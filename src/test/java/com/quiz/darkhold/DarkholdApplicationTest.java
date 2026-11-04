@@ -31,7 +31,7 @@ class DarkholdApplicationTest {
     @Test
     @DisplayName("Main method should not throw exceptions")
     void mainMethodExecutesWithoutException() {
-        assertDoesNotThrow(() -> DarkholdApplication.main(new String[]{}),
+        assertDoesNotThrow(() -> DarkholdApplication.main(new String[]{"--server.port=0"}),
                 "Main method should execute without throwing exceptions");
     }
 

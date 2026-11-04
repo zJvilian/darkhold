@@ -4,7 +4,7 @@
 ALTER TABLE game ADD COLUMN IF NOT EXISTS moderator VARCHAR(255);
 
 -- Add index for faster queries by moderator
-CREATE INDEX IF NOT EXISTS idx_game_moderator_status ON game(moderator, game_status);
+CREATE INDEX IF NOT EXISTS idx_game_moderator_status ON game(moderator);
 
 -- Add comment for clarity
 COMMENT ON COLUMN game.moderator IS 'Username of the moderator who created this game';

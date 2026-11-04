@@ -22,22 +22,22 @@ public class TeamResult {
     @JoinColumn(name = "game_result_id", nullable = false)
     private GameResult gameResult;
 
-    @Column(nullable = false, length = 100)
+    @Column(name = "team_name", nullable = false, length = 100)
     private String teamName;
 
-    @Column(nullable = false, length = 20)
+    @Column(name = "team_color", nullable = false, length = 20)
     private String teamColor;
 
-    @Column(nullable = false)
+    @Column(name = "final_score", nullable = false)
     private Integer finalScore;
 
-    @Column(nullable = false)
+    @Column(name = "final_rank", nullable = false)
     private Integer finalRank;
 
-    @Column(nullable = false)
+    @Column(name = "member_count", nullable = false)
     private Integer memberCount;
 
-    @Column(nullable = false)
+    @Column(name = "average_score_per_member", nullable = false)
     private Integer averageScorePerMember;
 
     /**

@@ -28,47 +28,47 @@ public class GameResult {
     @Column(nullable = false)
     private String pin;
 
-    @Column(nullable = false)
+    @Column(name = "challenge_id", nullable = false)
     private String challengeId;
 
-    @Column(nullable = false)
+    @Column(name = "challenge_name", nullable = false)
     private String challengeName;
 
     @Column(nullable = false)
     private String moderator;
 
-    @Column(nullable = false)
+    @Column(name = "game_mode", nullable = false)
     private String gameMode;
 
-    @Column(nullable = false)
+    @Column(name = "total_questions", nullable = false)
     private Integer totalQuestions;
 
-    @Column(nullable = false)
+    @Column(name = "participant_count", nullable = false)
     private Integer participantCount;
 
     @CreatedDate
-    @Column(name = "startedAt", nullable = false)
+    @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
 
-    @Column(name = "completedAt", nullable = false)
+    @Column(name = "completed_at", nullable = false)
     private LocalDateTime completedAt;
 
-    @Column(nullable = false)
+    @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
 
-    @Column
+    @Column(name = "winner_username")
     private String winnerUsername;
 
-    @Column
+    @Column(name = "winner_score")
     private Integer winnerScore;
 
-    @Column
+    @Column(name = "team_mode")
     private Boolean teamMode = false;
 
-    @Column(length = 100)
+    @Column(name = "winning_team_name", length = 100)
     private String winningTeamName;
 
-    @Column
+    @Column(name = "winning_team_score")
     private Integer winningTeamScore;
 
     @OneToMany(mappedBy = "gameResult", cascade = CascadeType.ALL, orphanRemoval = true)

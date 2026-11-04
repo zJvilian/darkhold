@@ -28,28 +28,28 @@ public class QuestionResult {
     @JoinColumn(name = "game_result_id", nullable = false)
     private GameResult gameResult;
 
-    @Column(nullable = false)
+    @Column(name = "question_number", nullable = false)
     private Integer questionNumber;
 
-    @Column(nullable = false, length = 1000)
+    @Column(name = "question_text", nullable = false, length = 1000)
     private String questionText;
 
-    @Column(nullable = false)
+    @Column(name = "question_type", nullable = false)
     private String questionType;
 
-    @Column(nullable = false)
+    @Column(name = "correct_count", nullable = false)
     private Integer correctCount;
 
-    @Column(nullable = false)
+    @Column(name = "incorrect_count", nullable = false)
     private Integer incorrectCount;
 
-    @Column(nullable = false)
+    @Column(name = "timeout_count", nullable = false)
     private Integer timeoutCount;
 
-    @Column
+    @Column(name = "average_answer_time_seconds")
     private Integer averageAnswerTimeSeconds;
 
-    @Column
+    @Column(name = "fastest_answer_time_seconds")
     private Integer fastestAnswerTimeSeconds;
 
     // Constructors

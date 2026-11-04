@@ -36,42 +36,43 @@ public class CurrentGameSession {
     @Column(nullable = false)
     private String moderator;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "users_json", columnDefinition = "TEXT")
     private String usersJson;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "questions_json", columnDefinition = "TEXT")
     private String questionsJson;
 
-    @Column(nullable = false)
+    @Column(name = "current_question_no", nullable = false)
     private Integer currentQuestionNo;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "scores_json", columnDefinition = "TEXT")
     private String scoresJson;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "streak_json", columnDefinition = "TEXT")
     private String streakJson;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "previous_scores_json", columnDefinition = "TEXT")
     private String previousScoresJson;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "teams_json", columnDefinition = "TEXT")
     private String teamsJson;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "player_teams_json", columnDefinition = "TEXT")
     private String playerTeamsJson;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "team_assignment_method", length = 20)
     private TeamAssignmentMethod teamAssignmentMethod;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "game_status", length = 20)
     private GameStatus gameStatus = GameStatus.WAITING;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "game_mode", length = 20)
     private GameMode gameMode = GameMode.MULTIPLAYER;
 
+    @Column(name = "paused_at")
     private Long pausedAt;
 
     private static final Logger logger = LogManager.getLogger(CurrentGameSession.class);

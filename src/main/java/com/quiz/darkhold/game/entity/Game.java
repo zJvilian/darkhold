@@ -31,7 +31,7 @@ public class Game {
     @Column
     private String challengeId;
 
-    @Column
+    @Column(name = "game_mode")
     private String gameMode = "MULTIPLAYER";
 
     @Column

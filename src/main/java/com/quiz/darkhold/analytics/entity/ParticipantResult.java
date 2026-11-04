@@ -27,28 +27,28 @@ public class ParticipantResult {
     @Column(nullable = false)
     private String username;
 
-    @Column(nullable = false)
+    @Column(name = "final_score", nullable = false)
     private Integer finalScore;
 
-    @Column(nullable = false)
+    @Column(name = "final_rank", nullable = false)
     private Integer finalRank;
 
-    @Column(nullable = false)
+    @Column(name = "correct_answers", nullable = false)
     private Integer correctAnswers;
 
-    @Column(nullable = false)
+    @Column(name = "incorrect_answers", nullable = false)
     private Integer incorrectAnswers;
 
-    @Column(nullable = false)
+    @Column(name = "max_streak", nullable = false)
     private Integer maxStreak;
 
-    @Column
+    @Column(name = "average_answer_time_seconds")
     private Integer averageAnswerTimeSeconds;
 
-    @Column(length = 100)
+    @Column(name = "team_name", length = 100)
     private String teamName;
 
-    @Column(length = 20)
+    @Column(name = "team_color", length = 20)
     private String teamColor;
 
     // Constructors

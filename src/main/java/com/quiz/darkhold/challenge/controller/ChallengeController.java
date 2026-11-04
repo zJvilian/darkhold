@@ -48,23 +48,27 @@ public class ChallengeController {
         return "options/options";
     }
 
-    /**
-     * Upload the challenge as a predefined Excel sheet.
-     *
-     * @param upload             excel file
-     * @param title              game title
-     * @param description        description
-     * @param redirectAttributes redirect attributes
-     * @return ResponseEntity with challenge info and appropriate HTTP status
-     */
-    @PostMapping("/upload_challenge")
     public ResponseEntity<ChallengeWithResponse> handleFileUpload(final MultipartFile upload,
                                                                    final String title,
                                                                    final String description,
                                                                    final RedirectAttributes redirectAttributes) {
+        return handleFileUpload(upload, title, description, true, redirectAttributes);
+    }
+
+    /**
+     * Upload the challenge as a predefined Excel sheet.
+     */
+    @PostMapping("/upload_challenge")
+    public ResponseEntity<ChallengeWithResponse> handleFileUpload(
+            final MultipartFile upload, final String title, final String description,
+            @RequestParam(defaultValue = "true") final boolean wordCloudFuzzy,
+            final RedirectAttributes redirectAttributes) {
         logParams(upload, title, description);
         try {
             Long challengeId = challengeService.readProcessAndSaveChallenge(upload, title, description);
+            if (!wordCloudFuzzy) {
+                challengeService.setWordCloudFuzzy(challengeId, false);
+            }
             String responseText = "Successfully created " + CommonUtils.sanitizedString(title) + " !!!";
             return ResponseEntity.ok(new ChallengeWithResponse(challengeId, responseText));
         } catch (ChallengeException challengeException) {
@@ -89,10 +93,6 @@ public class ChallengeController {
 
     /**
      * Delete a challenge by its ID.
-     *
-     * @param challenge          challenge ID to delete
-     * @param redirectAttributes redirect attributes
-     * @return ResponseEntity with success status
      */
     @DeleteMapping("/delete_challenge")
     public ResponseEntity<Boolean> deleteChallenge(final Long challenge,
@@ -119,31 +119,23 @@ public class ChallengeController {
 
     /**
      * Save a new empty challenge (without questions).
-     *
-     * @param title       challenge title
-     * @param description challenge description
-     * @return ResponseEntity with challenge info
      */
     @PostMapping("/save_challenge")
     public ResponseEntity<ChallengeWithResponse> saveChallenge(
             @RequestParam @NotBlank @Size(max = 100) final String title,
-            @RequestParam @Size(max = 250) final String description) {
+            @RequestParam @Size(max = 250) final String description,
+            @RequestParam(defaultValue = "true") final boolean wordCloudFuzzy) {
         String sanitizedTitle = CommonUtils.sanitizedString(title);
-        String sanitizedDescription = CommonUtils.sanitizedString(description);
-        logger.info("Creating new challenge: title={}, description={}", sanitizedTitle, sanitizedDescription);
+        logger.info("Creating new challenge: title={}", sanitizedTitle);
         com.quiz.darkhold.challenge.entity.Challenge challenge =
                 challengeService.createEmptyChallenge(title, description);
+        if (!wordCloudFuzzy && challenge != null) {
+            challengeService.setWordCloudFuzzy(challenge.getId(), false);
+        }
         return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                 "Successfully created " + sanitizedTitle + " !!!"));
     }
 
-    /**
-     * Show the edit form for a challenge.
-     *
-     * @param id    challenge ID
-     * @param model Spring model
-     * @return the edit challenge view or redirect to options
-     */
     @GetMapping("/edit_challenge/{id}")
     public String showEditChallengeForm(@PathVariable final Long id, final Model model) {
         logger.info("Showing edit form for challenge: {}", id);
@@ -157,18 +149,14 @@ public class ChallengeController {
     }
 
     /**
-     * Update an existing challenge's title and description.
-     *
-     * @param id          challenge ID
-     * @param title       new title
-     * @param description new description
-     * @return ResponseEntity with updated challenge info
+     * Update an existing challenge's title, description, and optional word-cloud typo setting.
      */
     @PostMapping("/update_challenge/{id}")
     public ResponseEntity<ChallengeWithResponse> updateChallenge(
             @PathVariable final Long id,
             @RequestParam @NotBlank @Size(max = 100) final String title,
-            @RequestParam @Size(max = 250) final String description) {
+            @RequestParam @Size(max = 250) final String description,
+            @RequestParam(required = false) final Boolean wordCloudFuzzy) {
         String sanitizedTitle = CommonUtils.sanitizedString(title);
         logger.info("Updating challenge {}: title={}", id, sanitizedTitle);
         com.quiz.darkhold.challenge.entity.Challenge challenge =
@@ -176,16 +164,13 @@ public class ChallengeController {
         if (challenge == null) {
             return ResponseEntity.notFound().build();
         }
+        if (wordCloudFuzzy != null) {
+            challengeService.setWordCloudFuzzy(id, wordCloudFuzzy);
+        }
         return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                 "Successfully updated " + sanitizedTitle + " !!!"));
     }
 
-    /**
-     * Duplicate a challenge with all its questions.
-     *
-     * @param id challenge ID to duplicate
-     * @return ResponseEntity with new challenge info
-     */
     @PostMapping("/duplicate_challenge/{id}")
     public ResponseEntity<ChallengeWithResponse> duplicateChallenge(@PathVariable final Long id) {
         logger.info("Duplicating challenge: {}", id);
@@ -197,9 +182,6 @@ public class ChallengeController {
                 "Successfully duplicated as " + newChallenge.getTitle() + " !!!"));
     }
 
-    /**
-     * Export a challenge as JSON.
-     */
     @GetMapping("/export_challenge/{id}/json")
     public ResponseEntity<byte[]> exportChallengeAsJson(@PathVariable final Long id) {
         logger.info("Exporting challenge as JSON: {}", id);
@@ -226,9 +208,6 @@ public class ChallengeController {
         }
     }
 
-    /**
-     * Export a challenge as CSV.
-     */
     @GetMapping("/export_challenge/{id}/csv")
     public ResponseEntity<byte[]> exportChallengeAsCsv(@PathVariable final Long id) {
         logger.info("Exporting challenge as CSV: {}", id);
@@ -290,9 +269,6 @@ public class ChallengeController {
         return value;
     }
 
-    /**
-     * Import a challenge from JSON file.
-     */
     @PostMapping("/import_challenge/json")
     public ResponseEntity<ChallengeWithResponse> importChallengeFromJson(
             @RequestParam("file") final MultipartFile file) {

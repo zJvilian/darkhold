@@ -7,6 +7,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -334,5 +336,39 @@ class AnswerValidationServiceTest {
         qs.setAnswer1(answer1);
         qs.setAcceptableAnswers(acceptableAnswers);
         return qs;
+    }
+
+    @Nested
+    @DisplayName("WORD_CLOUD clustering and typo matching")
+    class WordCloudTests {
+
+        @Test
+        @DisplayName("Should not score WORD_CLOUD and accept non-blank answers")
+        void wordCloudValidation() {
+            var qs = makeQuestion(QuestionType.WORD_CLOUD, "FUZZY", null);
+            assertFalse(service.shouldScore(qs));
+            assertTrue(service.validateAnswer(qs, "creative"));
+            assertFalse(service.validateAnswer(qs, "   "));
+        }
+
+        @Test
+        @DisplayName("Should merge typos into frequent words when fuzzy matching is enabled")
+        void fuzzyWordCloudMergesTypos() {
+            var answers = List.of("creativ", "Creative", "creative", "fast", "past",
+                    "inspiration", "insperation", "transpiration");
+            List<Map<String, Object>> cloud = service.buildWordCloud(answers, true);
+            assertEquals(5, cloud.size());
+            assertEquals(Map.of("text", "creative", "count", 3), cloud.get(0));
+            assertEquals(Map.of("text", "inspiration", "count", 2), cloud.get(1));
+        }
+
+        @Test
+        @DisplayName("Should keep typos separate when fuzzy matching is disabled")
+        void exactWordCloudKeepsTyposSeparate() {
+            var answers = List.of("creativ", "Creative", "creative", "bold");
+            List<Map<String, Object>> cloud = service.buildWordCloud(answers, false);
+            assertEquals(3, cloud.size());
+            assertEquals(Map.of("text", "creative", "count", 2), cloud.get(0));
+        }
     }
 }

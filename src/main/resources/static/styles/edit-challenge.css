@@ -335,6 +335,85 @@
     border: 1px solid var(--color-border-light);
 }
 
+/* Word Cloud Settings in Modal */
+.word-cloud-settings-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .word-cloud-settings-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.word-cloud-settings-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.word-cloud-settings-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    background: rgba(var(--color-primary-rgb, 0, 98, 204), 0.12);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+
+.word-cloud-settings-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.word-cloud-settings-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--color-text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.word-cloud-settings-hint {
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+    line-height: 1.45;
+    margin: 0;
+    text-align: left;
+}
+
+.word-cloud-settings-toggle {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--color-border-light);
+    display: flex;
+    align-items: center;
+}
+
+[data-theme="dark"] .word-cloud-settings-toggle {
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.word-cloud-settings-toggle .form-check-label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    margin-left: 0.5rem;
+    margin-bottom: 0;
+}
+
+.word-cloud-settings-toggle .form-check-input {
+    cursor: pointer;
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */

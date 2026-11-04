@@ -164,7 +164,7 @@
                 </div>
 
                 <!-- TYPE_ANSWER: Text Input -->
-                <div th:if="${question_type == 'TYPE_ANSWER'}" class="type-answer-container">
+                <div th:if="${question_type == 'TYPE_ANSWER' or question_type == 'WORD_CLOUD'}" class="type-answer-container">
                     <div class="type-answer-card">
                         <label for="typeAnswerInput" class="type-answer-label" th:text="#{game.typeYourAnswer}">Type your answer:</label>
                         <input type="text" id="typeAnswerInput" class="type-answer-input"

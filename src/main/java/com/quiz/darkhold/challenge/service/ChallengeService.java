@@ -105,6 +105,14 @@ public class ChallengeService {
      * @param description new description
      * @return the updated challenge or null if not found/not owned
      */
+    public void setWordCloudFuzzy(final Long challengeId, final boolean fuzzy) {
+        Challenge challenge = getChallengeForEdit(challengeId);
+        if (challenge != null) {
+            challenge.setWordCloudFuzzy(fuzzy);
+            challengeRepository.save(challenge);
+        }
+    }
+
     public Challenge updateChallenge(final Long challengeId, final String title, final String description) {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
         if (challengeOpt.isPresent()) {
@@ -143,6 +151,7 @@ public class ChallengeService {
         Challenge newChallenge = new Challenge();
         newChallenge.setTitle(original.getTitle() + " (Copy)");
         newChallenge.setDescription(original.getDescription());
+        newChallenge.setWordCloudFuzzy(original.isWordCloudFuzzy());
         newChallenge.setChallengeOwner(currentUserId());
         Challenge savedChallenge = challengeRepository.save(newChallenge);
 

@@ -43,7 +43,7 @@ function callTimeOut() {
     let questionType = getQuestionType();
 
     // For TYPE_ANSWER, if no answer submitted, mark as timeout
-    if (questionType === 'TYPE_ANSWER') {
+    if (questionType === 'TYPE_ANSWER' || questionType === 'WORD_CLOUD') {
         let inputElem = document.getElementById('typeAnswerInput');
         if (inputElem && !inputElem.disabled) {
             document.getElementById('selectedOptions').value = "timeout";
@@ -90,7 +90,7 @@ function highlightGreen() {
             // Add animation class
             toGreenChild.classList.add('answer-correct');
         }
-    } else if (questionType === 'TYPE_ANSWER') {
+    } else if (questionType === 'TYPE_ANSWER' || questionType === 'WORD_CLOUD') {
         // For TYPE_ANSWER, feedback is shown inline via input styling
         return;
     } else {
@@ -139,7 +139,7 @@ function highlightRedOnIncorrectSelection() {
             // Add animation class
             toRedChild.classList.add('answer-incorrect');
         }
-    } else if (questionType === 'TYPE_ANSWER') {
+    } else if (questionType === 'TYPE_ANSWER' || questionType === 'WORD_CLOUD') {
         // Already handled in validateTypeAnswerOnServer
         return;
     } else {

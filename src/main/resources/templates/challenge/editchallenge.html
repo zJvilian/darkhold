@@ -83,7 +83,10 @@
                     </div>
                     <div class="question-answers" th:if="${q.questionType != null and q.questionType.name() == 'TYPE_ANSWER'}">
                         <span th:text="#{challenge.edit.answer}">Answer:</span> <span class="correct-answer" th:text="${q.answer1}"></span>
-                        <span th:if="${q.acceptableAnswers}"> (also accepts: <span th:text="${q.acceptableAnswers}"></span>)</span>
+                        <span th:if="${q.acceptableAnswers}"> (<span th:text="#{client.alsoAccepts}">also accepts:</span> <span th:text="${q.acceptableAnswers}"></span>)</span>
+                    </div>
+                    <div class="question-answers" th:if="${q.questionType != null and q.questionType.name() == 'WORD_CLOUD'}">
+                        <span th:text="${q.correctOptions == 'EXACT' ? #messages.msg('challenge.edit.wordCloudExactSummary') : #messages.msg('challenge.edit.wordCloudFuzzySummary')}">Free-text word cloud (typo matching enabled)</span>
                     </div>
                 </div>
                 <div class="question-actions">
@@ -118,7 +121,7 @@
                 <input type="hidden" id="editingQuestionId"/>
                 <!-- Question Type and Settings Row -->
                 <div class="row mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-4" id="questionTypeCol">
                         <label class="form-label" th:text="#{challenge.edit.questionType}">Question Type</label>
                         <select id="questionType" class="form-select" onchange="onQuestionTypeChange()">
                             <option value="MULTIPLE_CHOICE" th:text="#{challenge.edit.multipleChoice}">Multiple Choice</option>
@@ -127,7 +130,7 @@
                             <option value="POLL" th:text="#{challenge.edit.poll}">Poll (No Correct)</option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4" id="timeLimitCol">
                         <label class="form-label" th:text="#{challenge.edit.timeLimit}">Time Limit</label>
                         <select id="timeLimit" class="form-select">
                             <option value="" th:text="#{challenge.edit.default}">Default</option>
@@ -141,7 +144,7 @@
                             <option value="240">4 <span th:text="#{challenge.edit.minutes}">minutes</span></option>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-4" id="pointsCol">
                         <label class="form-label" th:text="#{challenge.edit.points}">Points</label>
                         <input type="number" id="points" class="form-control" value="1000" min="0" max="10000">
                     </div>
@@ -213,6 +216,22 @@
                         <small class="text-muted" th:text="#{challenge.edit.fuzzyMatchingHint}">Typos will be tolerated using fuzzy matching</small>
                     </div>
                 </div>
+                <!-- Word Cloud Settings -->
+                <div id="wordCloudSettings" class="word-cloud-settings-card" style="display:none;">
+                    <div class="word-cloud-settings-header">
+                        <div class="word-cloud-settings-icon">
+                            <i class="bi bi-cloud"></i>
+                        </div>
+                        <div class="word-cloud-settings-body">
+                            <div class="word-cloud-settings-title" th:text="#{challenge.edit.wordCloud}">Word Cloud</div>
+                            <p class="word-cloud-settings-hint" th:text="#{challenge.edit.wordCloudHint}">Every submitted word appears in the cloud and grows larger the more often it is typed.</p>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch word-cloud-settings-toggle">
+                        <input class="form-check-input" type="checkbox" role="switch" id="wordCloudQuestionFuzzy" checked>
+                        <label class="form-check-label" for="wordCloudQuestionFuzzy" th:text="#{challenge.create.wordCloudFuzzy}">Match typos to similar words in Word Cloud questions</label>
+                    </div>
+                </div>
                 <!-- Media Section -->
                 <hr>
                 <h6 class="mb-3" th:text="#{challenge.edit.mediaOptional}">Media (Optional)</h6>
@@ -259,6 +278,10 @@
                     <label class="form-label" th:text="#{challenge.create.description}">Description</label>
                     <textarea id="editDescription" class="form-control" rows="3" maxlength="250" th:text="${challenge.description}"></textarea>
                 </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="editWordCloudFuzzy" th:checked="${challenge.wordCloudFuzzy}">
+                    <label class="form-check-label" for="editWordCloudFuzzy" th:text="#{challenge.create.wordCloudFuzzy}">Match typos to similar words in Word Cloud questions</label>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" th:text="#{button.cancel}">Cancel</button>
@@ -271,6 +294,7 @@
 <script src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
 const challengeId = [[${challenge.id}]];
+const defaultWordCloudFuzzy = [[${challenge.wordCloudFuzzy}]];
 const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
 
 // Initialize drag-and-drop
@@ -310,6 +334,7 @@ function showQuestionModal(id = null) {
     document.getElementById('acceptableAnswers').value = '';
     document.getElementById('tfTrue').checked = false;
     document.getElementById('tfFalse').checked = false;
+    document.getElementById('wordCloudQuestionFuzzy').checked = defaultWordCloudFuzzy !== false;
     ['A','B','C','D'].forEach(x => document.getElementById('correct'+x).checked = false);
     // Reset media fields
     document.getElementById('questionImageInput').value = '';
@@ -326,6 +351,11 @@ function onQuestionTypeChange() {
     const mcAnswers = document.getElementById('multipleChoiceAnswers');
     const tfAnswers = document.getElementById('trueFalseAnswers');
     const taInput = document.getElementById('typeAnswerInput');
+    const wcSettings = document.getElementById('wordCloudSettings');
+    const pointsCol = document.getElementById('pointsCol');
+    const questionTypeCol = document.getElementById('questionTypeCol');
+    const timeLimitCol = document.getElementById('timeLimitCol');
+    const pointsInput = document.getElementById('points');
     const correctHint = document.getElementById('correctAnswerHint');
     const answerCGroup = document.getElementById('answerCGroup');
     const answerDGroup = document.getElementById('answerDGroup');
@@ -334,6 +364,24 @@ function onQuestionTypeChange() {
     mcAnswers.style.display = 'none';
     tfAnswers.style.display = 'none';
     taInput.style.display = 'none';
+    wcSettings.style.display = 'none';
+    // Word Cloud has no point scoring: remove points option from UI and balance columns
+    if (type === 'WORD_CLOUD') {
+        pointsCol.style.display = 'none';
+        questionTypeCol.className = 'col-md-6';
+        timeLimitCol.className = 'col-md-6';
+        pointsInput.value = '0';
+        pointsInput.disabled = true;
+        wcSettings.style.display = 'block';
+    } else {
+        pointsCol.style.display = 'block';
+        questionTypeCol.className = 'col-md-4';
+        timeLimitCol.className = 'col-md-4';
+        if (pointsInput.value === '0' || !pointsInput.value) {
+            pointsInput.value = '1000';
+        }
+        pointsInput.disabled = (type === 'POLL');
+    }
 
     if (type === 'MULTIPLE_CHOICE') {
         mcAnswers.style.display = 'block';
@@ -378,6 +426,8 @@ function editQuestion(id) {
                 document.getElementById('tfFalse').checked = opts.includes('FALSE');
             } else if (type === 'TYPE_ANSWER') {
                 document.getElementById('typeAnswerCorrect').value = q.answer1 || '';
+            } else if (type === 'WORD_CLOUD') {
+                document.getElementById('wordCloudQuestionFuzzy').checked = opts ? opts !== 'EXACT' : (defaultWordCloudFuzzy !== false);
             } else {
                 ['A','B','C','D'].forEach(x => document.getElementById('correct'+x).checked = opts.includes(x));
             }
@@ -443,7 +493,7 @@ function saveQuestion() {
         question: document.getElementById('questionText').value,
         questionType: type,
         timeLimit: timeLimitVal ? parseInt(timeLimitVal) : null,
-        points: parseInt(document.getElementById('points').value) || 1000,
+        points: (type === 'POLL' || type === 'WORD_CLOUD') ? 0 : (parseInt(document.getElementById('points').value) || 1000),
         answer1: answer1,
         answer2: answer2,
         answer3: answer3,
@@ -497,8 +547,9 @@ function updateChallengeInfo() {
     const formData = new FormData();
     formData.append('title', document.getElementById('editTitle').value);
     formData.append('description', document.getElementById('editDescription').value);
-    fetch('/update_challenge/' + challengeId, {method: 'POST', body: formData})
-        .then(r => r.ok ? location.reload() : alert('Error updating challenge'));
+    formData.append('wordCloudFuzzy', String(document.getElementById('editWordCloudFuzzy').checked));
+    RequestClient.json('/update_challenge/' + challengeId, {method: 'POST', headers: CsrfManager.addTokenToFetch(), body: formData})
+        .then(() => location.reload()).catch(error => alert(error.message));
 }
 
 // Media handling functions

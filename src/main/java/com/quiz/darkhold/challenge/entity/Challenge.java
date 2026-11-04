@@ -44,6 +44,9 @@ public class Challenge implements Serializable {
     @Column(name = "challengeowner")
     private Long challengeOwner;
 
+    @Column(name = "word_cloud_fuzzy")
+    private Boolean wordCloudFuzzy = Boolean.TRUE;
+
     @CreatedDate
     @Column(name = "createdOn")
     private LocalDateTime createdOn;
@@ -90,6 +93,18 @@ public class Challenge implements Serializable {
 
     public void setChallengeOwner(final Long challengeOwner) {
         this.challengeOwner = challengeOwner;
+    }
+
+    public boolean isWordCloudFuzzy() {
+        return !Boolean.FALSE.equals(wordCloudFuzzy);
+    }
+
+    public Boolean getWordCloudFuzzy() {
+        return isWordCloudFuzzy();
+    }
+
+    public void setWordCloudFuzzy(final Boolean wordCloudFuzzy) {
+        this.wordCloudFuzzy = !Boolean.FALSE.equals(wordCloudFuzzy);
     }
 
     public LocalDateTime getCreatedOn() {

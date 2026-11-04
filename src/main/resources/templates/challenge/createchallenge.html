@@ -65,6 +65,16 @@
                                       placeholder="Provide a brief overview of this challenge (optional)"></textarea>
                             <span class="form-hint" th:text="#{challenge.create.descriptionHint}">Optional, maximum 250 characters</span>
                         </div>
+
+                        <div class="form-field">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       id="wordCloudFuzzy" name="wordCloudFuzzy" value="true" checked>
+                                <label class="form-check-label form-label" for="wordCloudFuzzy"
+                                       th:text="#{challenge.create.wordCloudFuzzy}">Match typos to similar words in Word Cloud questions</label>
+                            </div>
+                            <span class="form-hint" th:text="#{challenge.create.wordCloudFuzzyHint}">Groups answers with minor spelling mistakes into the same word bubble</span>
+                        </div>
                     </section>
 
                     <!-- Section 2: Question Import -->

@@ -231,7 +231,8 @@ public class GameController {
         int streak = gameService.updateStreak(user, isCorrect);
         QuestionPointer questionPointer = gameService.getCurrentQuestionPointer();
         QuestionSet currentQuestion = questionPointer.getCurrentQuestion();
-        int basePoints = currentQuestion.getPoints() != null ? currentQuestion.getPoints() : 1000;
+        int basePoints = answerValidationService.shouldScore(currentQuestion)
+                ? answerValidationService.getPoints(currentQuestion) : 0;
         int scoreOnStatus = calculateScoreWithStreak(status, timeTook, basePoints, streak);
         logger.info("score is {} (streak: {}, base: {})", scoreOnStatus, streak, basePoints);
         gameService.saveCurrentScore(user, scoreOnStatus);

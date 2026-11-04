@@ -37,6 +37,8 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
     formData.append('upload', file, file.name);
     formData.append('title', title);
     formData.append('description', description);
+    const fuzzyToggle = document.getElementById('wordCloudFuzzy');
+    formData.append('wordCloudFuzzy', fuzzyToggle ? String(fuzzyToggle.checked) : 'true');
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/upload_challenge', true);
@@ -84,6 +86,8 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
+    const fuzzyToggle = document.getElementById('wordCloudFuzzy');
+    formData.append('wordCloudFuzzy', fuzzyToggle ? String(fuzzyToggle.checked) : 'true');
 
     return fetch('/save_challenge', {
         method: 'POST',

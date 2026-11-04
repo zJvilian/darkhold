@@ -22,5 +22,10 @@ public enum QuestionType {
     /**
      * Poll question - multiple choice but no correct answer, shows result distribution.
      */
-    POLL
+    POLL,
+
+    /**
+     * Word cloud question - free text answers rendered as frequency-sized word bubbles.
+     */
+    WORD_CLOUD,
 }

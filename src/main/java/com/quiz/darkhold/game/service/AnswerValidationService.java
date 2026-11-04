@@ -7,12 +7,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
  * Service for validating answers based on question type.
- * Supports fuzzy matching for TYPE_ANSWER questions using Levenshtein distance.
+ * Supports fuzzy matching for TYPE_ANSWER and WORD_CLOUD questions using Levenshtein distance.
  */
 @Service
 public class AnswerValidationService {
@@ -20,29 +26,10 @@ public class AnswerValidationService {
     private final Logger logger = LogManager.getLogger(AnswerValidationService.class);
     private final LevenshteinDistance levenshtein = new LevenshteinDistance();
 
-    /**
-     * Maximum allowed Levenshtein distance for short answers (up to 5 chars).
-     */
     private static final int SHORT_ANSWER_TOLERANCE = 1;
-
-    /**
-     * Maximum allowed Levenshtein distance for medium answers (6-10 chars).
-     */
     private static final int MEDIUM_ANSWER_TOLERANCE = 2;
-
-    /**
-     * Maximum proportion of characters that can differ for long answers.
-     */
     private static final double LONG_ANSWER_TOLERANCE_RATIO = 0.2;
-
-    /**
-     * Maximum length for short answers.
-     */
     private static final int SHORT_ANSWER_MAX_LENGTH = 5;
-
-    /**
-     * Maximum length for medium answers.
-     */
     private static final int MEDIUM_ANSWER_MAX_LENGTH = 10;
 
     /**
@@ -56,17 +43,13 @@ public class AnswerValidationService {
         if (question == null || userAnswer == null) {
             return false;
         }
-
-        QuestionType questionType = question.getQuestionType();
-        if (questionType == null) {
-            questionType = QuestionType.MULTIPLE_CHOICE;
-        }
-
+        QuestionType questionType = question.getQuestionType() == null
+                ? QuestionType.MULTIPLE_CHOICE : question.getQuestionType();
         return switch (questionType) {
             case MULTIPLE_CHOICE -> validateMultipleChoice(question, userAnswer);
             case TRUE_FALSE -> validateTrueFalse(question, userAnswer);
             case TYPE_ANSWER -> validateTypeAnswer(question, userAnswer);
-            case POLL -> true; // Polls have no correct answer
+            case POLL, WORD_CLOUD -> !userAnswer.isBlank();
         };
     }
 
@@ -77,7 +60,73 @@ public class AnswerValidationService {
         if (question == null || question.getQuestionType() == null) {
             return true;
         }
-        return question.getQuestionType() != QuestionType.POLL;
+        return question.getQuestionType() != QuestionType.POLL
+                && question.getQuestionType() != QuestionType.WORD_CLOUD;
+    }
+
+    /**
+     * Group free-text answers into word-cloud entries sorted by frequency descending.
+     * Every submitted answer is represented; when fuzzyMatch is enabled, typos merge into
+     * the most frequent similar word.
+     */
+    public List<Map<String, Object>> buildWordCloud(final List<String> rawAnswers, final boolean fuzzyMatch) {
+        if (rawAnswers == null || rawAnswers.isEmpty()) {
+            return List.of();
+        }
+        Map<String, Integer> exact = countExactAnswers(rawAnswers);
+        Map<String, Integer> clusters = fuzzyMatch ? mergeWordCloudTypos(exact) : exact;
+        return clusters.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder()))
+                .map(entry -> Map.<String, Object>of("text", entry.getKey(), "count", entry.getValue()))
+                .toList();
+    }
+
+    private Map<String, Integer> countExactAnswers(final List<String> rawAnswers) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (String answer : rawAnswers) {
+            String normalized = normalizeAnswer(answer);
+            if (!normalized.isEmpty()) {
+                counts.merge(normalized, 1, Integer::sum);
+            }
+        }
+        return counts;
+    }
+
+    private Map<String, Integer> mergeWordCloudTypos(final Map<String, Integer> exact) {
+        List<Map.Entry<String, Integer>> sorted = exact.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue(Comparator.reverseOrder())).toList();
+        Map<String, Integer> clusters = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : sorted) {
+            String match = findClosestCluster(clusters.keySet(), entry.getKey());
+            clusters.merge(match != null ? match : entry.getKey(), entry.getValue(), Integer::sum);
+        }
+        return clusters;
+    }
+
+    private String findClosestCluster(final java.util.Set<String> clusters, final String word) {
+        String best = null;
+        int bestDist = Integer.MAX_VALUE;
+        for (String canonical : clusters) {
+            int dist = typoDistanceIfMatch(word, canonical);
+            if (dist >= 0 && dist < bestDist) {
+                bestDist = dist;
+                best = canonical;
+            }
+        }
+        return best;
+    }
+
+    private int typoDistanceIfMatch(final String word, final String canonical) {
+        int maxLen = Math.max(word.length(), canonical.length());
+        if (maxLen < 4 || Math.abs(word.length() - canonical.length()) > 2) {
+            return -1;
+        }
+        if (maxLen == 4 && word.charAt(0) != canonical.charAt(0)) {
+            return -1;
+        }
+        int dist = levenshtein.apply(word, canonical);
+        int limit = maxLen >= 9 ? 2 : 1;
+        return dist <= limit ? dist : -1;
     }
 
     /**
@@ -95,9 +144,12 @@ public class AnswerValidationService {
         if (correctOptions == null || correctOptions.isBlank()) {
             return false;
         }
-        // User answer is option letter(s) like "A" or "A,B"
-        String userOptions = userAnswer.toUpperCase(Locale.ROOT).trim();
-        return correctOptions.equalsIgnoreCase(userOptions);
+        return optionSet(correctOptions).equals(optionSet(userAnswer));
+    }
+
+    private java.util.Set<String> optionSet(final String options) {
+        return Arrays.stream(options.toUpperCase(Locale.ROOT).split(",", -1))
+                .map(String::strip).collect(Collectors.toSet());
     }
 
     private boolean validateTrueFalse(final QuestionSet question, final String userAnswer) {
@@ -105,7 +157,6 @@ public class AnswerValidationService {
         if (correctAnswer == null || correctAnswer.isBlank()) {
             return false;
         }
-        // Correct is stored as "TRUE" or "FALSE"
         return correctAnswer.equalsIgnoreCase(userAnswer.trim());
     }
 
@@ -134,9 +185,6 @@ public class AnswerValidationService {
         return false;
     }
 
-    /**
-     * Normalize an answer for comparison: trim, lowercase, remove extra spaces.
-     */
     private String normalizeAnswer(final String answer) {
         if (answer == null) {
             return "";
@@ -144,18 +192,13 @@ public class AnswerValidationService {
         return answer.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
     }
 
-    /**
-     * Check if two answers match using fuzzy matching with Levenshtein distance.
-     */
     private boolean isFuzzyMatch(final String userAnswer, final String correctAnswer) {
         if (userAnswer.equals(correctAnswer)) {
             return true;
         }
-
         int distance = levenshtein.apply(userAnswer, correctAnswer);
         int maxLength = Math.max(userAnswer.length(), correctAnswer.length());
         int tolerance = calculateTolerance(maxLength);
-
         boolean isMatch = distance <= tolerance;
         if (isMatch && distance > 0) {
             logger.debug("Fuzzy match: '{}' -> '{}' (distance: {})", userAnswer, correctAnswer, distance);
@@ -163,9 +206,6 @@ public class AnswerValidationService {
         return isMatch;
     }
 
-    /**
-     * Calculate the allowed Levenshtein distance based on answer length.
-     */
     private int calculateTolerance(final int length) {
         if (length <= SHORT_ANSWER_MAX_LENGTH) {
             return SHORT_ANSWER_TOLERANCE;

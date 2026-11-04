@@ -28,4 +28,7 @@ public enum QuestionType {
      * Word cloud question - free text answers rendered as frequency-sized word bubbles.
      */
     WORD_CLOUD,
+
+    /** Answers must be arranged in the specified order. */
+    SORTING
 }

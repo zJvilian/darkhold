@@ -23,6 +23,21 @@ class AnswerValidationServiceTest {
         service = new AnswerValidationService();
     }
 
+    @Test
+    void sortingRequiresTheExactCompleteOrder() {
+        var question = new QuestionSet();
+        question.setQuestionType(QuestionType.SORTING);
+        question.setCorrectOptions("C,A,B");
+        question.setAnswer1("First");
+        question.setAnswer2("Second");
+        question.setAnswer3("Third");
+        assertTrue(service.validateAnswer(question, " c, a, b "));
+        assertTrue(service.shouldScore(question));
+        for (String invalid : List.of("A,B,C", "C,A", "C,A,A", "C,A,B,D", "C,A,B,", "")) {
+            assertFalse(service.validateAnswer(question, invalid), invalid);
+        }
+    }
+
     @Nested
     @DisplayName("validateAnswer - null handling")
     class NullHandling {

@@ -5,10 +5,26 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("QuestionRequest Tests")
 class QuestionRequestTest {
+
+    @Test
+    void sortingRejectsMissingAndRepeatedAnswers() {
+        var request = new QuestionRequest();
+        request.setQuestionType(QuestionType.SORTING);
+        request.setAnswer1("Alpha");
+        request.setAnswer3("Gamma");
+        request.setCorrectOptions("C,A");
+        assertTrue(request.isSortingValid());
+        request.setCorrectOptions("C,C");
+        assertFalse(request.isSortingValid());
+        request.setCorrectOptions("A,B,C");
+        assertFalse(request.isSortingValid());
+    }
 
     @Test
     @DisplayName("Should have correct defaults")

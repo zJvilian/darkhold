@@ -145,6 +145,21 @@
                     </div>
                 </div>
 
+                <div th:if="${question_type == 'SORTING'}" id="sortingAnswers">
+                    <p th:text="#{client.sorting.hint}"></p>
+                    <div class="answer-grid">
+                        <th:block th:each="label, stat : ${challenge.QuestionSet.sortingAnswers}"
+                                th:with="letter=${ {'A','B','C','D','E','F','G','H','I','J'}[stat.index] }">
+                        <button type="button" th:if="${not #strings.isEmpty(label)}" class="btn btn-outline-primary p-3"
+                                th:attr="data-value=${letter}" onclick="chooseSortingAnswer(this)" aria-pressed="false">
+                            <span class="sorting-rank">–</span> <span th:text="${label}"></span>
+                        </button>
+                        </th:block>
+                    </div>
+                    <button id="submitSorting" type="button" class="btn btn-primary mt-3" onclick="submitSortingAnswer()"
+                            disabled th:text="#{client.sorting.submit}"></button>
+                    <p id="sortingFeedback" role="status"></p>
+                </div>
                 <!-- TRUE_FALSE: True/False Options -->
                 <div th:if="${question_type == 'TRUE_FALSE'}" class="answer-grid">
                     <div id="optionTRUE" class="answer-option-card"

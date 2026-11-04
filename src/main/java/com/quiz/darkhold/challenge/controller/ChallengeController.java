@@ -229,7 +229,8 @@ public class ChallengeController {
 
     private String buildCsvContent(final com.quiz.darkhold.challenge.entity.Challenge challenge) {
         String header = "Question,Answer1,Answer2,Answer3,Answer4,CorrectOptions,"
-                + "Type,TimeLimit,Points,AcceptableAnswers,ImageUrl,VideoUrl\n";
+                + "Type,TimeLimit,Points,AcceptableAnswers,ImageUrl,VideoUrl,"
+                + "Answer5,Answer6,Answer7,Answer8,Answer9,Answer10\n";
         StringBuilder sb = new StringBuilder(header);
         if (challenge.getQuestionSets() != null) {
             challenge.getQuestionSets().forEach(q -> appendCsvRow(sb, q));
@@ -256,7 +257,12 @@ public class ChallengeController {
         sb.append(question.getPoints() != null ? question.getPoints() : "").append(',');
         sb.append(escapeCsv(question.getAcceptableAnswers())).append(',');
         sb.append(escapeCsv(question.getImageUrl())).append(',');
-        sb.append(escapeCsv(question.getVideoUrl())).append('\n');
+        sb.append(escapeCsv(question.getVideoUrl()));
+        String[] answers = question.getSortingAnswers();
+        for (int index = 4; index < answers.length; index++) {
+            sb.append(',').append(escapeCsv(answers[index]));
+        }
+        sb.append('\n');
     }
 
     private String escapeCsv(final String value) {

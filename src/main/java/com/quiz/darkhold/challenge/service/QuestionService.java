@@ -196,10 +196,7 @@ public class QuestionService {
     private QuestionSet buildQuestionSet(final QuestionRequest request, final Challenge challenge) {
         QuestionSet qs = new QuestionSet();
         qs.setQuestion(request.getQuestion());
-        qs.setAnswer1(request.getAnswer1());
-        qs.setAnswer2(request.getAnswer2());
-        qs.setAnswer3(request.getAnswer3());
-        qs.setAnswer4(request.getAnswer4());
+        updateAnswers(qs, request);
         qs.setCorrectOptions(request.getCorrectOptions());
         qs.setQuestionType(request.getQuestionType());
         qs.setTimeLimit(request.getTimeLimit());
@@ -211,12 +208,23 @@ public class QuestionService {
         return qs;
     }
 
-    private void updateQuestionFields(final QuestionSet question, final QuestionRequest request) {
-        question.setQuestion(request.getQuestion());
+    private void updateAnswers(final QuestionSet question, final QuestionRequest request) {
         question.setAnswer1(request.getAnswer1());
         question.setAnswer2(request.getAnswer2());
         question.setAnswer3(request.getAnswer3());
         question.setAnswer4(request.getAnswer4());
+        question.setAnswer5(request.getAnswer5());
+        question.setAnswer6(request.getAnswer6());
+        question.setAnswer7(request.getAnswer7());
+        question.setAnswer8(request.getAnswer8());
+        question.setAnswer9(request.getAnswer9());
+        question.setAnswer10(request.getAnswer10());
+    }
+
+    @SuppressWarnings("checkstyle:MethodLength")
+    private void updateQuestionFields(final QuestionSet question, final QuestionRequest request) {
+        question.setQuestion(request.getQuestion());
+        updateAnswers(question, request);
         question.setCorrectOptions(request.getCorrectOptions());
         question.setQuestionType(request.getQuestionType());
         question.setTimeLimit(request.getTimeLimit());
@@ -255,6 +263,12 @@ public class QuestionService {
         dest.setAnswer2(src.getAnswer2());
         dest.setAnswer3(src.getAnswer3());
         dest.setAnswer4(src.getAnswer4());
+        dest.setAnswer5(src.getAnswer5());
+        dest.setAnswer6(src.getAnswer6());
+        dest.setAnswer7(src.getAnswer7());
+        dest.setAnswer8(src.getAnswer8());
+        dest.setAnswer9(src.getAnswer9());
+        dest.setAnswer10(src.getAnswer10());
         dest.setCorrectOptions(src.getCorrectOptions());
     }
 

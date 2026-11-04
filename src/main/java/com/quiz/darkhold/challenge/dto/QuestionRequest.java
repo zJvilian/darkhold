@@ -1,6 +1,8 @@
 package com.quiz.darkhold.challenge.dto;
 
 import com.quiz.darkhold.challenge.entity.QuestionType;
+import com.quiz.darkhold.challenge.entity.SortingAnswer;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -29,6 +31,25 @@ public class QuestionRequest {
     @Size(max = 225, message = "Answer must be at most 225 characters")
     private String answer4;
 
+    @Size(max = 225, message = "Answer must be at most 225 characters")
+    private String answer5;
+
+    @Size(max = 225, message = "Answer must be at most 225 characters")
+    private String answer6;
+
+    @Size(max = 225, message = "Answer must be at most 225 characters")
+    private String answer7;
+
+    @Size(max = 225, message = "Answer must be at most 225 characters")
+    private String answer8;
+
+    @Size(max = 225, message = "Answer must be at most 225 characters")
+    private String answer9;
+
+    @Size(max = 225, message = "Answer must be at most 225 characters")
+    private String answer10;
+
+
     private String correctOptions;
 
     private QuestionType questionType = QuestionType.MULTIPLE_CHOICE;
@@ -45,6 +66,13 @@ public class QuestionRequest {
 
     @Size(max = 500, message = "Video URL must be at most 500 characters")
     private String videoUrl;
+
+    @AssertTrue(message = "Sorting needs at least two answers, each letter exactly once in the correct order")
+    public boolean isSortingValid() {
+        return questionType != QuestionType.SORTING
+                || SortingAnswer.isValid(correctOptions, answer1, answer2, answer3, answer4,
+                answer5, answer6, answer7, answer8, answer9, answer10);
+    }
 
     public Long getChallengeId() {
         return challengeId;
@@ -92,6 +120,54 @@ public class QuestionRequest {
 
     public void setAnswer4(final String answer4) {
         this.answer4 = answer4;
+    }
+
+    public String getAnswer5() {
+        return answer5;
+    }
+
+    public void setAnswer5(final String answer5) {
+        this.answer5 = answer5;
+    }
+
+    public String getAnswer6() {
+        return answer6;
+    }
+
+    public void setAnswer6(final String answer6) {
+        this.answer6 = answer6;
+    }
+
+    public String getAnswer7() {
+        return answer7;
+    }
+
+    public void setAnswer7(final String answer7) {
+        this.answer7 = answer7;
+    }
+
+    public String getAnswer8() {
+        return answer8;
+    }
+
+    public void setAnswer8(final String answer8) {
+        this.answer8 = answer8;
+    }
+
+    public String getAnswer9() {
+        return answer9;
+    }
+
+    public void setAnswer9(final String answer9) {
+        this.answer9 = answer9;
+    }
+
+    public String getAnswer10() {
+        return answer10;
+    }
+
+    public void setAnswer10(final String answer10) {
+        this.answer10 = answer10;
     }
 
     public String getCorrectOptions() {

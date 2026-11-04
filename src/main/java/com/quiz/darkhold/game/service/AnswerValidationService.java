@@ -2,6 +2,7 @@ package com.quiz.darkhold.game.service;
 
 import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.challenge.entity.QuestionType;
+import com.quiz.darkhold.challenge.entity.SortingAnswer;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,6 +48,7 @@ public class AnswerValidationService {
                 ? QuestionType.MULTIPLE_CHOICE : question.getQuestionType();
         return switch (questionType) {
             case MULTIPLE_CHOICE -> validateMultipleChoice(question, userAnswer);
+            case SORTING -> validateSorting(question, userAnswer);
             case TRUE_FALSE -> validateTrueFalse(question, userAnswer);
             case TYPE_ANSWER -> validateTypeAnswer(question, userAnswer);
             case POLL, WORD_CLOUD -> !userAnswer.isBlank();
@@ -137,6 +139,11 @@ public class AnswerValidationService {
             return 1000;
         }
         return question.getPoints();
+    }
+
+    private boolean validateSorting(final QuestionSet question, final String userAnswer) {
+        return SortingAnswer.isValid(userAnswer, question.getSortingAnswers())
+                && SortingAnswer.normalize(userAnswer).equals(SortingAnswer.normalize(question.getCorrectOptions()));
     }
 
     private boolean validateMultipleChoice(final QuestionSet question, final String userAnswer) {

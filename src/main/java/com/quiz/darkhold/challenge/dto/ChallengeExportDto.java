@@ -61,6 +61,18 @@ public class ChallengeExportDto {
         private String answer2;
         private String answer3;
         private String answer4;
+
+        private String answer5;
+
+        private String answer6;
+
+        private String answer7;
+
+        private String answer8;
+
+        private String answer9;
+
+        private String answer10;
         private String correctOptions;
         private QuestionType questionType;
         private Integer timeLimit;
@@ -77,6 +89,12 @@ public class ChallengeExportDto {
             dto.setAnswer2(questionSet.getAnswer2());
             dto.setAnswer3(questionSet.getAnswer3());
             dto.setAnswer4(questionSet.getAnswer4());
+            dto.setAnswer5(questionSet.getAnswer5());
+            dto.setAnswer6(questionSet.getAnswer6());
+            dto.setAnswer7(questionSet.getAnswer7());
+            dto.setAnswer8(questionSet.getAnswer8());
+            dto.setAnswer9(questionSet.getAnswer9());
+            dto.setAnswer10(questionSet.getAnswer10());
             dto.setCorrectOptions(questionSet.getCorrectOptions());
             dto.setQuestionType(questionSet.getQuestionType());
             dto.setTimeLimit(questionSet.getTimeLimit());
@@ -125,6 +143,54 @@ public class ChallengeExportDto {
 
         public void setAnswer4(final String answer4) {
             this.answer4 = answer4;
+        }
+
+        public String getAnswer5() {
+            return answer5;
+        }
+
+        public void setAnswer5(final String answer5) {
+            this.answer5 = answer5;
+        }
+
+        public String getAnswer6() {
+            return answer6;
+        }
+
+        public void setAnswer6(final String answer6) {
+            this.answer6 = answer6;
+        }
+
+        public String getAnswer7() {
+            return answer7;
+        }
+
+        public void setAnswer7(final String answer7) {
+            this.answer7 = answer7;
+        }
+
+        public String getAnswer8() {
+            return answer8;
+        }
+
+        public void setAnswer8(final String answer8) {
+            this.answer8 = answer8;
+        }
+
+        public String getAnswer9() {
+            return answer9;
+        }
+
+        public void setAnswer9(final String answer9) {
+            this.answer9 = answer9;
+        }
+
+        public String getAnswer10() {
+            return answer10;
+        }
+
+        public void setAnswer10(final String answer10) {
+            this.answer10 = answer10;
         }
 
         public String getCorrectOptions() {

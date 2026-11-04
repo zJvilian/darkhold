@@ -53,7 +53,12 @@ function callTimeOut() {
         }
     }
 
-    saveAnswerOnAjax();
+    if (questionType !== 'SORTING' || !sortingSubmitted) saveAnswerOnAjax();
+    if (questionType === 'SORTING') {
+        sortingClosed = true;
+        document.querySelectorAll('#sortingAnswers button').forEach(button => button.disabled = true);
+        document.getElementById('sortingFeedback').textContent = document.getElementById('correctOptions').value;
+    }
 
     // Check if practice mode
     let gameMode = document.getElementById('gameMode') ? document.getElementById('gameMode').value : 'MULTIPLAYER';
@@ -72,7 +77,7 @@ function callTimeOut() {
     }
 
     // Only highlight correct/incorrect for non-POLL questions
-    if (questionType !== 'POLL') {
+    if (questionType !== 'POLL' && questionType !== 'WORD_CLOUD' && questionType !== 'SORTING') {
         highlightGreen();
         highlightRedOnIncorrectSelection();
     }
@@ -527,4 +532,47 @@ function goToNextQuestion() {
     console.log('Practice mode: advancing to next question');
     document.forms[0].action = "/question";
     document.forms[0].submit();
+}
+
+const sortingSelection = new Set();
+let sortingSubmitted = false;
+let sortingClosed = false;
+
+function chooseSortingAnswer(button) {
+    if (isAnswerSelected || (document.getElementById('roles').value.includes('ROLE_MODERATOR')
+            && document.getElementById('gameMode').value !== 'PRACTICE')) return;
+    const value = button.dataset.value;
+    if (sortingSelection.has(value)) sortingSelection.delete(value); else sortingSelection.add(value);
+    const buttons = document.querySelectorAll('#sortingAnswers [data-value]');
+    buttons.forEach(item => {
+        const rank = [...sortingSelection].indexOf(item.dataset.value);
+        item.querySelector('.sorting-rank').textContent = rank < 0 ? '–' : rank + 1;
+        item.setAttribute('aria-pressed', String(rank >= 0));
+    });
+    document.getElementById('submitSorting').disabled = sortingSelection.size !== buttons.length;
+}
+
+async function submitSortingAnswer() {
+    if (isAnswerSelected || document.getElementById('submitSorting').disabled) return;
+    isAnswerSelected = true;
+    sortingSubmitted = true;
+    endTime = Date.now();
+    document.querySelectorAll('#sortingAnswers button').forEach(button => button.disabled = true);
+    try {
+        const response = await fetch('/validate_answer/', {
+            method: 'POST',
+            headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/x-www-form-urlencoded'}),
+            body: new URLSearchParams({userAnswer: [...sortingSelection].join(','),
+                user: document.getElementById('user').value, timeTook: endTime - startTime})
+        });
+        if (!response.ok) throw new Error(LanguageManager.text('live.requestFailed'));
+        document.getElementById('selectedOptions').value = await response.text();
+    } catch (error) {
+        document.getElementById('sortingFeedback').textContent = error.message;
+        if (!sortingClosed) {
+            isAnswerSelected = false;
+            sortingSubmitted = false;
+            document.querySelectorAll('#sortingAnswers button').forEach(button => button.disabled = false);
+        }
+    }
 }

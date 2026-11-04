@@ -15,6 +15,18 @@ public class QuestionResponse {
     private String answer2;
     private String answer3;
     private String answer4;
+
+    private String answer5;
+
+    private String answer6;
+
+    private String answer7;
+
+    private String answer8;
+
+    private String answer9;
+
+    private String answer10;
     private String correctOptions;
     private Integer displayOrder;
     private QuestionType questionType;
@@ -51,10 +63,16 @@ public class QuestionResponse {
         resp.answer2 = qs.getAnswer2();
         resp.answer3 = qs.getAnswer3();
         resp.answer4 = qs.getAnswer4();
-        resp.correctOptions = qs.getCorrectOptions();
+        resp.answer5 = qs.getAnswer5();
+        resp.answer6 = qs.getAnswer6();
+        resp.answer7 = qs.getAnswer7();
+        resp.answer8 = qs.getAnswer8();
+        resp.answer9 = qs.getAnswer9();
+        resp.answer10 = qs.getAnswer10();
     }
 
     private static void mapExtendedFields(final QuestionResponse resp, final QuestionSet qs) {
+        resp.correctOptions = qs.getCorrectOptions();
         resp.displayOrder = qs.getDisplayOrder();
         resp.questionType = qs.getQuestionType();
         resp.timeLimit = qs.getTimeLimit();
@@ -118,6 +136,54 @@ public class QuestionResponse {
 
     public void setAnswer4(final String answer4) {
         this.answer4 = answer4;
+    }
+
+    public String getAnswer5() {
+        return answer5;
+    }
+
+    public void setAnswer5(final String answer5) {
+        this.answer5 = answer5;
+    }
+
+    public String getAnswer6() {
+        return answer6;
+    }
+
+    public void setAnswer6(final String answer6) {
+        this.answer6 = answer6;
+    }
+
+    public String getAnswer7() {
+        return answer7;
+    }
+
+    public void setAnswer7(final String answer7) {
+        this.answer7 = answer7;
+    }
+
+    public String getAnswer8() {
+        return answer8;
+    }
+
+    public void setAnswer8(final String answer8) {
+        this.answer8 = answer8;
+    }
+
+    public String getAnswer9() {
+        return answer9;
+    }
+
+    public void setAnswer9(final String answer9) {
+        this.answer9 = answer9;
+    }
+
+    public String getAnswer10() {
+        return answer10;
+    }
+
+    public void setAnswer10(final String answer10) {
+        this.answer10 = answer10;
     }
 
     public String getCorrectOptions() {

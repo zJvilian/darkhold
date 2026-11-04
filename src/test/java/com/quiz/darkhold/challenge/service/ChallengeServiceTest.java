@@ -84,6 +84,54 @@ class ChallengeServiceTest {
         SecurityContextHolder.setContext(securityContext);
     }
 
+    @Test
+    void spreadsheetImportReadsAnswersThroughJWithoutMovingExistingColumns() throws Exception {
+        byte[] data;
+        try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
+            var row = workbook.createSheet().createRow(0);
+            row.createCell(0).setCellValue("Sort ten");
+            for (int i = 1; i <= 10; i++) {
+                row.createCell(i <= 4 ? i : i + 7).setCellValue("Answer " + i);
+            }
+            row.createCell(5).setCellValue("J,I,H,G,F,E,D,C,B,A");
+            row.createCell(6).setCellValue("SORTING");
+            workbook.write(output);
+            data = output.toByteArray();
+        }
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        challengeService.readProcessAndSaveChallenge(
+                new MockMultipartFile("upload", "sorting.xlsx", "application/octet-stream", data), "Sorting", "");
+        var captured = ArgumentCaptor.forClass(Challenge.class);
+        verify(challengeRepository).save(captured.capture());
+        QuestionSet question = captured.getValue().getQuestionSets().getFirst();
+        for (int i = 1; i <= 10; i++) {
+            assertEquals("Answer " + i, question.getSortingAnswers()[i - 1]);
+        }
+        assertEquals("J,I,H,G,F,E,D,C,B,A", question.getCorrectOptions());
+    }
+
+    @Test
+    void jsonImportRetainsAdditionalSortingAnswers() {
+        var question = new QuestionSet();
+        question.setQuestionType(QuestionType.SORTING);
+        question.setAnswer1("First");
+        question.setAnswer10("Tenth");
+        question.setCorrectOptions("J,A");
+        var dto = new ChallengeExportDto();
+        dto.setQuestions(List.of(ChallengeExportDto.QuestionExportDto.fromEntity(question)));
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(questionSetRepository.saveAll(any())).thenAnswer(inv -> {
+            Iterable<QuestionSet> saved = inv.getArgument(0);
+            var imported = saved.iterator().next();
+            org.junit.jupiter.api.Assertions.assertArrayEquals(
+                    question.getSortingAnswers(), imported.getSortingAnswers());
+            assertEquals("J,A", imported.getCorrectOptions());
+            return List.of(imported);
+        });
+        challengeService.importFromJson(dto);
+        verify(questionSetRepository).saveAll(any());
+    }
+
     @Nested
     @DisplayName("readProcessAndSaveChallenge tests")
     class ReadProcessAndSaveChallengeTests {

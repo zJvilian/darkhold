@@ -1,0 +1,6 @@
+ALTER TABLE question_set ADD COLUMN answer5 VARCHAR(225);
+ALTER TABLE question_set ADD COLUMN answer6 VARCHAR(225);
+ALTER TABLE question_set ADD COLUMN answer7 VARCHAR(225);
+ALTER TABLE question_set ADD COLUMN answer8 VARCHAR(225);
+ALTER TABLE question_set ADD COLUMN answer9 VARCHAR(225);
+ALTER TABLE question_set ADD COLUMN answer10 VARCHAR(225);

@@ -5,6 +5,7 @@ import com.quiz.darkhold.challenge.entity.Challenge;
 import com.quiz.darkhold.challenge.entity.Options;
 import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.challenge.entity.QuestionType;
+import com.quiz.darkhold.challenge.entity.SortingAnswer;
 import com.quiz.darkhold.challenge.exception.ChallengeException;
 import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.challenge.repository.QuestionSetRepository;
@@ -221,6 +222,12 @@ public class ChallengeService {
         dest.setAnswer2(src.getAnswer2());
         dest.setAnswer3(src.getAnswer3());
         dest.setAnswer4(src.getAnswer4());
+        dest.setAnswer5(src.getAnswer5());
+        dest.setAnswer6(src.getAnswer6());
+        dest.setAnswer7(src.getAnswer7());
+        dest.setAnswer8(src.getAnswer8());
+        dest.setAnswer9(src.getAnswer9());
+        dest.setAnswer10(src.getAnswer10());
         dest.setCorrectOptions(src.getCorrectOptions());
         dest.setQuestionType(src.getQuestionType());
         dest.setTimeLimit(src.getTimeLimit());
@@ -236,6 +243,12 @@ public class ChallengeService {
         dest.setAnswer2(src.getAnswer2());
         dest.setAnswer3(src.getAnswer3());
         dest.setAnswer4(src.getAnswer4());
+        dest.setAnswer5(src.getAnswer5());
+        dest.setAnswer6(src.getAnswer6());
+        dest.setAnswer7(src.getAnswer7());
+        dest.setAnswer8(src.getAnswer8());
+        dest.setAnswer9(src.getAnswer9());
+        dest.setAnswer10(src.getAnswer10());
         dest.setCorrectOptions(src.getCorrectOptions());
         dest.setQuestionType(src.getQuestionType());
         dest.setTimeLimit(src.getTimeLimit());
@@ -265,7 +278,8 @@ public class ChallengeService {
         return questionSets;
     }
 
-    private QuestionSet populateQuestionSet(final Row currentRow) {
+    @SuppressWarnings("checkstyle:MethodLength")
+    private QuestionSet populateQuestionSet(final Row currentRow) throws ChallengeException {
         java.util.Iterator<Cell> cellIterator = currentRow.iterator();
         QuestionSet questionSet = new QuestionSet();
         while (cellIterator.hasNext()) {
@@ -283,8 +297,18 @@ public class ChallengeService {
                 case 9 -> questionSet.setAcceptableAnswers(fetchCurrentCellValue(currentCell));
                 case 10 -> questionSet.setImageUrl(fetchCurrentCellValue(currentCell));
                 case 11 -> questionSet.setVideoUrl(fetchCurrentCellValue(currentCell));
+                case 12 -> questionSet.setAnswer5(fetchCurrentCellValue(currentCell));
+                case 13 -> questionSet.setAnswer6(fetchCurrentCellValue(currentCell));
+                case 14 -> questionSet.setAnswer7(fetchCurrentCellValue(currentCell));
+                case 15 -> questionSet.setAnswer8(fetchCurrentCellValue(currentCell));
+                case 16 -> questionSet.setAnswer9(fetchCurrentCellValue(currentCell));
+                case 17 -> questionSet.setAnswer10(fetchCurrentCellValue(currentCell));
                 default -> logger.debug("Extra column at {}", currentCell.getColumnIndex());
             }
+        }
+        if (questionSet.getQuestionType() == QuestionType.SORTING
+                && !SortingAnswer.isValid(questionSet.getCorrectOptions(), questionSet.getSortingAnswers())) {
+            throw new ChallengeException("Sorting requires each answer exactly once in the correct order");
         }
         logger.info("Current questions : {}", questionSet);
         return questionSet;

@@ -71,12 +71,19 @@
                               th:text="${#messages.msg('client.questionType.' + q.questionType.name())}"></span>
                         <span th:if="${q.timeLimit != null}" class="question-time-badge" th:text="${q.timeLimit} + 's'"></span>
                     </div>
-                    <div class="question-answers" th:if="${q.questionType == null or q.questionType.name() == 'MULTIPLE_CHOICE' or q.questionType.name() == 'POLL'}">
+                    <div class="question-answers" th:if="${q.questionType == null or q.questionType.name() == 'MULTIPLE_CHOICE' or q.questionType.name() == 'POLL' or q.questionType.name() == 'SORTING'}">
                         <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'A')} ? 'correct-answer' : ''" th:text="'A: ' + ${q.answer1}"></span> |
                         <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'B')} ? 'correct-answer' : ''" th:text="'B: ' + ${q.answer2}"></span>
                         <span th:if="${q.answer3}"> | <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'C')} ? 'correct-answer' : ''" th:text="'C: ' + ${q.answer3}"></span></span>
                         <span th:if="${q.answer4}"> | <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'D')} ? 'correct-answer' : ''" th:text="'D: ' + ${q.answer4}"></span></span>
+                        <span th:if="${q.answer5}"> | <span th:text="'E: ' + ${q.answer5}"></span></span>
+                        <span th:if="${q.answer6}"> | <span th:text="'F: ' + ${q.answer6}"></span></span>
+                        <span th:if="${q.answer7}"> | <span th:text="'G: ' + ${q.answer7}"></span></span>
+                        <span th:if="${q.answer8}"> | <span th:text="'H: ' + ${q.answer8}"></span></span>
+                        <span th:if="${q.answer9}"> | <span th:text="'I: ' + ${q.answer9}"></span></span>
+                        <span th:if="${q.answer10}"> | <span th:text="'J: ' + ${q.answer10}"></span></span>
                     </div>
+                    <div th:if="${q.questionType != null and q.questionType.name() == 'SORTING'}" th:text="${q.correctOptions}"></div>
                     <div class="question-answers" th:if="${q.questionType != null and q.questionType.name() == 'TRUE_FALSE'}">
                         <span th:class="${#strings.contains(q.correctOptions, 'TRUE')} ? 'correct-answer' : ''" th:text="#{live.true}">True</span> |
                         <span th:class="${#strings.contains(q.correctOptions, 'FALSE')} ? 'correct-answer' : ''" th:text="#{live.false}">False</span>
@@ -128,6 +135,8 @@
                             <option value="TRUE_FALSE" th:text="#{challenge.edit.trueFalse}">True/False</option>
                             <option value="TYPE_ANSWER" th:text="#{challenge.edit.typeAnswer}">Type Answer</option>
                             <option value="POLL" th:text="#{challenge.edit.poll}">Poll (No Correct)</option>
+                            <option value="SORTING" th:text="#{challenge.edit.sorting}">Sorting</option>
+                            <option value="WORD_CLOUD" th:text="#{challenge.edit.wordCloud}">Word Cloud</option>
                         </select>
                     </div>
                     <div class="col-md-4" id="timeLimitCol">
@@ -185,7 +194,37 @@
                             </div>
                         </div>
                     </div>
+                    <div id="sortingExtraAnswers" class="row" style="display:none;">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'E')}">Answer E</label>
+                            <input type="text" id="answer5" class="form-control" maxlength="225">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'F')}">Answer F</label>
+                            <input type="text" id="answer6" class="form-control" maxlength="225">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'G')}">Answer G</label>
+                            <input type="text" id="answer7" class="form-control" maxlength="225">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'H')}">Answer H</label>
+                            <input type="text" id="answer8" class="form-control" maxlength="225">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'I')}">Answer I</label>
+                            <input type="text" id="answer9" class="form-control" maxlength="225">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'J')}">Answer J</label>
+                            <input type="text" id="answer10" class="form-control" maxlength="225">
+                        </div>
+                    </div>
                     <small id="correctAnswerHint" class="text-muted" th:text="#{challenge.edit.correctAnswerHint}">Check the box next to correct answer(s)</small>
+                </div>
+                <div id="sortingSettings" class="mb-3" style="display:none;">
+                    <label for="sortingOrder" class="form-label" th:text="#{client.sorting.authorHint}">Correct order (e.g. C,A,B). Include every answer once.</label>
+                    <input id="sortingOrder" class="form-control" placeholder="C,A,B" maxlength="40">
                 </div>
                 <!-- True/False Answers -->
                 <div id="trueFalseAnswers" style="display:none;">
@@ -324,12 +363,10 @@ function showQuestionModal(id = null) {
     document.getElementById('modalTitle').textContent = id ? LanguageManager.text('client.editor.editQuestion') : LanguageManager.text('client.editor.addQuestion');
     document.getElementById('questionText').value = '';
     document.getElementById('questionType').value = 'MULTIPLE_CHOICE';
+    document.getElementById('sortingOrder').value = '';
     document.getElementById('timeLimit').value = '';
     document.getElementById('points').value = '1000';
-    document.getElementById('answer1').value = '';
-    document.getElementById('answer2').value = '';
-    document.getElementById('answer3').value = '';
-    document.getElementById('answer4').value = '';
+    for (let i = 1; i <= 10; i++) document.getElementById('answer' + i).value = '';
     document.getElementById('typeAnswerCorrect').value = '';
     document.getElementById('acceptableAnswers').value = '';
     document.getElementById('tfTrue').checked = false;
@@ -365,6 +402,10 @@ function onQuestionTypeChange() {
     tfAnswers.style.display = 'none';
     taInput.style.display = 'none';
     wcSettings.style.display = 'none';
+    document.getElementById('sortingSettings').style.display = type === 'SORTING' ? 'block' : 'none';
+    const sortingExtra = document.getElementById('sortingExtraAnswers');
+    if (sortingExtra) sortingExtra.style.display = type === 'SORTING' ? 'flex' : 'none';
+
     // Word Cloud has no point scoring: remove points option from UI and balance columns
     if (type === 'WORD_CLOUD') {
         pointsCol.style.display = 'none';
@@ -393,7 +434,7 @@ function onQuestionTypeChange() {
         tfAnswers.style.display = 'block';
     } else if (type === 'TYPE_ANSWER') {
         taInput.style.display = 'block';
-    } else if (type === 'POLL') {
+    } else if (type === 'POLL' || type === 'SORTING') {
         mcAnswers.style.display = 'block';
         answerCGroup.style.display = 'block';
         answerDGroup.style.display = 'block';
@@ -412,13 +453,11 @@ function editQuestion(id) {
             document.getElementById('questionType').value = q.questionType || 'MULTIPLE_CHOICE';
             document.getElementById('timeLimit').value = q.timeLimit || '';
             document.getElementById('points').value = q.points || 1000;
-            document.getElementById('answer1').value = q.answer1 || '';
-            document.getElementById('answer2').value = q.answer2 || '';
-            document.getElementById('answer3').value = q.answer3 || '';
-            document.getElementById('answer4').value = q.answer4 || '';
+            for (let i = 1; i <= 10; i++) document.getElementById('answer' + i).value = q['answer' + i] || '';
             document.getElementById('acceptableAnswers').value = q.acceptableAnswers || '';
 
             const opts = q.correctOptions || '';
+            document.getElementById('sortingOrder').value = opts;
             const type = q.questionType || 'MULTIPLE_CHOICE';
 
             if (type === 'TRUE_FALSE') {
@@ -457,6 +496,7 @@ function saveQuestion() {
     const type = document.getElementById('questionType').value;
     let correct = '';
     let answer1 = '', answer2 = '', answer3 = '', answer4 = '';
+    let answer5 = '', answer6 = '', answer7 = '', answer8 = '', answer9 = '', answer10 = '';
     let acceptableAnswers = '';
 
     if (type === 'MULTIPLE_CHOICE') {
@@ -477,13 +517,32 @@ function saveQuestion() {
         if (!answer1) { alert(LanguageManager.text('client.editor.enterCorrect')); return; }
         correct = 'A'; // Correct is always answer1 for type answer
         acceptableAnswers = document.getElementById('acceptableAnswers').value;
-    } else if (type === 'POLL') {
+    } else if (type === 'WORD_CLOUD') {
+        correct = document.getElementById('wordCloudQuestionFuzzy').checked ? 'FUZZY' : 'EXACT';
+    } else if (type === 'POLL' || type === 'SORTING') {
         // Poll has no correct answer
         answer1 = document.getElementById('answer1').value;
         answer2 = document.getElementById('answer2').value;
         answer3 = document.getElementById('answer3').value;
         answer4 = document.getElementById('answer4').value;
-        correct = ''; // No correct answer for polls
+        if (type === 'SORTING') {
+            answer5 = document.getElementById('answer5').value;
+            answer6 = document.getElementById('answer6').value;
+            answer7 = document.getElementById('answer7').value;
+            answer8 = document.getElementById('answer8').value;
+            answer9 = document.getElementById('answer9').value;
+            answer10 = document.getElementById('answer10').value;
+        }
+        correct = type === 'SORTING' ? document.getElementById('sortingOrder').value.toUpperCase().replace(/\s/g, '') : '';
+        if (type === 'SORTING') {
+            const allAnswers = [answer1, answer2, answer3, answer4, answer5, answer6, answer7, answer8, answer9, answer10];
+            const available = ['A','B','C','D','E','F','G','H','I','J'].filter((_, i) => (allAnswers[i] || '').trim());
+            const order = correct.split(',');
+            if (available.length < 2 || order.length !== available.length || new Set(order).size !== order.length
+                    || order.some(value => !available.includes(value))) {
+                alert(LanguageManager.text('client.sorting.authorHint')); return;
+            }
+        }
     }
 
     const timeLimitVal = document.getElementById('timeLimit').value;
@@ -498,6 +557,12 @@ function saveQuestion() {
         answer2: answer2,
         answer3: answer3,
         answer4: answer4,
+        answer5: answer5,
+        answer6: answer6,
+        answer7: answer7,
+        answer8: answer8,
+        answer9: answer9,
+        answer10: answer10,
         correctOptions: correct,
         acceptableAnswers: acceptableAnswers,
         imageUrl: window.currentImageUrl || null,

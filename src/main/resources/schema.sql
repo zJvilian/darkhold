@@ -57,6 +57,12 @@ create table question_set (
       answer2        varchar(225),
       answer3        varchar(225),
       answer4        varchar(225),
+      answer5        varchar(225),
+      answer6        varchar(225),
+      answer7        varchar(225),
+      answer8        varchar(225),
+      answer9        varchar(225),
+      answer10        varchar(225),
       correctOptions varchar(225),
       display_order  int default 0,
       challenge_id   bigint

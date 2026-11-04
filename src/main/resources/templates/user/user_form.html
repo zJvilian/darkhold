@@ -17,6 +17,7 @@
         <script type="text/javascript" src="/scripts/language-manager.js"></script>
         <script type="text/javascript" src="/scripts/accessibility.js"></script>
         <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+        <script type="text/javascript" src="/scripts/csrf-manager.js"></script>
         <script type="text/javascript" src="/scripts/user-management-scripts.js"></script>
         <script type="text/javascript" src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
         <script th:replace="~{fragments/i18n :: messages}"></script>
@@ -129,7 +130,7 @@
                         </label>
                         <input type="password" class="admin-form-input" th:field="*{password}"
                                th:required="${userForm.id == null}"
-                               minlength="8" maxlength="20"
+                               minlength="8" maxlength="20" autocomplete="new-password"
                                th:placeholder="#{user.passwordPlaceholder}" placeholder="Enter password (min 8 characters)" />
                         <div class="admin-form-hint" th:if="${userForm.id != null}" th:text="#{user.passwordHint}">
                             Leave blank to keep current password
@@ -240,29 +241,6 @@
 
             function toUsers() {
                 window.location = "/userManagement";
-            }
-
-            function checkEmailUnique(form) {
-                const email = form.email.value;
-                const userId = form.id.value;
-                const xhr = new XMLHttpRequest();
-                xhr.open("POST", "/users/check_email", true);
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                xhr.send("email=" + encodeURIComponent(email) + "&id=" + userId);
-                xhr.onreadystatechange = function () {
-                    if (this.readyState == 4 && this.status == 200) {
-                        // The request has been processed successfully
-                        const response = this.responseText;
-                        if (response == 'OK') {
-                            form.submit();
-                        } else if (response == 'DUPLICATED') {
-                            showModelDialog("Warning", "Email already exists. Please use a different email : " + email);
-                        } else {
-                            showModelDialog("Error", "An error occurred while checking email uniqueness. Please try again later.");
-                        }
-                    }
-                }
-                return false;
             }
 
             function showModelDialog(title, body) {

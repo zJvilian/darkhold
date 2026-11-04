@@ -14,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.ui.Model;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 
@@ -23,6 +25,8 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -131,8 +135,8 @@ class RegistrationControllerTest {
         }
 
         @Test
-        @DisplayName("should return login view when binding result has errors")
-        void testRegistrationPost_WhenBindingResultHasErrors_ShouldReturnLoginView() {
+        @DisplayName("should return registration view when binding result has errors")
+        void testRegistrationPost_WhenBindingResultHasErrors_ShouldReturnRegistrationView() {
             // Given
             when(bindingResult.hasErrors()).thenReturn(true);
             ObjectError error = mock(ObjectError.class);
@@ -142,7 +146,7 @@ class RegistrationControllerTest {
             String result = registrationController.registration(model, user, bindingResult);
 
             // Then
-            assertEquals("login", result);
+            assertEquals("registration", result);
             verify(userService, never()).save(any());
             verify(model, never()).addAttribute(eq("gameinfo"), any());
         }
@@ -357,6 +361,26 @@ class RegistrationControllerTest {
         }
     }
 
+    @Test
+    void concurrentDuplicateEmailReturnsRegistrationForm() {
+        User user = registrationController.user();
+        user.setEmail("duplicate@example.invalid");
+        var errors = new BeanPropertyBindingResult(user, "user");
+        when(userService.findByUsername(user.getEmail())).thenReturn(null, new User());
+        when(userService.save(user)).thenThrow(new DataIntegrityViolationException("duplicate email"));
+        assertEquals("registration", registrationController.registration(model, user, errors));
+        assertTrue(errors.hasFieldErrors("email"));
+    }
+
+    @Test
+    void otherDatabaseFailuresAreNotReportedAsDuplicateEmail() {
+        User user = registrationController.user();
+        var errors = new BeanPropertyBindingResult(user, "user");
+        when(userService.save(user)).thenThrow(new DataIntegrityViolationException("other constraint"));
+        assertThrows(DataIntegrityViolationException.class,
+                () -> registrationController.registration(model, user, errors));
+    }
+
     @Nested
     @DisplayName("Integration scenario tests")
     class IntegrationScenarioTests {
@@ -397,7 +421,7 @@ class RegistrationControllerTest {
             String result = registrationController.registration(model, newUser, bindingResult);
 
             // Then
-            assertEquals("login", result);
+            assertEquals("registration", result);
             verify(userService, never()).listRoles();
             verify(userService, never()).save(any());
         }

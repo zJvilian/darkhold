@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.context.MessageSource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,6 +44,9 @@ class UserControllerTest {
     private UserService userService;
 
     @Mock
+    private MessageSource messages;
+
+    @Mock
     private Model model;
 
     @Mock
@@ -55,7 +59,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
-        userController = new UserController(userService);
+        userController = new UserController(userService, messages);
     }
 
     // ======================== manageUsers Tests ========================
@@ -189,7 +193,7 @@ class UserControllerTest {
     @Test
     void testSaveUser_WithValidImageFile_ShouldUploadAndRedirect() throws IOException {
         // Given
-        var user = createMockUser(null);
+        final var user = createMockUser(null);
         var fileName = "photo.jpg";
         var savedUser = createMockUser(1L);
 
@@ -283,7 +287,7 @@ class UserControllerTest {
     @Test
     void testSaveUser_FileUploadIOException_ShouldPropagateException() {
         // Given
-        var user = createMockUser(null);
+        final var user = createMockUser(null);
         var fileName = "photo.jpg";
         var savedUser = createMockUser(1L);
 

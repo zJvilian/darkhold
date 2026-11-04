@@ -9,6 +9,9 @@ import com.quiz.darkhold.user.service.UserServiceImpl;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.data.domain.Page;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -28,9 +31,11 @@ import java.util.Objects;
 public class UserController {
     private final Logger logger = LogManager.getLogger(UserController.class);
     private final UserService userService;
+    private final MessageSource messages;
 
-    public UserController(final UserService userService) {
+    public UserController(final UserService userService, final MessageSource messages) {
         this.userService = userService;
+        this.messages = messages;
     }
 
     /**
@@ -77,7 +82,7 @@ public class UserController {
     @PostMapping("/users/save")
     public String saveUser(final User user, final RedirectAttributes redirectAttributes,
                            @RequestParam("image") final MultipartFile multipartFile) throws IOException {
-        logger.info("Into the saveUser method, user is {}", user);
+        logger.info("Into the saveUser method, user id is {}", user.getId());
         if (multipartFile != null && !multipartFile.isEmpty()) {
             String fileName = StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename()));
             user.setPhoto(fileName);
@@ -86,7 +91,7 @@ public class UserController {
             FileUploadUtil.cleanDir(uploadDir);
             FileUploadUtil.saveFile(uploadDir, fileName, multipartFile);
         } else {
-            if (user.getPhoto().isEmpty()) {
+            if (!StringUtils.hasText(user.getPhoto())) {
                 user.setPhoto(null);
             }
             userService.save(user);
@@ -111,7 +116,7 @@ public class UserController {
         return "redirect:/userManagement";
     }
 
-    @GetMapping("/user/delete/{id}")
+    @PostMapping("/user/delete/{id}")
     public String deleteUser(@PathVariable final Long id,
                              final RedirectAttributes redirectAttributes) {
         logger.info("Into the deleteUser method, id is {}", id);
@@ -120,11 +125,14 @@ public class UserController {
             redirectAttributes.addFlashAttribute("message", "The user ID " + id + " has been deleted successfully");
         } catch (UserNotFoundException ex) {
             redirectAttributes.addFlashAttribute("message", ex.getMessage());
+        } catch (DataIntegrityViolationException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    messages.getMessage("user.deleteInUse", null, LocaleContextHolder.getLocale()));
         }
         return "redirect:/userManagement";
     }
 
-    @GetMapping("/users/{id}/enabled/{status}")
+    @PostMapping("/users/{id}/enabled/{status}")
     public String updateUserEnabledStatus(@PathVariable final Long id,
                                           @PathVariable("status") final boolean enabled,
                                           final RedirectAttributes redirectAttributes) {

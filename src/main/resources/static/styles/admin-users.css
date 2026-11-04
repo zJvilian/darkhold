@@ -6,6 +6,11 @@
 /* Import admin layout */
 @import url('admin-layout.css');
 
+.admin-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
 /* ----------------------------------------
    Search & Filter Bar
    ---------------------------------------- */

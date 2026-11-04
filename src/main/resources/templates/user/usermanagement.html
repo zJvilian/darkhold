@@ -91,6 +91,7 @@
             <span>[[${message}]]</span>
         </div>
         <!-- Users Table -->
+        <div th:if="${errorMessage != null}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
         <div class="admin-card">
             <div class="admin-table-container">
                 <table class="admin-table">
@@ -136,29 +137,25 @@
                             </td>
                             <td>
                                 <div class="admin-actions">
-                                    <a th:if="${user.enabled == true}"
-                                       class="admin-action-btn admin-action-btn--toggle"
-                                       th:href="@{'/users/' + ${user.id} + '/enabled/false'}"
-                                       th:title="#{user.disableUser}">
-                                        <i class="fas fa-toggle-on"></i>
                                     </a>
-                                    <a th:if="${user.enabled == false}"
-                                       class="admin-action-btn admin-action-btn--toggle"
-                                       th:href="@{'/users/' + ${user.id} + '/enabled/true'}"
-                                       th:title="#{user.enableUser}">
-                                        <i class="fas fa-toggle-off"></i>
-                                    </a>
+                                    <form method="post" th:action="@{/users/{id}/enabled/{enabled}(id=${user.id},enabled=${!user.enabled})}">
+                                        <button type="submit" class="admin-action-btn admin-action-btn--toggle"
+                                                th:title="${user.enabled ? #messages.msg('user.disableUser') : #messages.msg('user.enableUser')}"
+                                                th:aria-label="${user.enabled ? #messages.msg('user.disableUser') : #messages.msg('user.enableUser')}">
+                                            <i th:class="${user.enabled ? 'fas fa-toggle-on' : 'fas fa-toggle-off'}" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
                                     <a class="admin-action-btn admin-action-btn--edit"
                                        th:href="@{'/user/edit/' + ${user.id}}"
                                        th:title="#{user.editUser}">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a class="admin-action-btn admin-action-btn--delete"
-                                       th:href="@{'/user/delete/' + ${user.id}}"
-                                       th:userId="${user.id}"
-                                       th:title="#{user.deleteUser}">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
+                                    <button type="button" class="admin-action-btn admin-action-btn--delete"
+                                            th:data-delete-url="@{'/user/delete/' + ${user.id}}"
+                                            th:data-user-id="${user.id}"
+                                            th:title="#{user.deleteUser}" th:aria-label="#{user.deleteUser}">
+                                        <i class="fas fa-trash" aria-hidden="true"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -210,20 +207,20 @@
     </button>
 
     <!-- Delete Confirmation Modal -->
-    <div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="modalTitle" aria-describedby="confirmText" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalTitle" th:text="#{user.deleteConfirmation}">Delete Confirmation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" th:aria-label="#{button.close}"></button>
                 </div>
                 <div class="modal-body">
                     <p id="confirmText"></p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" th:text="#{user.no}">Cancel</button>
-                    <a class="btn btn-danger" href="" th:text="#{user.yes}">Delete</a>
-                </div>
+                <form id="deleteUserForm" method="post" th:action="@{/userManagement}" class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" th:text="#{button.cancel}">Cancel</button>
+                    <button type="submit" class="btn btn-danger" th:text="#{button.delete}">Delete</button>
+                </form>
             </div>
         </div>
     </div>
@@ -239,18 +236,16 @@
         var deleteLinks = document.querySelectorAll('.admin-action-btn--delete');
 
         deleteLinks.forEach(function(link) {
-            const userId = link.getAttribute('userId');
+            const userId = link.dataset.userId;
             link.addEventListener('click', function(event) {
                 event.preventDefault();
-                document.getElementById('confirmText').innerText = 'Are you sure you want to delete user ID ' + userId + '? This action cannot be undone.';
+                document.getElementById('confirmText').textContent = LanguageManager.text('client.user.deleteConfirm', userId);
 
                 // Open the modal
-                var myModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                var myModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
                 myModal.show();
 
-                // Set the href of the confirmation button to the href of the delete link
-                var confirmButton = document.querySelector('#confirmModal .btn-danger');
-                confirmButton.href = this.href;
+                document.getElementById('deleteUserForm').action = this.dataset.deleteUrl;
             });
         });
     };

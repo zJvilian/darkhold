@@ -137,6 +137,9 @@
                             </td>
                             <td>
                                 <div class="admin-actions">
+                                    <a class="btn btn-outline-primary btn-sm" th:href="@{/admin/users/{id}/quizzes(id=${user.id})}"
+                                       th:title="#{user.viewQuizzes}" th:aria-label="#{user.viewQuizzes}">
+                                        <span th:text="#{user.viewQuizzes}">View quizzes</span>
                                     </a>
                                     <form method="post" th:action="@{/users/{id}/enabled/{enabled}(id=${user.id},enabled=${!user.enabled})}">
                                         <button type="submit" class="admin-action-btn admin-action-btn--toggle"

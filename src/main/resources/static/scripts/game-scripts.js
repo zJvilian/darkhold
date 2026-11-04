@@ -36,9 +36,73 @@ $(document).ready(function () {
     if (typeof A11y !== 'undefined') {
         A11y.setupAnswerNavigation('#answerSpace');
     }
+
+    initQuestionAudio();
 });
 
+let questionAudioTimer = null;
+let questionAudioPlaysDone = 0;
+let questionAudioAutoRepeat = false;
+
+function questionAudioRepeats(duration) {
+    if (!Number.isFinite(duration) || duration <= 0) return 1;
+    if (duration <= 5) return 3;
+    if (duration <= 7) return 2;
+    return 1;
+}
+
+function initQuestionAudio() {
+    const img = document.getElementById('questionImage');
+    const audio = document.getElementById('questionAudio');
+    if (!img || !audio) return;
+    const src = img.getAttribute('src') || '';
+    if (!/\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)(?:$|[?#])/i.test(src)) return;
+    img.style.display = 'none';
+    img.removeAttribute('src');
+    if (!['MULTIPLE_CHOICE', 'TRUE_FALSE', 'TYPE_ANSWER'].includes(getQuestionType())) return;
+    audio.src = src;
+    const playBtn = document.getElementById('playAudioButton');
+    if (playBtn) playBtn.style.display = 'inline-flex';
+    audio.addEventListener('ended', function () {
+        if (!questionAudioAutoRepeat) return;
+        questionAudioPlaysDone++;
+        if (questionAudioPlaysDone < questionAudioRepeats(Number(audio.duration))) {
+            audio.currentTime = 0;
+            const res = audio.play();
+            if (res && typeof res.catch === 'function') res.catch(function () {});
+        } else {
+            questionAudioAutoRepeat = false;
+        }
+    });
+    questionAudioTimer = setTimeout(function () {
+        startQuestionAudio(true);
+    }, 3000);
+}
+
+function startQuestionAudio(autoRepeat) {
+    const audio = document.getElementById('questionAudio');
+    if (!audio || !audio.src) return;
+    if (questionAudioTimer) {
+        clearTimeout(questionAudioTimer);
+        questionAudioTimer = null;
+    }
+    questionAudioAutoRepeat = autoRepeat;
+    questionAudioPlaysDone = 0;
+    audio.currentTime = 0;
+    const res = audio.play();
+    if (res && typeof res.catch === 'function') res.catch(function () {});
+}
+
+function playQuestionAudioManually() {
+    startQuestionAudio(false);
+}
+
 function callTimeOut() {
+    if (questionAudioTimer) {
+        clearTimeout(questionAudioTimer);
+        questionAudioTimer = null;
+    }
+    questionAudioAutoRepeat = false;
     isAnswerSelected = true;
     let questionType = getQuestionType();
 

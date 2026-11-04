@@ -276,10 +276,11 @@
                 <h6 class="mb-3" th:text="#{challenge.edit.mediaOptional}">Media (Optional)</h6>
                 <div class="mb-3">
                     <label class="form-label" th:text="#{challenge.edit.questionImage}">Question Image</label>
-                    <input type="file" id="questionImageInput" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif">
+                    <input type="file" id="questionImageInput" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm">
                     <small class="text-muted" th:text="#{challenge.edit.imageHint}">Max 2MB. JPEG, PNG, or GIF. Will be auto-resized to 1200x800.</small>
                     <div id="imagePreviewContainer" style="margin-top: 10px; display: none;">
                         <img id="imagePreview" style="max-width: 200px; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;">
+                        <audio id="audioPreview" controls style="display: none; vertical-align: middle; max-width: 250px;"></audio>
                         <button type="button" id="removeImageBtn" class="btn btn-sm btn-danger ms-2" onclick="removeImage()" th:text="#{challenge.edit.remove}">Remove</button>
                     </div>
                 </div>
@@ -376,6 +377,7 @@ function showQuestionModal(id = null) {
     // Reset media fields
     document.getElementById('questionImageInput').value = '';
     document.getElementById('videoUrl').value = '';
+    document.getElementById('audioPreview').src = '';
     document.getElementById('imagePreviewContainer').style.display = 'none';
     document.getElementById('videoPreviewContainer').style.display = 'none';
     window.currentImageUrl = null;
@@ -405,6 +407,19 @@ function onQuestionTypeChange() {
     document.getElementById('sortingSettings').style.display = type === 'SORTING' ? 'block' : 'none';
     const sortingExtra = document.getElementById('sortingExtraAnswers');
     if (sortingExtra) sortingExtra.style.display = type === 'SORTING' ? 'flex' : 'none';
+
+    const supportsAudio = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'TYPE_ANSWER'].includes(type);
+    const mediaInput = document.getElementById('questionImageInput');
+    const audioRe = /\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)(?:$|[?#])/i;
+    mediaInput.accept = supportsAudio
+        ? 'image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm'
+        : 'image/jpeg,image/jpg,image/png,image/gif';
+    const selectedFile = mediaInput.files && mediaInput.files[0];
+    if (!supportsAudio && ((selectedFile && ((selectedFile.type && selectedFile.type.startsWith('audio/')) || audioRe.test(selectedFile.name || ''))) || audioRe.test(window.currentImageUrl || ''))) {
+        mediaInput.value = '';
+        window.currentImageUrl = null;
+        document.getElementById('imagePreviewContainer').style.display = 'none';
+    }
 
     // Word Cloud has no point scoring: remove points option from UI and balance columns
     if (type === 'WORD_CLOUD') {
@@ -474,7 +489,10 @@ function editQuestion(id) {
             // Load media
             window.currentImageUrl = q.imageUrl;
             if (q.imageUrl) {
-                document.getElementById('imagePreview').src = q.imageUrl;
+                const isAudio = /\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)(?:$|[?#])/i.test(q.imageUrl);
+                document.getElementById('imagePreview').style.display = isAudio ? 'none' : 'inline';
+                document.getElementById('audioPreview').style.display = isAudio ? 'inline' : 'none';
+                document.getElementById(isAudio ? 'audioPreview' : 'imagePreview').src = q.imageUrl;
                 document.getElementById('imagePreviewContainer').style.display = 'block';
             } else {
                 document.getElementById('imagePreviewContainer').style.display = 'none';
@@ -621,6 +639,13 @@ function updateChallengeInfo() {
 document.getElementById('questionImageInput').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
+        const isAudio = (file.type && file.type.startsWith('audio/'))
+            || /\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)$/i.test(file.name || '');
+        const type = document.getElementById('questionType').value;
+        if (isAudio && !['MULTIPLE_CHOICE', 'TRUE_FALSE', 'TYPE_ANSWER'].includes(type)) {
+            e.target.value = '';
+            return;
+        }
         // Validate file size (2MB)
         if (file.size > 2 * 1024 * 1024) {
             alert(LanguageManager.text('client.editor.imageSize'));
@@ -630,7 +655,9 @@ document.getElementById('questionImageInput').addEventListener('change', functio
         // Show preview
         const reader = new FileReader();
         reader.onload = function(event) {
-            document.getElementById('imagePreview').src = event.target.result;
+            document.getElementById('imagePreview').style.display = isAudio ? 'none' : 'inline';
+            document.getElementById('audioPreview').style.display = isAudio ? 'inline' : 'none';
+            document.getElementById(isAudio ? 'audioPreview' : 'imagePreview').src = event.target.result;
             document.getElementById('imagePreviewContainer').style.display = 'block';
         };
         reader.readAsDataURL(file);
@@ -641,22 +668,19 @@ function removeImage() {
     const editId = document.getElementById('editingQuestionId').value;
     if (editId && window.currentImageUrl) {
         // Delete existing image from server
-        if (confirm('Remove the image from this question?')) {
-            fetch('/api/question/' + editId + '/delete-image', {method: 'DELETE'})
-                .then(r => {
-                    if (r.ok) {
-                        window.currentImageUrl = null;
-                        document.getElementById('imagePreviewContainer').style.display = 'none';
-                        document.getElementById('questionImageInput').value = '';
-                        alert('Image removed successfully');
-                    } else {
-                        alert('Failed to remove image');
-                    }
-                });
+        if (confirm(LanguageManager.text('client.editor.removeImage'))) {
+            RequestClient.json('/api/question/' + editId + '/delete-image', {method: 'DELETE', headers: CsrfManager.addTokenToFetch()})
+                .then(() => {
+                    window.currentImageUrl = null;
+                    document.getElementById('audioPreview').src = '';
+                    document.getElementById('imagePreviewContainer').style.display = 'none';
+                    document.getElementById('questionImageInput').value = '';
+                }).catch(error => alert(error.message));
         }
     } else {
         // Just clear the preview for new questions
         window.currentImageUrl = null;
+        document.getElementById('audioPreview').src = '';
         document.getElementById('imagePreviewContainer').style.display = 'none';
         document.getElementById('questionImageInput').value = '';
     }

@@ -87,11 +87,18 @@
 
             <!-- Question Media -->
             <div th:if="${challenge.QuestionSet.imageUrl != null or challenge.QuestionSet.videoUrl != null}" class="question-media-section">
-                <!-- Question Image -->
+                <!-- Question Image / Audio -->
                 <div th:if="${challenge.QuestionSet.imageUrl != null}" class="question-image-container">
-                    <img th:src="${challenge.QuestionSet.imageUrl}"
+                    <img id="questionImage" th:src="${challenge.QuestionSet.imageUrl}"
                          alt="Question Image"
                          class="question-image">
+                    <audio id="questionAudio" preload="auto" style="display:none;"></audio>
+                    <button th:if="${not #sets.isEmpty(#authentication.getPrincipal().getAuthorities())}"
+                            id="playAudioButton" class="game-control-btn" type="button"
+                            style="display:none;" onclick="playQuestionAudioManually()">
+                        <i class="fas fa-volume-up"></i>
+                        <span th:text="#{live.playAudio}">Play sound</span>
+                    </button>
                 </div>
                 <!-- Question Video -->
                 <div th:if="${challenge.QuestionSet.videoUrl != null}" class="question-video-container">

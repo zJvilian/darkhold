@@ -27,6 +27,22 @@ class QuestionRequestTest {
     }
 
     @Test
+    void audioMediaOnlyAllowedForMultipleChoiceTrueFalseAndTypeAnswer() {
+        var request = new QuestionRequest();
+        request.setImageUrl("/question-images/1/1/audio_1.mp3");
+        for (var allowed : new QuestionType[]{
+                QuestionType.MULTIPLE_CHOICE, QuestionType.TRUE_FALSE, QuestionType.TYPE_ANSWER}) {
+            request.setQuestionType(allowed);
+            assertTrue(request.isAudioMediaValid());
+        }
+        for (var disallowed : new QuestionType[]{
+                QuestionType.POLL, QuestionType.SORTING, QuestionType.WORD_CLOUD}) {
+            request.setQuestionType(disallowed);
+            assertFalse(request.isAudioMediaValid());
+        }
+    }
+
+    @Test
     @DisplayName("Should have correct defaults")
     void defaults() {
         var req = new QuestionRequest();

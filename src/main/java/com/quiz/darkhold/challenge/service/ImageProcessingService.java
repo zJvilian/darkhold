@@ -1,5 +1,6 @@
 package com.quiz.darkhold.challenge.service;
 
+import com.quiz.darkhold.challenge.entity.QuestionType;
 import com.quiz.darkhold.challenge.exception.ImageValidationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,6 +31,8 @@ public class ImageProcessingService {
     private static final List<String> ALLOWED_CONTENT_TYPES = Arrays.asList(
             "image/jpeg", "image/jpg", "image/png", "image/gif");
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
+    private static final List<String> ALLOWED_AUDIO_EXTENSIONS = Arrays.asList(
+            "mp3", "wav", "ogg", "m4a", "aac", "flac", "webm", "opus", "oga");
     private static final long MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
     private static final String QUESTION_IMAGES_URL_PREFIX = "/question-images/";
 
@@ -43,9 +46,47 @@ public class ImageProcessingService {
     private int maxImageHeight;
 
     /**
-     * Validate an image file for type, size, and format.
+     * Check whether a media URL points to an audio file.
      *
-     * @param file the image file to validate
+     * @param url media URL
+     * @return true when the URL has a supported audio extension
+     */
+    public static boolean isAudioUrl(final String url) {
+        return url != null
+                && url.toLowerCase(Locale.ROOT).matches(".*\\.(mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)($|[?#].*)");
+    }
+
+    /**
+     * Check whether the given question type allows attached audio.
+     *
+     * @param questionType the question type
+     * @return true for Multiple Choice, True/False, and Type Answer
+     */
+    public static boolean supportsAudio(final QuestionType questionType) {
+        return questionType == null
+                || questionType == QuestionType.MULTIPLE_CHOICE
+                || questionType == QuestionType.TRUE_FALSE
+                || questionType == QuestionType.TYPE_ANSWER;
+    }
+
+    /**
+     * Check whether an uploaded file is an audio file.
+     *
+     * @param file the uploaded file
+     * @return true if the file is an audio attachment
+     */
+    public boolean isAudioFile(final MultipartFile file) {
+        if (file == null) {
+            return false;
+        }
+        return isValidAudioContentType(file.getContentType())
+                || hasValidAudioExtension(file.getOriginalFilename());
+    }
+
+    /**
+     * Validate an image or audio file for type, size, and format.
+     *
+     * @param file the media file to validate
      * @throws ImageValidationException if validation fails
      */
     @SuppressWarnings("checkstyle:MethodLength")
@@ -61,11 +102,20 @@ public class ImageProcessingService {
                             MAX_FILE_SIZE / (1024 * 1024)));
         }
 
+        if (isAudioFile(file)) {
+            if (!isValidAudioContentType(file.getContentType())
+                    || !hasValidAudioExtension(file.getOriginalFilename())) {
+                throw new ImageValidationException(
+                        "Invalid audio file. Allowed extensions: mp3, wav, ogg, m4a, aac, flac, webm, opus, oga");
+            }
+            return;
+        }
+
         // Check content type
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
             throw new ImageValidationException(
-                    "Invalid file type. Allowed types: JPEG, PNG, GIF");
+                    "Invalid file type. Allowed types: JPEG, PNG, GIF, or audio");
         }
 
         // Check file extension
@@ -149,41 +199,43 @@ public class ImageProcessingService {
     }
 
     /**
-     * Save a question image to the filesystem.
+     * Save a question media file (image or audio) to the filesystem.
      *
      * @param challengeId the challenge ID
      * @param questionId  the question ID
-     * @param file        the image file
-     * @return the relative URL path to the saved image
+     * @param file        the media file
+     * @return the relative URL path to the saved media
      * @throws ImageValidationException if save fails
      */
     @SuppressWarnings("checkstyle:MethodLength")
     public String saveQuestionImage(final Long challengeId, final Long questionId,
                                     final MultipartFile file) throws ImageValidationException {
         validateImage(file);
-        byte[] processedImageBytes = resizeAndCompressImage(file);
+        boolean audio = isAudioFile(file);
 
         // Create directory structure: question-images/{challengeId}/{questionId}/
         Path uploadPath = Paths.get(questionImagesDir, challengeId.toString(), questionId.toString());
         try {
+            byte[] processedBytes = audio ? file.getBytes() : resizeAndCompressImage(file);
             Files.createDirectories(uploadPath);
 
             // Generate filename with timestamp to prevent caching issues
-            String extension = getFileExtension(file.getOriginalFilename());
-            String filename = String.format("image_%d.%s", System.currentTimeMillis(), extension);
+            String extension = getFileExtension(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
+            String prefix = audio ? "audio" : "image";
+            String filename = String.format("%s_%d.%s", prefix, System.currentTimeMillis(), extension);
             Path filePath = uploadPath.resolve(filename);
 
-            // Save processed image
-            Files.write(filePath, processedImageBytes);
+            // Save processed media
+            Files.write(filePath, processedBytes);
 
             // Return relative URL path
             String imageUrl = String.format("/question-images/%d/%d/%s",
                     challengeId, questionId, filename);
-            logger.info("Saved question image: {}", imageUrl);
+            logger.info("Saved question media: {}", imageUrl);
 
             return imageUrl;
         } catch (IOException ioException) {
-            throw new ImageValidationException("Failed to save image: " + ioException.getMessage());
+            throw new ImageValidationException("Failed to save media: " + ioException.getMessage());
         }
     }
 
@@ -253,6 +305,19 @@ public class ImageProcessingService {
             logger.error("Failed to delete challenge images for {}: {}",
                     challengeId, ioException.getMessage());
         }
+    }
+
+    private boolean isValidAudioContentType(final String contentType) {
+        if (contentType == null) {
+            return false;
+        }
+        String normalized = contentType.toLowerCase(Locale.ROOT);
+        return normalized.startsWith("audio/") || "application/ogg".equals(normalized);
+    }
+
+    private boolean hasValidAudioExtension(final String filename) {
+        String extension = getFileExtension(filename);
+        return ALLOWED_AUDIO_EXTENSIONS.contains(extension.toLowerCase(Locale.ROOT));
     }
 
     private boolean hasValidExtension(final String filename) {

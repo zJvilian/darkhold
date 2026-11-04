@@ -2,6 +2,7 @@ package com.quiz.darkhold.challenge.dto;
 
 import com.quiz.darkhold.challenge.entity.QuestionType;
 import com.quiz.darkhold.challenge.entity.SortingAnswer;
+import com.quiz.darkhold.challenge.service.ImageProcessingService;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -72,6 +73,12 @@ public class QuestionRequest {
         return questionType != QuestionType.SORTING
                 || SortingAnswer.isValid(correctOptions, answer1, answer2, answer3, answer4,
                 answer5, answer6, answer7, answer8, answer9, answer10);
+    }
+
+    @AssertTrue(message = "Audio media is only allowed for Multiple Choice, True/False, and Type Answer questions")
+    public boolean isAudioMediaValid() {
+        return !ImageProcessingService.isAudioUrl(imageUrl)
+                || ImageProcessingService.supportsAudio(questionType);
     }
 
     public Long getChallengeId() {

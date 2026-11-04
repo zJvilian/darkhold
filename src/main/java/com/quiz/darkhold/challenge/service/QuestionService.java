@@ -115,10 +115,16 @@ public class QuestionService {
     }
 
     @Transactional
+    @SuppressWarnings("checkstyle:MethodLength")
     public String uploadQuestionImage(final Long questionId, final MultipartFile file) {
         QuestionSet question = getOwnedQuestion(questionId);
         if (question == null) {
             throw new ImageValidationException("Question not found or access denied");
+        }
+        if (imageProcessingService.isAudioFile(file)
+                && !ImageProcessingService.supportsAudio(question.getQuestionType())) {
+            throw new ImageValidationException(
+                    "Audio is only available for Multiple Choice, True/False, and Type Answer questions");
         }
 
         // Delete old image if exists
@@ -231,7 +237,11 @@ public class QuestionService {
         question.setPoints(request.getPoints());
         question.setAcceptableAnswers(request.getAcceptableAnswers());
         question.setVideoUrl(request.getVideoUrl());
-        // Note: imageUrl is NOT updated here - use upload-image endpoint instead
+        if (!ImageProcessingService.supportsAudio(request.getQuestionType())
+                && ImageProcessingService.isAudioUrl(question.getImageUrl())) {
+            imageProcessingService.deleteQuestionImage(question.getImageUrl());
+            question.setImageUrl(null);
+        }
     }
 
     private void updateQuestionOrders(final Long challengeId, final List<Long> questionIds) {

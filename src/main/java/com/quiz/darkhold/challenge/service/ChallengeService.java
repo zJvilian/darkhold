@@ -310,6 +310,11 @@ public class ChallengeService {
                 && !SortingAnswer.isValid(questionSet.getCorrectOptions(), questionSet.getSortingAnswers())) {
             throw new ChallengeException("Sorting requires each answer exactly once in the correct order");
         }
+        if (ImageProcessingService.isAudioUrl(questionSet.getImageUrl())
+                && !ImageProcessingService.supportsAudio(questionSet.getQuestionType())) {
+            throw new ChallengeException(
+                    "Audio is only available for Multiple Choice, True/False, and Type Answer questions");
+        }
         logger.info("Current questions : {}", questionSet);
         return questionSet;
     }

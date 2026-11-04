@@ -3,8 +3,8 @@
 <head>
     <title th:text="#{challenge.create.title}">Create Challenge - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="_csrf" content="${_csrf.token}"/>
-    <meta name="_csrf_header" content="${_csrf.headerName}"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/images/favicon.png">
@@ -14,6 +14,7 @@
     <script type="text/javascript" src="/scripts/audio-manager.js"></script>
     <script type="text/javascript" src="/scripts/language-manager.js"></script>
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
+    <script src="/scripts/csrf-manager.js"></script>
     <script type="text/javascript" src="/scripts/create-challenge-scripts.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
     <script th:replace="~{fragments/i18n :: messages}"></script>
@@ -33,7 +34,7 @@
             <!-- Main Form Card -->
             <div class="create-challenge-card">
                 <form method="POST" id="fileUploadForm" enctype="multipart/form-data" class="create-challenge-body">
-                    <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
 
                     <!-- Section 1: Basic Information -->
                     <section class="form-section">

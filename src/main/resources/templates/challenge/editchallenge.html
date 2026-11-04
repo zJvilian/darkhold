@@ -3,6 +3,8 @@
 <head>
     <title th:text="#{challenge.edit.title}">Edit Challenge - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <script src="/scripts/csrf-manager.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="manifest" href="/manifest.json">
     <link rel="shortcut icon" href="/images/favicon.png">
@@ -279,7 +281,7 @@ new Sortable(document.getElementById('questionList'), {
         const ids = [...document.querySelectorAll('.question-card')].map(el => parseInt(el.dataset.id));
         RequestClient.json('/api/question/reorder', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/json'}),
             body: JSON.stringify({challengeId: challengeId, questionIds: ids})
         }).catch(error => alert(error.message));
         updateNumbers();
@@ -459,7 +461,7 @@ function saveQuestion() {
     // First, save the question
     RequestClient.json(url, {
         method: method,
-        headers: {'Content-Type': 'application/json'},
+        headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/json'}),
         body: JSON.stringify(data)
     }).then(savedQuestion => {
         if (!savedQuestion) return;
@@ -471,6 +473,7 @@ function saveQuestion() {
             formData.append('image', imageInput.files[0]);
             return RequestClient.json('/api/question/' + savedQuestion.id + '/upload-image', {
                 method: 'POST',
+                headers: CsrfManager.addTokenToFetch(),
                 body: formData
             }).then(() => location.reload());
         } else {
@@ -480,14 +483,14 @@ function saveQuestion() {
 }
 
 function deleteQuestion(id) {
-    if (!confirm('Delete this question?')) return;
-    fetch('/api/question/' + id, {method: 'DELETE'})
-        .then(r => r.ok ? location.reload() : alert('Error deleting question'));
+    if (!confirm(LanguageManager.text('client.editor.deleteConfirm'))) return;
+    RequestClient.json('/api/question/' + id, {method: 'DELETE', headers: CsrfManager.addTokenToFetch()})
+        .then(() => location.reload()).catch(error => alert(error.message));
 }
 
 function duplicateQuestion(id) {
-    fetch('/api/question/' + id + '/duplicate', {method: 'POST'})
-        .then(r => r.ok ? location.reload() : alert('Error duplicating question'));
+    RequestClient.json('/api/question/' + id + '/duplicate', {method: 'POST', headers: CsrfManager.addTokenToFetch()})
+        .then(() => location.reload()).catch(error => alert(error.message));
 }
 
 function updateChallengeInfo() {

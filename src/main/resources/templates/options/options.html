@@ -20,8 +20,7 @@
     <div th:insert="~{navbar :: navbar}"></div>
 
     <!-- Hidden form for POST actions -->
-    <form id="optionsForm" action="#" method="post" style="display:none;">
-        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+    <form id="optionsForm" th:action="@{/viewChallenge}" method="post" style="display:none;">
     </form>
 
     <main class="options-main">

@@ -159,7 +159,7 @@ function assignPlayerToTeam(username, teamName) {
     let pin = document.getElementById('quizPin').value;
     fetch('/team/assign', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: CsrfManager.addTokenToFetch({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ pin: pin, username: username, teamName: teamName })
     })
     .then(response => {
@@ -213,7 +213,7 @@ function autoAssignAllPlayers() {
         let teamName = teamData[teamIndex].name;
         return fetch('/team/assign', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: CsrfManager.addTokenToFetch({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ pin: pin, username: player, teamName: teamName })
         }).then(response => {
             if (!response.ok) throw new Error(LanguageManager.text('client.request.failed'));

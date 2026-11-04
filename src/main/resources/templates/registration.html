@@ -32,7 +32,9 @@
             </div>
             <!-- Registration Form -->
             <form th:action="@{/registration}" method="post" th:object="${user}" class="login-form">
-                <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+                <div class="login-error" role="alert" th:if="${#fields.hasAnyErrors()}">
+                    <p th:each="error : ${#fields.allErrors()}" th:text="${error}">Please check your details.</p>
+                </div>
 
                 <!-- First Name -->
                 <div class="form-group">

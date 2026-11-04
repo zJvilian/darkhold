@@ -8,7 +8,7 @@ function uploadPDF() {
 
     // Validate title
     if (!title) {
-        resultDiv.innerHTML = '<div class="alert alert-danger">Please enter a challenge title.</div>';
+        showChallengeMessage(resultDiv, LanguageManager.text('client.create.titleRequired'), 'danger');
         return;
     }
 
@@ -40,6 +40,8 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/upload_challenge', true);
+    xhr.responseType = 'json';
+    CsrfManager.addTokenToXHR(xhr);
 
     // Track upload progress
     xhr.upload.onprogress = function (e) {
@@ -52,19 +54,14 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
     };
 
     xhr.onload = function () {
-        if (xhr.status === 200) {
-            const challengeResponse = JSON.parse(xhr.responseText);
-            progressDiv.style.display = "none";
-            uploadButton.style.display = "none";
-
-            // Show success message
-            resultDiv.innerHTML = '<div class="alert alert-success">' + challengeResponse.message + '</div>';
-
-            // Add "View Challenge" button
-            viewChallenge(resultDiv, challengeResponse.challengeId);
-        } else {
-            progressDiv.style.display = "none";
-            resultDiv.innerHTML = '<div class="alert alert-danger">An error occurred while uploading the file.</div>';
+        progressDiv.style.display = 'none';
+        try {
+            const data = validateChallengeResponse(xhr.status, xhr.response);
+            uploadButton.style.display = 'none';
+            showChallengeMessage(resultDiv, LanguageManager.text('client.create.success'), 'success');
+            viewChallenge(resultDiv, data.challengeId);
+        } catch (error) {
+            showChallengeMessage(resultDiv, error.message, 'danger');
             uploadButton.disabled = false;
             uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
         }
@@ -72,7 +69,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
 
     xhr.onerror = function () {
         progressDiv.style.display = "none";
-        resultDiv.innerHTML = '<div class="alert alert-danger">Network error occurred.</div>';
+        showChallengeMessage(resultDiv, LanguageManager.text('client.create.network'), 'danger');
         uploadButton.disabled = false;
         uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
     };
@@ -88,33 +85,48 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
     formData.append('title', title);
     formData.append('description', description);
 
-    fetch('/save_challenge', {
+    return fetch('/save_challenge', {
         method: 'POST',
+        headers: CsrfManager.addTokenToFetch(),
         body: formData
     })
-    .then(response => response.json())
+    .then(async response => {
+        const isJson = (response.headers.get('content-type') || '').includes('application/json');
+        const data = isJson ? await response.json().catch(() => null) : null;
+        return validateChallengeResponse(response.status, data, response.redirected);
+    })
     .then(data => {
-        if (data.challengeId && data.challengeId > 0) {
-            resultDiv.innerHTML = '<div class="alert alert-success">' + data.message + '</div>';
-            uploadButton.style.display = 'none';
+        showChallengeMessage(resultDiv, LanguageManager.text('client.create.success'), 'success');
+        uploadButton.style.display = 'none';
 
-            // Add "Add Questions" button
-            const editBtn = document.createElement('a');
-            editBtn.href = '/edit_challenge/' + data.challengeId;
-            editBtn.className = 'btn btn-success';
-            editBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Add Questions';
-            resultDiv.appendChild(editBtn);
-        } else {
-            resultDiv.innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
-            uploadButton.disabled = false;
-            uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> Create Challenge';
-        }
+        const editBtn = document.createElement('a');
+        editBtn.href = '/edit_challenge/' + data.challengeId;
+        editBtn.className = 'btn btn-success';
+        editBtn.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.add');
+        resultDiv.appendChild(editBtn);
     })
     .catch(error => {
-        resultDiv.innerHTML = '<div class="alert alert-danger">An error occurred: ' + error.message + '</div>';
+        showChallengeMessage(resultDiv, error.message, 'danger');
         uploadButton.disabled = false;
         uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
     });
+}
+
+function validateChallengeResponse(status, data, redirected = false) {
+    if (redirected || status === 401 || status === 403) {
+        throw new Error(LanguageManager.text('client.create.expired'));
+    }
+    if (status < 200 || status >= 300 || !data || !(data.challengeId > 0)) {
+        throw new Error(data?.message || LanguageManager.text('client.create.failed'));
+    }
+    return data;
+}
+
+function showChallengeMessage(resultDiv, message, type) {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-' + type;
+    alert.textContent = message;
+    resultDiv.replaceChildren(alert);
 }
 
 function update_progress(e) {

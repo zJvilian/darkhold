@@ -12,7 +12,16 @@
     padding: 2rem;
 }
 
+.error-brand {
+    display: inline-block;
+    color: var(--color-text-primary);
+    font-weight: 700;
+    text-decoration: none;
+    margin-bottom: 2rem;
+}
+
 .error-container {
+    width: 100%;
     max-width: 900px;
     margin: 0 auto;
     text-align: center;

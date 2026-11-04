@@ -186,3 +186,33 @@ function registerServiceWorker() {
 
 // Register service worker
 registerServiceWorker();
+
+/** Parse API responses without exposing HTML/login pages as JSON syntax errors. */
+const RequestClient = {
+    async json(url, options = {}) {
+        const headers = {Accept: 'application/json', ...options.headers};
+        if (!['GET', 'HEAD'].includes((options.method || 'GET').toUpperCase()) && typeof CsrfManager !== 'undefined') {
+            CsrfManager.addTokenToFetch(headers);
+        }
+        let response;
+        try {
+            response = await fetch(url, {...options, headers});
+        } catch (error) {
+            throw new Error(LanguageManager.text('client.request.network'));
+        }
+        const isJson = (response.headers.get('content-type') || '').includes('json');
+        const data = isJson ? await response.json().catch(() => null) : null;
+        if (response.redirected || response.status === 401) {
+            throw new Error(LanguageManager.text('client.request.login'));
+        }
+        if (!response.ok) {
+            const key = {403: 'forbidden', 404: 'missing', 409: 'conflict', 413: 'large'}[response.status];
+            throw new Error(key ? LanguageManager.text('client.request.' + key)
+                : data?.message || LanguageManager.text('client.request.failed'));
+        }
+        if (response.status !== 204 && data === null) {
+            throw new Error(LanguageManager.text('client.request.invalidResponse'));
+        }
+        return data;
+    }
+};

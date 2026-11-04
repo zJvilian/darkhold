@@ -22,7 +22,7 @@
 
     <main class="view-challenges-page">
         <div class="view-challenges-container">
-            <form action="#" th:object="${challengeInfo}" method="post">
+            <form id="challengeListForm" th:action="@{/preconfigure}" th:object="${challengeInfo}" method="post">
                 <input type="hidden" th:name="challenges" id="challenges"/>
 
                 <!-- Page Header -->

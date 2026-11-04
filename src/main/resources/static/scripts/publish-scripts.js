@@ -82,8 +82,7 @@ function connect() {
 
 function loadTeamsAndRender() {
     let pin = document.getElementById('quizPin').value;
-    fetch('/team/list/' + pin)
-        .then(response => response.json())
+    RequestClient.json('/team/list/' + pin)
         .then(teams => {
             teamData = teams;
             renderTeamView();
@@ -167,10 +166,10 @@ function assignPlayerToTeam(username, teamName) {
         if (response.ok) {
             loadTeamsAndRender();
         } else {
-            alert('Failed to assign player to team');
+            alert(LanguageManager.text('client.request.failed'));
         }
     })
-    .catch(err => console.error('Error assigning player:', err));
+    .catch(() => alert(LanguageManager.text('client.request.network')));
 }
 
 function removeFromTeam(username) {
@@ -216,12 +215,14 @@ function autoAssignAllPlayers() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pin: pin, username: player, teamName: teamName })
+        }).then(response => {
+            if (!response.ok) throw new Error(LanguageManager.text('client.request.failed'));
         });
     });
 
     Promise.all(promises)
         .then(() => loadTeamsAndRender())
-        .catch(err => console.error('Error auto-assigning:', err));
+        .catch(error => alert(error.message));
 }
 
 function escapeHtml(text) {

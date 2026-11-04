@@ -1,44 +1,28 @@
-<!DOCTYPE HTML>
-<html lang="en">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Page not found" />
-    <title>Error - Darkhold</title>
-    <link rel="shortcut icon" href="/images/favicon.png">
-    <link rel="manifest" href="/manifest.json">
-    <link href="/styles/darkhold-styles.css" rel="stylesheet" />
-    <link href="/styles/error.css" rel="stylesheet" />
-    <script type="text/javascript" src="/scripts/theme-manager.js"></script>
-    <script type="text/javascript" src="/scripts/audio-manager.js"></script>
-    <script type="text/javascript" src="/scripts/language-manager.js"></script>
-    <script type="text/javascript" src="/scripts/accessibility.js"></script>
-    <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title th:text="#{error.pageTitle}">Something went wrong — Darkhold</title>
+    <link rel="icon" href="/images/favicon.png">
+    <link rel="stylesheet" href="/styles/darkhold-styles.css">
+    <link rel="stylesheet" href="/styles/error.css">
+    <script src="/scripts/theme-manager.js"></script>
 </head>
 <body class="error-page">
-    <div th:insert="~{navbar :: navbar}"></div>
-
-    <div class="error-container">
-        <div class="error-content">
-            <img src="/images/404.png" alt="404 Error" class="error-illustration" />
-            <h1 class="error-code">404</h1>
-            <h2 class="error-title">Page Not Found</h2>
-            <p class="error-message">
-                We can't find the page you're looking for. You can either return to the previous page, visit our homepage, or contact our support team.
-            </p>
+    <main class="error-container">
+        <div class="error-content" role="alert">
+            <a class="error-brand" href="/">✦ Darkhold</a>
+            <p class="error-code" th:text="${status}">500</p>
+            <h1 class="error-title" th:text="${#messages.msg('error.' + errorMessageStatus + '.title')}">Something went wrong</h1>
+            <p class="error-message" th:text="${#messages.msg('error.' + errorMessageStatus + '.message')}">Please try again.</p>
             <div class="error-actions">
-                <a href="javascript:history.back()" class="error-btn error-btn--secondary">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Go Back</span>
-                </a>
-                <a href="/" class="error-btn error-btn--primary">
-                    <i class="fas fa-home"></i>
-                    <span>Visit Homepage</span>
-                </a>
+                <button type="button" onclick="history.back()" class="error-btn error-btn--secondary" th:text="#{error.back}">Go back</button>
+                <a href="/login" class="error-btn error-btn--primary" th:if="${status == 401 || status == 403}" th:text="#{login.signIn}">Sign in</a>
+                <a href="/" class="error-btn error-btn--primary" th:unless="${status == 401 || status == 403}" th:text="#{error.home}">Go to homepage</a>
             </div>
         </div>
-    </div>
-
-    <script type="text/javascript" src="/scripts/core/bootstrap-5.3.1/bootstrap.min.js"></script>
+    </main>
 </body>
 </html>

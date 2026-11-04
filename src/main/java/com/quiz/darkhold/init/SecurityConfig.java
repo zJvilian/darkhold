@@ -14,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 @EnableWebSecurity
@@ -45,6 +46,8 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/h2-console/**")
         );
 
+        http.authorizeHttpRequests(auth -> auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll());
+
         for (String paths : matchingPaths()) {
             http.authorizeHttpRequests(auth -> auth
                     .requestMatchers(paths).permitAll()
@@ -64,9 +67,9 @@ public class SecurityConfig {
     }
 
     private String[] matchingPaths() {
-        return new String[]{"/", "/logmein",
-                "/home", "/resources/**",
-                "/registration", "/images/**",
+        return new String[]{"/", "/logmein", "/error",
+                "/home", "/resources/**", "/actuator/health",
+                "/registration", "/images/**", "/question-images/**",
                 "/scripts/**", "/styles/**",
                 "/scripts/core/**", "/styles/core/*", "/styles/webfonts/**",
                 "/fonts/**", "/favicon.ico",

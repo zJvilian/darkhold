@@ -1,6 +1,6 @@
 package com.quiz.darkhold.challenge.exception;
 
-public class ImageValidationException extends RuntimeException {
+public class ImageValidationException extends IllegalArgumentException {
     private static final long serialVersionUID = 1L;
     private final String errorMessage;
 

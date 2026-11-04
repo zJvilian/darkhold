@@ -75,8 +75,7 @@ function connect() {
 
 function loadTeamsAndRender() {
     let pin = document.getElementById('quizPin').value;
-    fetch('/team/list/' + pin)
-        .then(response => response.json())
+    RequestClient.json('/team/list/' + pin)
         .then(teams => {
             teamData = teams;
             renderTeamView();

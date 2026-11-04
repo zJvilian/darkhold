@@ -1,6 +1,6 @@
 package com.quiz.darkhold.team.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.quiz.darkhold.team.model.TeamConfig;
 import com.quiz.darkhold.team.model.TeamInfo;
 import com.quiz.darkhold.team.service.TeamService;

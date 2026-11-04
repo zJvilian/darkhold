@@ -1,6 +1,6 @@
 package com.quiz.darkhold.challenge.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.quiz.darkhold.challenge.dto.ChallengeExportDto;
 import com.quiz.darkhold.challenge.exception.ChallengeException;
 import com.quiz.darkhold.challenge.service.ChallengeService;
@@ -220,7 +220,7 @@ public class ChallengeController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                     .contentType(MediaType.APPLICATION_JSON).body(json);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException jsonException) {
+        } catch (tools.jackson.core.JacksonException jsonException) {
             logger.error("Error exporting challenge: {}", jsonException.getMessage());
             return ResponseEntity.internalServerError().build();
         }

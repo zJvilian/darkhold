@@ -77,7 +77,7 @@ Please head over to [Wiki](https://github.com/surajcm/darkhold/wiki/Screenshots)
 - Accessibility features (ARIA, keyboard navigation)
 
 ### 🔧 Technical
-- Spring Boot 4.0 with WebSocket/STOMP for real-time gameplay
+- Spring Boot 4.1 with WebSocket/STOMP for real-time gameplay
 - PostgreSQL or H2 database support
 - Docker & Docker Compose ready
 - Comprehensive test suite (427 tests, 51% coverage)

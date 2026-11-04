@@ -1,204 +1,22 @@
 /**
  * Darkhold Login Page
- * Modern split-panel layout
  */
 
 /* ============================================
-   PAGE LAYOUT - Split Panel
+   PAGE LAYOUT
    ============================================ */
 .login-page {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     background: var(--color-bg-primary);
 }
 
 /* ============================================
-   LEFT PANEL - Branding & Features
-   ============================================ */
-.login-panel-left {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-    background: linear-gradient(160deg, #0a1628 0%, #0d2847 40%, #0b3d6e 100%);
-    color: white;
-    overflow: hidden;
-}
-
-[data-theme="dark"] .login-panel-left {
-    background: linear-gradient(160deg, #0a0f1a 0%, #0d1f35 40%, #0a2a4d 100%);
-}
-
-.panel-left-content {
-    position: relative;
-    z-index: 1;
-    max-width: 440px;
-    width: 100%;
-}
-
-/* Decorative glows */
-.panel-left-decor {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}
-
-.panel-glow {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(100px);
-}
-
-.panel-glow--1 {
-    width: 400px;
-    height: 400px;
-    top: -100px;
-    right: -100px;
-    background: rgba(65, 131, 215, 0.15);
-}
-
-.panel-glow--2 {
-    width: 300px;
-    height: 300px;
-    bottom: -80px;
-    left: -60px;
-    background: rgba(96, 199, 193, 0.12);
-}
-
-/* Brand */
-.panel-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-}
-
-.panel-logo-icon {
-    width: 44px;
-    height: 44px;
-    color: rgba(255, 255, 255, 0.9);
-}
-
-.panel-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
-    margin: 0;
-}
-
-/* Headline */
-.panel-headline {
-    font-size: 1.75rem;
-    font-weight: 700;
-    line-height: 1.3;
-    color: white;
-    margin: 0 0 2.5rem;
-    letter-spacing: -0.01em;
-}
-
-/* Feature list */
-.panel-features {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    margin-bottom: 2.5rem;
-}
-
-.panel-feature {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.85rem;
-}
-
-.panel-feature-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    color: white;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    flex-shrink: 0;
-    margin-top: 0.1rem;
-}
-
-.panel-feature-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.panel-feature-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: white;
-}
-
-.panel-feature-desc {
-    font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.55);
-    line-height: 1.4;
-}
-
-/* Testimonial */
-.panel-testimonial {
-    padding-top: 2rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.panel-quote {
-    font-size: 0.95rem;
-    font-style: italic;
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
-    margin: 0 0 1rem;
-    padding: 0;
-    border: none;
-}
-
-.panel-quote-author {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.panel-quote-avatar {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: white;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 50%;
-}
-
-.panel-quote-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-quote-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: white;
-}
-
-.panel-quote-role {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-/* ============================================
-   RIGHT PANEL - Login Form
+   LOGIN PANEL
    ============================================ */
 .login-panel-right {
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -246,9 +64,9 @@
     color: var(--color-text-primary);
 }
 
-/* Mobile Brand */
+/* Brand Header */
 .login-brand-mobile {
-    display: none;
+    display: flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 2rem;
@@ -612,25 +430,6 @@
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
-
-/* Tablet - stack panels */
-@media (max-width: 960px) {
-    .login-page {
-        grid-template-columns: 1fr;
-    }
-
-    .login-panel-left {
-        display: none;
-    }
-
-    .login-panel-right {
-        min-height: 100vh;
-    }
-
-    .login-brand-mobile {
-        display: flex;
-    }
-}
 
 /* Mobile */
 @media (max-width: 480px) {

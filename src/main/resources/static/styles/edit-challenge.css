@@ -293,7 +293,7 @@
 
 .form-control,
 .form-select {
-    border: 1px solid var(--color-border-light);
+    border: 1px solid var(--color-input-border);
     border-radius: var(--radius-md);
     padding: 0.75rem 1rem;
     font-size: 0.95rem;
@@ -315,6 +315,15 @@
 
 .input-group .form-control {
     border-left: none;
+}
+
+.modal .form-control::placeholder {
+    color: var(--color-text-secondary);
+    opacity: 1;
+}
+
+.modal .form-check-input {
+    border-color: var(--color-text-secondary);
 }
 
 /* Media Preview */

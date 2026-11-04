@@ -302,7 +302,7 @@ ul.flip {
     font-size: 15px;
 }
 
-.bg-game a {
+.bg-game a:not([class*="btn"]) {
     text-decoration: none;
     color: var(--color-primary);
     border-bottom: 2px solid var(--color-primary);

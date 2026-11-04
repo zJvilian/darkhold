@@ -14,6 +14,43 @@
 @import url('game-components.css');
 @import url('admin-components.css');
 
+/* Keep Bootstrap's surfaces and controls in sync with the app theme. */
+.modal {
+    --bs-modal-bg: var(--color-bg-primary);
+    --bs-modal-color: var(--color-text-primary);
+    --bs-modal-border-color: var(--color-border-light);
+    --bs-modal-header-border-color: var(--color-border-light);
+    --bs-modal-footer-border-color: var(--color-border-light);
+    --bs-body-bg: var(--color-input-bg);
+    --bs-body-color: var(--color-input-text);
+    --bs-secondary-color: var(--color-text-secondary);
+    --bs-secondary-bg: var(--color-bg-secondary);
+    --bs-tertiary-bg: var(--color-bg-secondary);
+    --bs-border-color: var(--color-input-border);
+}
+
+[data-theme="dark"] .modal {
+    color-scheme: dark;
+}
+
+[data-theme="dark"] .modal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+[data-theme="dark"] .modal .form-select {
+    --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23f0f0f0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+.modal .form-control:disabled,
+.modal .form-select:disabled,
+[data-theme="dark"] .modal .form-control:disabled,
+[data-theme="dark"] .modal .form-select:disabled {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border-light);
+    opacity: 0.7;
+}
+
 body {
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);

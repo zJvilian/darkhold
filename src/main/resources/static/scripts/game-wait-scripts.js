@@ -242,7 +242,7 @@ function escapeHtmlPlayer(text) {
     if (!text) return '';
     let div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;');
 }
 
 function showGreeting(message) {
@@ -280,15 +280,16 @@ function buildParticipantRow(username, isModerator, moderator) {
     // Add kick button for moderator (can't kick self)
     if (isModerator && username !== moderator) {
         html += ' <button type="button" class="btn btn-sm btn-danger ms-2" '
-            + 'onclick="kickPlayer(\'' + escapeHtml(username) + '\')">Kick</button>';
+            + 'data-username="' + escapeHtml(username) + '" '
+            + 'onclick="kickPlayer(this.dataset.username)">Kick</button>';
     }
     return html;
 }
 
 function escapeHtml(text) {
     let div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    div.textContent = text == null ? '' : text;
+    return div.innerHTML.replace(/"/g, '&quot;');
 }
 
 function kickPlayer(username) {

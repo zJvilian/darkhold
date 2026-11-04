@@ -8,7 +8,9 @@ import com.quiz.darkhold.init.GameConfig;
 import com.quiz.darkhold.preview.model.PreviewInfo;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGame;
+import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
@@ -40,9 +42,7 @@ public class PreviewService {
      */
     public PreviewInfo fetchQuestions(final String challengeId) {
         PreviewInfo previewInfo = new PreviewInfo();
-        Long challengeOne = Long.valueOf(challengeId);
-        com.quiz.darkhold.challenge.entity.Challenge challenge = challengeRepository.findById(challengeOne)
-                .orElseThrow(() -> new IllegalArgumentException("Challenge not found: " + challengeId));
+        com.quiz.darkhold.challenge.entity.Challenge challenge = ownedChallenge(challengeId);
         // convert challenge to type ArrayDeque<QuestionSet>
         ArrayDeque<com.quiz.darkhold.challenge.entity.QuestionSet> dequeChallenge =
                 new ArrayDeque<>(challenge.getQuestionSets());
@@ -50,6 +50,31 @@ public class PreviewService {
         previewInfo.setChallengeName(challenge.getTitle());
         previewInfo.setChallengeId(challengeId);
         return previewInfo;
+    }
+
+    /**
+     * Load a challenge only when the current user owns it; anything else looks like a missing challenge.
+     *
+     * @param challengeId challenge id
+     * @return the owned challenge
+     */
+    private com.quiz.darkhold.challenge.entity.Challenge ownedChallenge(final String challengeId) {
+        com.quiz.darkhold.challenge.entity.Challenge challenge = challengeRepository
+                .findById(Long.valueOf(challengeId))
+                .orElseThrow(() -> new IllegalArgumentException("Challenge not found: " + challengeId));
+        if (challenge.getOwner() == null || !challenge.getOwner().getEmail().equals(currentUserEmail())) {
+            throw new IllegalArgumentException("Challenge not found: " + challengeId);
+        }
+        return challenge;
+    }
+
+    private String currentUserEmail() {
+        org.springframework.security.core.Authentication auth =
+                SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof DarkholdUserDetails details) {
+            return details.getEmail();
+        }
+        return null;
     }
 
     /**
@@ -79,6 +104,7 @@ public class PreviewService {
      * @return game info
      */
     public PublishInfo generateQuizPin(final String challengeId, final String currentUser) {
+        ownedChallenge(challengeId);
         String uniquePin = generateUniquePin();
         Game game = createAndSaveGame(uniquePin, challengeId, currentUser, false);
         return createPublishInfo(game, currentUser);
@@ -94,6 +120,7 @@ public class PreviewService {
      */
     public PublishInfo generateQuizPin(final String challengeId, final String currentUser,
                                        final boolean teamMode) {
+        ownedChallenge(challengeId);
         String uniquePin = generateUniquePin();
         Game game = createAndSaveGame(uniquePin, challengeId, currentUser, teamMode);
         return createPublishInfo(game, currentUser);

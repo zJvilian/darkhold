@@ -215,6 +215,7 @@ class ChallengeServiceTest {
             Long challengeId = 1L;
             Challenge challenge = new Challenge();
             challenge.setId(challengeId);
+            challenge.setChallengeOwner(testUserId);
             challenge.setQuestionSets(new ArrayList<>());
 
             when(challengeRepository.findById(challengeId)).thenReturn(Optional.of(challenge));
@@ -225,6 +226,22 @@ class ChallengeServiceTest {
             verify(challengeRepository).findById(challengeId);
             verify(questionSetRepository).deleteAll(challenge.getQuestionSets());
             verify(challengeRepository).delete(challenge);
+        }
+
+        @Test
+        @DisplayName("Should refuse to delete a challenge owned by another user")
+        void shouldRefuseToDeleteAnotherUsersChallenge() {
+            Long challengeId = 4L;
+            Challenge challenge = new Challenge();
+            challenge.setId(challengeId);
+            challenge.setChallengeOwner(testUserId + 1);
+            challenge.setQuestionSets(new ArrayList<>());
+
+            when(challengeRepository.findById(challengeId)).thenReturn(Optional.of(challenge));
+
+            assertEquals(false, challengeService.deleteChallenge(challengeId));
+            verify(questionSetRepository, never()).deleteAll(any());
+            verify(challengeRepository, never()).delete(any());
         }
 
         @Test
@@ -247,6 +264,7 @@ class ChallengeServiceTest {
             Long challengeId = 2L;
             Challenge challenge = new Challenge();
             challenge.setId(challengeId);
+            challenge.setChallengeOwner(testUserId);
 
             QuestionSet qs1 = new QuestionSet();
             QuestionSet qs2 = new QuestionSet();
@@ -281,6 +299,7 @@ class ChallengeServiceTest {
             Long challengeId = 3L;
             Challenge challenge = new Challenge();
             challenge.setId(challengeId);
+            challenge.setChallengeOwner(testUserId);
 
             List<QuestionSet> questionSets = new ArrayList<>();
             for (int i = 0; i < 10; i++) {

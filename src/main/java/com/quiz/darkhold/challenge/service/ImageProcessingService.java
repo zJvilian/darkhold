@@ -31,6 +31,7 @@ public class ImageProcessingService {
             "image/jpeg", "image/jpg", "image/png", "image/gif");
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
     private static final long MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    private static final String QUESTION_IMAGES_URL_PREFIX = "/question-images/";
 
     @Value("${darkhold.media.question-images-dir:question-images}")
     private String questionImagesDir;
@@ -198,10 +199,13 @@ public class ImageProcessingService {
         }
 
         try {
-            // Convert URL path to filesystem path
-            // e.g., /question-images/1/2/image_123.jpg -> question-images/1/2/image_123.jpg
-            String relativePath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
-            Path filePath = Paths.get(relativePath);
+            Path root = Paths.get(questionImagesDir).toAbsolutePath().normalize();
+            // imageUrl is user-settable, so resolve it under the media root and refuse any escape
+            Path filePath = root.resolve(relativeMediaPath(imageUrl)).normalize();
+            if (!filePath.startsWith(root)) {
+                logger.warn("Refusing to delete a path outside the media directory: {}", imageUrl);
+                return;
+            }
 
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
@@ -218,6 +222,19 @@ public class ImageProcessingService {
         } catch (IOException ioException) {
             logger.error("Failed to delete image {}: {}", imageUrl, ioException.getMessage());
         }
+    }
+
+    /**
+     * Strip the public URL prefix so the value can be resolved under the media root.
+     *
+     * @param imageUrl stored image URL
+     * @return the path relative to the media root
+     */
+    private String relativeMediaPath(final String imageUrl) {
+        int index = imageUrl.indexOf(QUESTION_IMAGES_URL_PREFIX);
+        return index >= 0
+                ? imageUrl.substring(index + QUESTION_IMAGES_URL_PREFIX.length())
+                : imageUrl.replaceFirst("^/", "");
     }
 
     /**

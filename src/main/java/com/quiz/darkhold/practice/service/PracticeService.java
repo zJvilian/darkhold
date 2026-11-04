@@ -6,9 +6,11 @@ import com.quiz.darkhold.game.model.GameMode;
 import com.quiz.darkhold.preview.entity.CurrentGameSession;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGameSessionRepository;
+import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import jakarta.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -54,6 +56,10 @@ public class PracticeService {
         com.quiz.darkhold.challenge.entity.Challenge challenge = challengeRepository.findById(challengeIdLong)
                 .orElseThrow(() -> new IllegalArgumentException("Challenge not found: " + challengeId));
 
+        if (challenge.getOwner() == null || !challenge.getOwner().getEmail().equals(currentUserEmail())) {
+            throw new IllegalArgumentException("Challenge not found: " + challengeId);
+        }
+
         List<QuestionSet> questionsList = new ArrayList<>(challenge.getQuestionSets());
 
         // Create practice game session
@@ -85,5 +91,14 @@ public class PracticeService {
         publishInfo.setModerator(playerName);
 
         return publishInfo;
+    }
+
+    private String currentUserEmail() {
+        org.springframework.security.core.Authentication auth =
+                SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof DarkholdUserDetails details) {
+            return details.getEmail();
+        }
+        return null;
     }
 }

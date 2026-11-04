@@ -197,6 +197,13 @@
             }
         }
 
+        // Player names arrive from the network, so never interpolate them raw
+        function escapePlayerName(value) {
+            const div = document.createElement('div');
+            div.textContent = value == null ? '' : String(value);
+            return div.innerHTML.replace(/"/g, '&quot;');
+        }
+
         // Enhance the showGreeting function to use the new grid layout
         const originalShowGreeting = window.showGreeting;
         window.showGreeting = function(users) {
@@ -217,7 +224,7 @@
                         <div class="player-avatar">
                             <i class="fas fa-user"></i>
                         </div>
-                        <span class="player-name">${user}</span>
+                        <span class="player-name">${escapePlayerName(user)}</span>
                     </div>
                 `).join('');
                 if (emptyState) emptyState.style.display = 'none';

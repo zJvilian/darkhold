@@ -6,11 +6,14 @@ import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.init.GameConfig;
 import com.quiz.darkhold.preview.repository.CurrentGame;
+import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.ArrayList;
@@ -41,10 +44,20 @@ class PreviewServiceTest {
 
     @Test
     void fetchQuestions() {
+        signIn("USER");
         when(challengeRepository.findById(anyLong())).thenReturn(mockOptionalChallenge());
         var challengeId = "1234";
         var previewInfo = previewService.fetchQuestions(challengeId);
         Assertions.assertEquals(challengeId, previewInfo.getChallengeId());
+    }
+
+    @Test
+    void fetchQuestionsRejectsAnotherUser() {
+        signIn("SOMEONE_ELSE");
+        when(challengeRepository.findById(anyLong())).thenReturn(mockOptionalChallenge());
+
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> previewService.fetchQuestions("1234"));
     }
 
     @Test
@@ -58,6 +71,7 @@ class PreviewServiceTest {
 
     @Test
     void generateQuizPin() {
+        signIn("USER");
         var user = "USER";
         var game = mockGame("1234");
         when(gameRepository.existsByPin(anyString())).thenReturn(false);
@@ -76,12 +90,22 @@ class PreviewServiceTest {
         Assertions.assertEquals(challengeId, publishInfo.getPin());
     }
 
+    private void signIn(final String email) {
+        var user = new com.quiz.darkhold.user.entity.User();
+        user.setEmail(email);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(new DarkholdUserDetails(user), "n/a"));
+    }
+
     private Optional<Challenge> mockOptionalChallenge() {
         return Optional.of(mockChallenge());
     }
 
     private Challenge mockChallenge() {
         var challenge = new Challenge();
+        var owner = new com.quiz.darkhold.user.entity.User();
+        owner.setEmail("USER");
+        challenge.setOwner(owner);
         challenge.setQuestionSets(new ArrayList<>());
         challenge.setTitle("hello");
         return challenge;

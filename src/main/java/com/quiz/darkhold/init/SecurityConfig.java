@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import jakarta.servlet.DispatcherType;
@@ -53,8 +54,19 @@ public class SecurityConfig {
                     .requestMatchers(paths).permitAll()
             );
         }
-        http.authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
-        http.formLogin((formLogin) -> formLogin.defaultSuccessUrl("/", true).permitAll());
+        http.authorizeHttpRequests(auth -> auth
+                .requestMatchers("/admin", "/admin/**", "/userManagement", "/user/**", "/users/**")
+                .hasAuthority("ADMIN")
+                .anyRequest().authenticated());
+        http.formLogin((formLogin) -> formLogin.loginPage("/login").defaultSuccessUrl("/", true).permitAll());
+        var login = new LoginUrlAuthenticationEntryPoint("/login");
+        http.exceptionHandling(errors -> errors.authenticationEntryPoint((req, res, ex) -> {
+            if (ErrorRendering.wantsHtml(req)) {
+                login.commence(req, res, ex);
+            } else {
+                res.sendError(401);
+            }
+        }));
         http.logout((logout) -> logout.logoutSuccessUrl("/")
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)

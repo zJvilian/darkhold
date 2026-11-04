@@ -68,6 +68,11 @@ public class ChallengeService {
         Boolean response = Boolean.FALSE;
         java.util.Optional<Challenge> challenge = challengeRepository.findById(challengeId);
         if (challenge.isPresent()) {
+            if (!challenge.get().getChallengeOwner().equals(currentUserId())) {
+                logger.warn("User {} attempted to delete challenge {} owned by {}",
+                        currentUserId(), challengeId, challenge.get().getChallengeOwner());
+                return Boolean.FALSE;
+            }
             logger.info("Challenge present in database");
             java.util.List<QuestionSet> questionSets = challenge.get().getQuestionSets();
             questionSetRepository.deleteAll(questionSets);

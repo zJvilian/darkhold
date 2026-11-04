@@ -97,7 +97,7 @@
                     <span class="section-label-text" th:text="#{options.administration}">Administration</span>
                 </div>
                 <div class="action-grid action-grid--2">
-                    <div class="action-card" onclick="manageUsers();">
+                    <div class="action-card" onclick="manageUsers();" sec:authorize="hasAuthority('ADMIN')">
                         <div class="action-card-icon action-card-icon--purple">
                             <i class="fas fa-users-cog"></i>
                         </div>

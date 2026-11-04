@@ -6,6 +6,7 @@ import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.preview.entity.CurrentGameSession;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGameSessionRepository;
+import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,11 +50,31 @@ class PracticeServiceTest {
     @BeforeEach
     void setUp() {
         practiceService = new PracticeService(challengeRepository, sessionRepository);
+        signIn("player1");
+    }
+
+    private void signIn(final String email) {
+        var user = new com.quiz.darkhold.user.entity.User();
+        user.setEmail(email);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(new DarkholdUserDetails(user), "n/a"));
     }
 
     @Nested
     @DisplayName("initializePracticeGame tests")
     class InitializePracticeGameTests {
+
+        @Test
+        @DisplayName("Should reject a challenge owned by another user")
+        void shouldRejectForeignChallenge() {
+            Challenge challenge = createTestChallenge();
+            when(challengeRepository.findById(1L)).thenReturn(Optional.of(challenge));
+            signIn("someoneElse");
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> practiceService.initializePracticeGame("1", "player1", httpSession));
+            verify(sessionRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        }
 
         @Test
         @DisplayName("Should return PublishInfo with PRACTICE- prefixed pin")
@@ -70,9 +94,9 @@ class PracticeServiceTest {
             Challenge challenge = createTestChallenge();
             when(challengeRepository.findById(1L)).thenReturn(Optional.of(challenge));
 
-            PublishInfo result = practiceService.initializePracticeGame("1", "testPlayer", httpSession);
+            PublishInfo result = practiceService.initializePracticeGame("1", "player1", httpSession);
 
-            assertEquals("testPlayer", result.getModerator());
+            assertEquals("player1", result.getModerator());
         }
 
         @Test
@@ -171,6 +195,9 @@ class PracticeServiceTest {
         challenge.setId(1L);
         challenge.setTitle("Test Challenge");
         challenge.setDescription("Test Description");
+        com.quiz.darkhold.user.entity.User owner = new com.quiz.darkhold.user.entity.User();
+        owner.setEmail("player1");
+        challenge.setOwner(owner);
         QuestionSet qs = new QuestionSet();
         qs.setQuestion("What is 2+2?");
         qs.setAnswer1("3");

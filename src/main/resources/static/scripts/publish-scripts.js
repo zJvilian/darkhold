@@ -238,6 +238,6 @@ function showGreeting(message) {
     tableRef.innerHTML = "";
     for (let i = 0; i < message.length; i++) {
         let newRow = tableRef.insertRow(tableRef.rows.length);
-        newRow.innerHTML = message[i];
+        newRow.innerHTML = escapeHtml(message[i]);
     }
 }

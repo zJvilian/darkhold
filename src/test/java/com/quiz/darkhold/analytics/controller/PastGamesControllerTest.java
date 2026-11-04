@@ -106,7 +106,7 @@ class PastGamesControllerTest {
         return qr;
     }
 
-    // ==================== /past-games Endpoint Tests ====================
+    // ==================== /past-games Endpoint Tests ====================\
 
     @Test
     void testShowPastGames_Success() throws Exception {
@@ -122,6 +122,18 @@ class PastGamesControllerTest {
                 .andExpect(model().attribute("moderator", moderatorEmail));
 
         verify(resultService).getGameResultsByModerator(moderatorEmail);
+    }
+
+    @Test
+    void testShowPastGames_UnhyphenatedAlias_Success() throws Exception {
+        when(resultService.getGameResultsByModerator(anyString())).thenReturn(mockPastGames);
+
+        mockMvc.perform(get("/pastgames")
+                        .principal(createMockPrincipal(moderatorEmail)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("pastgames"))
+                .andExpect(model().attributeExists("pastGames"))
+                .andExpect(model().attribute("pastGames", hasSize(1)));
     }
 
     @Test
@@ -143,7 +155,7 @@ class PastGamesControllerTest {
                 .andExpect(redirectedUrl("/login"));
     }
 
-    // ==================== /game-result/{id} Endpoint Tests ====================
+    // ==================== /game-result/{id} Endpoint Tests ====================\
 
     @Test
     void testShowGameResult_Success() throws Exception {
@@ -157,6 +169,17 @@ class PastGamesControllerTest {
                 .andExpect(model().attribute("gameResult", mockGameResult));
 
         verify(resultService).getGameResultById(1L);
+    }
+
+    @Test
+    void testShowGameResult_UnhyphenatedAlias_Success() throws Exception {
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+
+        mockMvc.perform(get("/gameresult/1")
+                        .principal(createMockPrincipal(moderatorEmail)))
+                .andExpect(status().isOk())
+                .andExpect(view().name("gameresult"))
+                .andExpect(model().attributeExists("gameResult"));
     }
 
     @Test
@@ -186,7 +209,7 @@ class PastGamesControllerTest {
                 .andExpect(redirectedUrl("/login"));
     }
 
-    // ==================== /game-result/{id}/export-csv Endpoint Tests ====================
+    // ==================== /game-result/{id}/export-csv Endpoint Tests ====================\
 
     @Test
     void testExportGameResultCsv_Success() throws Exception {
@@ -203,6 +226,17 @@ class PastGamesControllerTest {
                 .andExpect(content().string(containsString("player1")))
                 .andExpect(content().string(containsString("What is 2+2?")))
                 .andDo(result -> verify(resultService).getGameResultById(1L));
+    }
+
+    @Test
+    void testExportGameResultCsv_UnhyphenatedAlias_Success() throws Exception {
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+
+        mockMvc.perform(get("/gameresult/1/export-csv")
+                        .principal(createMockPrincipal(moderatorEmail)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "text/csv"))
+                .andExpect(content().string(containsString("Game Results Export")));
     }
 
     @Test

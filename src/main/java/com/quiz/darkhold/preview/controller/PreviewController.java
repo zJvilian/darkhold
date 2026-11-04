@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
@@ -54,6 +55,11 @@ public class PreviewController {
         com.quiz.darkhold.preview.model.PreviewInfo previewInfo = previewService.fetchQuestions(challenges);
         model.addAttribute("previewInfo", previewInfo);
         return "challenge/preview";
+    }
+
+    @GetMapping("/preconfigure")
+    public String previewPage(final Model model, @RequestParam("challenges") final String challenges) {
+        return preconfigure(model, challenges);
     }
 
     /**

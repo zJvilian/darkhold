@@ -106,12 +106,7 @@ public class ChallengeController {
         return ResponseEntity.notFound().build();
     }
 
-    /**
-     * Show the unified form to create a new challenge (with or without Excel upload).
-     *
-     * @return the unified create challenge form view
-     */
-    @GetMapping("/create_challenge_form")
+    @GetMapping({"/create_challenge_form", "/challenge/create"})
     public String showCreateChallengeForm() {
         logger.info("Showing unified create challenge form");
         return "challenge/createchallenge";

@@ -38,7 +38,7 @@ public class PastGamesController {
      * @param principal authenticated user
      * @return view name
      */
-    @GetMapping("/past-games")
+    @GetMapping({"/past-games", "/pastgames"})
     public String showPastGames(final Model model, final Principal principal) {
         if (principal == null) {
             return "redirect:/login";
@@ -61,7 +61,7 @@ public class PastGamesController {
      * @return view name
      */
     @SuppressWarnings("PMD.ExcessiveMethodLength")
-    @GetMapping("/game-result/{id}")
+    @GetMapping({"/game-result/{id}", "/gameresult/{id}"})
     public String showGameResult(@PathVariable final Long id, final Model model, final Principal principal) {
         if (principal == null) {
             return "redirect:/login";
@@ -92,7 +92,7 @@ public class PastGamesController {
      * @param principal authenticated user
      */
     @SuppressWarnings("PMD.ExcessiveMethodLength")
-    @GetMapping("/game-result/{id}/export-csv")
+    @GetMapping({"/game-result/{id}/export-csv", "/gameresult/{id}/export-csv"})
     @ResponseBody
     public void exportGameResultCsv(@PathVariable final Long id,
                                      final HttpServletResponse response,

@@ -14,8 +14,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 
 @ExtendWith(SpringExtension.class)
@@ -45,6 +47,32 @@ class OptionsControllerTest {
     void testViewChallenge() throws Exception {
         mvc.perform(post("/viewChallenge"))
                 .andExpect(status().is(200));
+    }
+
+    @Test
+    void testViewChallengesAliasesPost() throws Exception {
+        mvc.perform(post("/view_challenges"))
+                .andExpect(status().is(200))
+                .andExpect(view().name("challenge/viewchallenges"));
+
+        mvc.perform(post("/viewchallenges"))
+                .andExpect(status().is(200))
+                .andExpect(view().name("challenge/viewchallenges"));
+    }
+
+    @Test
+    void testViewChallengesAliasesGet() throws Exception {
+        mvc.perform(get("/view_challenges"))
+                .andExpect(status().is(200))
+                .andExpect(view().name("challenge/viewchallenges"));
+
+        mvc.perform(get("/viewchallenges"))
+                .andExpect(status().is(200))
+                .andExpect(view().name("challenge/viewchallenges"));
+
+        mvc.perform(get("/viewChallenge"))
+                .andExpect(status().is(200))
+                .andExpect(view().name("challenge/viewchallenges"));
     }
 
     @Test

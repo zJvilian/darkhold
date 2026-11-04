@@ -43,15 +43,22 @@ public class OptionsController {
      * on to view challenge page, with a view of challenges.
      *
      * @param model model
+     * @param email user email
      * @return view challenge page
      */
-    @PostMapping("/viewChallenge")
+    @PostMapping({"/viewChallenge", "/view_challenges", "/viewchallenges"})
     public String viewChallenges(final Model model,
                                  @AuthenticationPrincipal(expression = "email") final String email) {
         log.info("Into the viewChallenge method");
         log.info("email is : " +  email);
         model.addAttribute("challengeInfo", optionsService.populateChallengeInfo(email));
         return "challenge/viewchallenges";
+    }
+
+    @GetMapping({"/viewChallenge", "/challenge/view", "/view_challenges", "/viewchallenges"})
+    public String viewChallengesPage(final Model model,
+                                    @AuthenticationPrincipal(expression = "email") final String email) {
+        return viewChallenges(model, email);
     }
 
     /**

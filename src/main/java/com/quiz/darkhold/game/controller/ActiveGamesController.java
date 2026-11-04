@@ -45,7 +45,7 @@ public class ActiveGamesController {
      * @param principal authenticated user
      * @return view name
      */
-    @GetMapping("/my-active-games")
+    @GetMapping({"/my-active-games", "/activegames", "/active-games"})
     public String showActiveGames(final Model model, final Principal principal) {
         if (principal == null) {
             return "redirect:/login";

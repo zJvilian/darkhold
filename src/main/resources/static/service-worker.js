@@ -78,6 +78,17 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // Room state and session-bound pages must never replay a cached game or CSRF token.
+    const pathname = new URL(event.request.url).pathname;
+    // Localized HTML depends on a cookie; a cached page can display the wrong language.
+    if (event.request.mode === 'navigate') {
+        event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE_URL)));
+        return;
+    }
+    if (pathname === '/join' || pathname.startsWith('/play/') || pathname.startsWith('/api/live/')) {
+        return;
+    }
+
     // Skip WebSocket requests
     if (event.request.url.includes('/ws')) {
         return;

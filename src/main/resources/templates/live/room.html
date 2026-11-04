@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#28104e">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <title th:text="#{live.title}">Live quiz · Darkhold</title>
+    <link rel="icon" href="/images/favicon.png">
+    <link rel="stylesheet" href="/styles/live-quiz.css">
+    <script th:replace="~{fragments/i18n :: messages}"></script>
+    <script defer src="/scripts/language-manager.js"></script>
+    <script defer src="/scripts/live-quiz.js"></script>
+</head>
+<body class="live-page" th:attr="data-pin=${pin},data-host=${host}">
+<header class="live-nav">
+    <a class="brand" href="/">✦ Darkhold</a>
+    <span id="role-label" th:text="${host ? #messages.msg('live.hostScreen') : #messages.msg('live.playerScreen')}">Player screen</span>
+    <span class="nav-code"><span th:text="#{live.room}">Room</span> <strong th:text="${pin}"></strong></span>
+    <div th:replace="~{fragments/i18n :: liveLanguage}"></div>
+</header>
+<main class="room-layout">
+    <div id="connection" class="notice" role="status" hidden></div>
+    <div id="game-error" class="notice error" role="alert" hidden></div>
+    <section id="lobby" hidden>
+        <div class="section-heading"><div><span class="eyebrow" th:text="#{live.more}">The more, the merrier</span>
+            <h1 id="quiz-title" th:text="#{live.preparing}">Getting the room ready…</h1></div><span class="live-badge" th:text="#{live.lobby}">● Live lobby</span></div>
+        <div class="lobby-banner" th:if="${host}">
+            <div class="join-instructions"><span class="eyebrow" th:text="#{live.joinPhone}">Join on your phone</span>
+                <p th:text="#{live.scanOrVisit}">Scan the QR code or visit</p><a id="join-address" th:href="${joinUrl}" th:text="${joinUrl}"></a>
+                <p class="code-caption" th:text="#{live.enterCode}">and enter the room code</p><div class="room-code" th:text="${pin}"></div>
+                <button id="copy-link" class="secondary" type="button" th:text="#{live.copyLink}">Copy invite link</button>
+                <p id="local-hint" class="local-hint" hidden th:text="#{live.localHint}">For phones: open this host page using your computer’s Wi-Fi IP address. The QR code will use that address. Both devices must be on the same network.</p>
+            </div>
+            <div class="qr-card"><img th:src="@{/api/live/{pin}/qr(pin=${pin})}" alt="Scan to join this quiz" th:alt="#{live.qrAlt}" width="240" height="240"><span th:text="#{live.scanSteps}">Scan. Pick a name. Play.</span></div>
+        </div>
+        <div th:unless="${host}" class="welcome-card"><div id="my-avatar" class="big-avatar"></div>
+            <h2><span th:text="#{live.youAreIn}">You’re in,</span> <span id="my-name"></span>!</h2><p th:text="#{live.waitHost}">Look at the host’s screen. The quiz starts soon.</p>
+            <div class="waiting-dots" aria-label="Waiting for the host" th:aria-label="#{live.waiting}"><span></span><span></span><span></span></div>
+        </div>
+        <div class="players-heading"><h2><span id="player-count">0</span> <span th:text="#{live.playersReady}">players ready</span></h2>
+            <div class="host-actions" th:if="${host}"><button id="lock-room" class="secondary" type="button" th:text="#{live.lock}">Lock room</button>
+                <button id="start-game" class="primary" type="button" disabled th:text="#{live.start}">Start quiz →</button></div></div>
+        <p id="empty-lobby" class="empty-state" th:text="#{live.emptyLobby}">Your players will appear here as they join. Share the code to get started.</p>
+        <div id="players" class="players-grid" aria-live="polite"></div>
+    </section>
+    <section id="round" hidden>
+        <div class="round-top"><span id="question-number" class="eyebrow"></span><span id="answer-count"></span>
+            <div id="timer" class="timer" role="timer" aria-label="Seconds remaining" th:aria-label="#{live.secondsRemaining}">20</div></div>
+        <div class="timer-track"><div id="timer-bar"></div></div>
+        <div id="countdown" class="countdown" hidden><span class="eyebrow" th:text="#{live.ready}">Get ready!</span><strong id="countdown-number">3</strong></div>
+        <div id="question-content"><h1 id="question-text" class="question-title"></h1>
+            <img id="question-image" class="question-image" alt="Question illustration" th:alt="#{live.imageAlt}" hidden>
+            <audio id="question-audio" class="question-audio" preload="auto" hidden></audio>
+            <button id="play-audio" class="secondary" type="button" hidden th:text="#{live.playAudio}">Play sound</button>
+            <iframe id="question-video" class="question-video" title="Question video" th:title="#{live.videoTitle}" allowfullscreen hidden></iframe>
+            <p id="answer-hint" class="answer-hint"></p>
+            <div id="word-cloud" class="word-cloud" hidden><p id="word-cloud-empty" class="word-cloud-empty" th:text="#{live.wordCloudEmpty}">Waiting for the first words…</p><svg id="word-cloud-svg" class="word-cloud-svg" role="img" aria-live="polite"></svg></div>
+            <p id="sorting-hint" hidden th:text="#{client.sorting.hint}"></p>
+            <div id="answers" class="answer-grid"></div>
+            <form id="typed-answer-form" class="typed-answer" hidden><label for="typed-answer" th:text="#{live.yourAnswer}">Your answer</label>
+                <input id="typed-answer" maxlength="500" autocomplete="off" required><button class="primary" type="submit" th:text="#{live.submit}">Submit answer</button></form>
+            <button id="submit-multiple" class="primary" type="button" hidden th:text="#{live.submitMultiple}">Submit answers</button>
+        </div>
+        <div id="answer-sent" class="answer-sent" role="status" hidden><span aria-hidden="true">✓</span><h2 th:text="#{live.answerSaved}">Answer locked in!</h2><p th:text="#{live.seeResult}">Let’s see how you did…</p></div>
+        <div id="round-result" class="round-result" hidden><h2 id="feedback" role="status"></h2><p id="correct-answer"></p></div>
+        <div id="round-host-actions" class="host-actions" th:if="${host}"><button id="reveal" class="secondary" type="button" th:text="#{live.reveal}">Reveal answers</button>
+            <button id="next-question" class="primary" type="button" hidden th:text="#{live.next}">Next question →</button></div>
+    </section>
+    <section id="leaderboard-section" hidden><div class="section-heading"><div><span class="eyebrow" id="score-eyebrow" th:text="#{live.standings}">The standings</span><h2 id="score-title" th:text="#{live.leaderboard}">Leaderboard</h2></div>
+        <a id="play-again" href="/join" class="secondary" hidden th:text="#{live.joinAnother}">Join another quiz</a></div>
+        <div id="podium" class="podium" hidden></div><ol id="leaderboard" class="leaderboard"></ol>
+    </section>
+    <footer class="room-footer"><span id="my-score"></span><button th:if="${host}" id="end-game" class="quiet" type="button" th:text="#{live.end}">End quiz</button>
+        <a th:unless="${host}" href="/join" th:text="#{live.leave}">Leave room</a></footer>
+    <dialog id="end-dialog"><h2 th:text="#{live.confirmEnd}">End this quiz?</h2><p th:text="#{live.endDescription}">Everyone will see the final scores.</p><div class="host-actions">
+        <button id="cancel-end" class="secondary" type="button" th:text="#{live.keepPlaying}">Keep playing</button><button id="confirm-end" class="primary" type="button" th:text="#{live.end}">End quiz</button></div></dialog>
+</main>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#28104e">
+    <title th:text="#{live.joinTitle}">Join a live quiz · Darkhold</title>
+    <link rel="icon" href="/images/favicon.png">
+    <link rel="stylesheet" href="/styles/live-quiz.css">
+    <script th:replace="~{fragments/i18n :: messages}"></script>
+    <script defer src="/scripts/language-manager.js"></script>
+</head>
+<body class="live-page join-page">
+<header class="live-nav"><a class="brand" href="/">✦ Darkhold</a><a href="/login" th:text="#{live.hostLink}">Host a quiz ↗</a><div th:replace="~{fragments/i18n :: liveLanguage}"></div></header>
+<main class="join-layout">
+    <div class="join-intro"><span class="eyebrow" th:text="#{live.friendly}">A little friendly competition</span>
+        <h1 th:text="#{live.readyToPlay}">Ready to play?</h1><p th:text="#{live.identity}">Your name. Your avatar. You’re in.</p>
+        <div class="floating-avatars" aria-hidden="true"><span>🦊</span><span>🤖</span><span>🐸</span></div>
+    </div>
+    <section class="join-card" aria-labelledby="join-heading">
+        <span class="eyebrow" th:text="#{live.joinFun}">Join the fun</span><h2 id="join-heading" th:text="#{live.entrance}">Make your entrance.</h2>
+        <p class="muted" th:text="#{live.noAccount}">No email, password, or account needed.</p>
+        <p th:if="${joinError}" th:text="${joinError}" class="notice error" role="alert"></p>
+        <form th:action="@{/join}" method="post" id="guest-form">
+            <label for="pin" th:text="#{live.roomCode}">Room code</label>
+            <input id="pin" name="pin" th:value="${pin}" placeholder="000 000" pattern="[0-9]{6}"
+                   maxlength="6" inputmode="numeric" autocomplete="off" required aria-describedby="pin-help">
+            <small id="pin-help" th:text="#{live.codeHelp}">Six digits from your host’s screen.</small>
+            <label for="nickname" th:text="#{live.nickname}">Nickname</label>
+            <input id="nickname" name="name" th:value="${nickname}" placeholder="What should we call you?" th:placeholder="#{live.nicknamePlaceholder}"
+                   minlength="2" maxlength="20" autocomplete="off" required>
+            <fieldset class="avatar-picker"><legend th:text="#{live.chooseAvatar}">Pick your avatar</legend>
+                <div class="avatar-grid">
+                    <label th:each="avatar : ${avatars}" class="avatar-choice">
+                        <input type="radio" name="avatar" th:value="${avatar.key}" th:checked="${avatar.key == 'fox'}"
+                               th:aria-label="${#messages.msg('live.avatar.' + avatar.key)}" required>
+                        <span th:text="${avatar.value}" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </fieldset>
+            <button class="primary full" type="submit"><span th:text="#{live.letsGo}">Let’s go!</span> <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="join-footer" th:text="#{live.stay}">Stay on this device to keep your place and score.</p>
+    </section>
+</main>
+</body>
+</html>

@@ -19,7 +19,7 @@ function publish() {
     document.getElementById('challenge_id').value = challengeId;
     // Collect custom team names if any
     document.getElementById('team_names').value = collectTeamNames();
-    document.forms[0].action = "/publish";
+    document.forms[0].action = document.getElementById('team_mode').value === 'true' ? "/publish" : "/live/host";
     document.forms[0].submit();
 }
 

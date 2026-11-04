@@ -14,6 +14,9 @@ WHAT AND WHY CHECKS SUPPRESSED
 -->
 
 <suppressions>
+    <suppress files="LiveQuizService.java" checks="MethodLength"/>
+    <suppress files="LiveQuizController.java" checks="MethodLength"/>
+    <suppress files="LiveQuizIntegrationTest.java" checks="MethodLength"/>
     <suppress files="GermanLanguageIntegrationTest.java" checks="MethodLength"/>
     <suppress files="ChallengeService.java" checks="MethodLength"/>
     <suppress files="SecurityConfig.java" checks="MethodLength"/>

@@ -86,7 +86,7 @@ public class SecurityConfig {
                 "/scripts/core/**", "/styles/core/*", "/styles/webfonts/**",
                 "/fonts/**", "/favicon.ico",
                 "/logme", "/h2-console/**",
-                "/enterGame", "/joinGame"
+                "/enterGame", "/joinGame", "/join", "/play/**", "/api/live/**"
         };
     }
 

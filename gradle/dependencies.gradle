@@ -17,6 +17,7 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:6.0.0")
     implementation("org.apache.commons:commons-lang3:3.21.0")
     implementation("org.apache.commons:commons-text:1.15.0")
+    implementation("com.google.zxing:core:3.5.4")
 
     // Database - PostgreSQL for production
     implementation("org.postgresql:postgresql")

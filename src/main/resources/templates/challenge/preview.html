@@ -22,7 +22,7 @@
 
     <main class="preview-page">
         <div class="preview-container">
-            <form action="#" th:object="${previewInfo}" method="post">
+            <form th:action="@{/live/host}" th:object="${previewInfo}" method="post">
                 <input type="hidden" th:value="${previewInfo.challengeId}" id="challengeId"/>
                 <input type="hidden" th:name="challenge_id" id="challenge_id"/>
                 <input type="hidden" name="team_mode" id="team_mode" value="false"/>

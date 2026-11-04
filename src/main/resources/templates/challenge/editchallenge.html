@@ -22,16 +22,19 @@
 </head>
 <body class="bg-admin">
 <div th:insert="~{navbar :: navbar}"></div>
-<form method="POST" id="editChallengeForm">
+<form method="POST" id="editChallengeForm" th:action="@{/live/host}">
 <div class="container my-4">
+    <p th:if="${liveError}" th:text="${liveError}" class="alert alert-danger" role="alert"></p>
     <input type="hidden" id="challengeId" th:value="${challenge.id}"/>
+    <input type="hidden" name="challenge_id" th:value="${challenge.id}"/>
 
     <!-- Challenge Info -->
     <div class="challenge-info-card">
         <div class="challenge-info-header">
             <h1 class="challenge-info-title" th:text="${challenge.title}">Challenge Title</h1>
             <div class="challenge-info-actions">
-                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editInfoModal">
+                <button type="submit" class="btn btn-primary" formnovalidate th:text="#{live.hostQuiz}">Host live quiz</button>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editInfoModal">
                     <i class="bi bi-pencil"></i>
                     <span th:text="#{challenge.edit.editInfo}">Edit Info</span>
                 </button>
@@ -53,7 +56,7 @@
             <span th:text="#{challenge.edit.questions}">Questions</span>
             (<span class="question-count" id="questionCount" th:text="${challenge.questionSets?.size() ?: 0}">0</span>)
         </h2>
-        <button class="btn btn-primary" onclick="showQuestionModal()">
+        <button type="button" class="btn btn-primary" onclick="showQuestionModal()">
             <i class="bi bi-plus"></i>
             <span th:text="#{challenge.edit.addQuestion}">Add Question</span>
         </button>
@@ -97,13 +100,13 @@
                     </div>
                 </div>
                 <div class="question-actions">
-                    <button class="question-action-btn" th:onclick="'editQuestion(' + ${q.id} + ')'">
+                    <button type="button" class="question-action-btn" th:onclick="'editQuestion(' + ${q.id} + ')'">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button class="question-action-btn" th:onclick="'duplicateQuestion(' + ${q.id} + ')'">
+                    <button type="button" class="question-action-btn" th:onclick="'duplicateQuestion(' + ${q.id} + ')'">
                         <i class="bi bi-copy"></i>
                     </button>
-                    <button class="question-action-btn question-action-btn--delete" th:onclick="'deleteQuestion(' + ${q.id} + ')'">
+                    <button type="button" class="question-action-btn question-action-btn--delete" th:onclick="'deleteQuestion(' + ${q.id} + ')'">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>

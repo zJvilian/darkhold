@@ -77,6 +77,11 @@ function enterGame() {
     // Clear previous errors
     clearError();
 
+    if (/^\d{6}$/.test(gamePin)) {
+        window.location.href = '/join?pin=' + encodeURIComponent(gamePin);
+        return;
+    }
+
     // Validate PIN
     if (gamePin.length === 0) {
         showError(LanguageManager.text('client.home.enterPin'));

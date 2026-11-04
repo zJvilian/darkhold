@@ -6,6 +6,7 @@ build/
 !**/src/test/**
 logs/
 user-photos/
+.env
 
 
 ### STS ###

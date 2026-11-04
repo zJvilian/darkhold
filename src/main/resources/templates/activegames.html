@@ -80,16 +80,28 @@
             </header>
 
             <!-- Stats Bar (only show when there are games) -->
-            <div class="active-games-stats" th:if="${activeGames != null and !activeGames.isEmpty()}">
+            <div class="active-games-stats" th:if="${(activeGames != null and !activeGames.isEmpty()) or (liveRooms != null and !liveRooms.isEmpty())}">
                 <div class="stat-badge">
                     <i class="fas fa-gamepad"></i>
                     <span th:text="#{activegames.youHave}">You have</span>
-                    <span class="stat-count" th:text="${#lists.size(activeGames)}">3</span>
+                    <span class="stat-count" th:text="${(activeGames != null ? #lists.size(activeGames) : 0) + (liveRooms != null ? #lists.size(liveRooms) : 0)}">3</span>
                     <span th:text="#{activegames.activeGamesCount}">active game(s)</span>
                 </div>
             </div>
 
             <!-- Game Grid -->
+            <div class="game-grid" th:if="${liveRooms != null and !liveRooms.isEmpty()}">
+                <div class="game-card" th:each="room : ${liveRooms}">
+                    <div class="game-card-header"><div class="game-pin-badge" th:text="${room.pin}"></div>
+                        <span class="game-status-badge" th:text="${#messages.msg('live.phase.' + room.phase)}"></span></div>
+                    <h3 class="game-card-title" th:text="${room.title}"></h3>
+                    <p><span th:text="${room.players}"></span> <span th:text="#{live.guestPlayers}">players · Guest live quiz</span></p>
+                    <div class="game-card-actions">
+                        <a class="game-action-btn game-action-btn--primary" th:href="@{/play/{pin}(pin=${room.pin})}"
+                           th:text="${room.phase == 'FINISHED' ? #messages.msg('live.viewPodium') : #messages.msg('live.returnHost')}">Return to host screen</a>
+                    </div>
+                </div>
+            </div>
             <div class="game-grid" th:if="${activeGames != null and !activeGames.isEmpty()}">
                 <div class="game-card" th:each="game : ${activeGames}">
 
@@ -180,7 +192,7 @@
             </div>
 
             <!-- Empty State -->
-            <div class="empty-state" th:if="${activeGames == null or activeGames.isEmpty()}">
+            <div class="empty-state" th:if="${(activeGames == null or activeGames.isEmpty()) and (liveRooms == null or liveRooms.isEmpty())}">
                 <div class="empty-state-icon">
                     <i class="fas fa-gamepad"></i>
                 </div>

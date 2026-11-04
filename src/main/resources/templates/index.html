@@ -88,7 +88,7 @@
                                 </svg>
                             </div>
                             <h2 class="pin-card-title" th:text="#{home.enterPin}">Enter Game PIN</h2>
-                            <p class="pin-card-subtitle" th:text="#{home.pinHelp}">Enter the 5-digit PIN shown on the presenter's screen</p>
+                            <p class="pin-card-subtitle" th:text="#{home.roomHelp}">Enter the room code on the host’s screen. No account needed.</p>
                         </div>
 
                         <form action="#" th:action="@{/joinGame}" th:object="${gameinfo}" method="post" id="joinForm" class="pin-form">
@@ -108,7 +108,7 @@
                                     <input type="text"
                                            inputmode="numeric"
                                            pattern="[0-9]*"
-                                           maxlength="5"
+                                           maxlength="6"
                                            class="pin-input"
                                            th:field="*{gamePin}"
                                            id="gamePin"

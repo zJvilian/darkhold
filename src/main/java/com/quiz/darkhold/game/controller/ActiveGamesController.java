@@ -5,6 +5,7 @@ import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.model.GameInfo;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.preview.service.PreviewService;
+import com.quiz.darkhold.live.LiveQuizService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,13 +23,16 @@ public class ActiveGamesController {
     private final PreviewService previewService;
     private final CurrentGame currentGame;
     private final ChallengeRepository challengeRepository;
+    private final LiveQuizService liveQuizService;
 
     public ActiveGamesController(final PreviewService previewService,
                                  final CurrentGame currentGame,
-                                 final ChallengeRepository challengeRepository) {
+                                 final ChallengeRepository challengeRepository,
+                                 final LiveQuizService liveQuizService) {
         this.previewService = previewService;
         this.currentGame = currentGame;
         this.challengeRepository = challengeRepository;
+        this.liveQuizService = liveQuizService;
     }
 
     /**
@@ -49,6 +53,7 @@ public class ActiveGamesController {
         List<GameInfo> gameInfos = convertToGameInfos(activeGames);
 
         model.addAttribute("activeGames", gameInfos);
+        model.addAttribute("liveRooms", liveQuizService.roomsForHost(LiveQuizService.hostIdentity(principal)));
         model.addAttribute("moderator", moderator);
         return "activegames";
     }

@@ -122,7 +122,11 @@ Please head over to [Wiki](https://github.com/surajcm/darkhold/wiki/Screenshots)
 - **English** (en) - Complete ✅
 - **Spanish** (es) - Complete ✅
 - **French** (fr) - Partial (contributors welcome!)
-- **German** (de) - Partial (contributors welcome!)
+- **German** (de) - Quiz creation, editor, host and guest live-game flow
+
+Choose **Deutsch** in the banner’s language menu to switch to **DE**. The choice
+persists across pages, login and browser sessions. Live-game pages also have a
+language selector; quiz questions and player names keep their original text.
 
 ### 🎨 Modern UI/UX
 - Dark/Light mode toggle

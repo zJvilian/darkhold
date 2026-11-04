@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{login.title}">Sign In - Darkhold Quiz</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -100,7 +100,7 @@
         <div class="login-panel-right">
             <div class="login-card">
                 <!-- Theme toggle -->
-                <button type="button" class="theme-toggle" onclick="ThemeManager.toggle(); updateIcon();" aria-label="Toggle theme">
+                <button type="button" class="theme-toggle" onclick="ThemeManager.toggle(); updateIcon();" th:aria-label="#{nav.toggleTheme}">
                     <i class="fas fa-moon" id="login-theme-icon"></i>
                 </button>
 
@@ -197,7 +197,7 @@
 
                 <!-- Divider -->
                 <div class="login-divider">
-                    <span>or</span>
+                    <span th:text="#{login.or}">or</span>
                 </div>
 
                 <!-- Sign Up Link -->
@@ -212,7 +212,7 @@
                 <div class="login-back">
                     <a href="/" class="back-link">
                         <i class="fas fa-arrow-left"></i>
-                        <span>Back to Home</span>
+                        <span th:text="#{login.backHome}">Back to Home</span>
                     </a>
                 </div>
             </div>
@@ -227,11 +227,11 @@
                     <div class="forgot-modal-icon">
                         <i class="fas fa-wrench"></i>
                     </div>
-                    <h5 id="forgotPassLabel" class="forgot-modal-title">Coming Soon</h5>
-                    <p class="forgot-modal-text">
+                    <h5 id="forgotPassLabel" class="forgot-modal-title" th:text="#{gameManagement.comingSoon}">Coming Soon</h5>
+                    <p class="forgot-modal-text" th:text="#{login.resetHelp}">
                         Password reset is not yet available. Please contact your administrator to reset your password.
                     </p>
-                    <button type="button" class="forgot-modal-btn" data-bs-dismiss="modal">Got it</button>
+                    <button type="button" class="forgot-modal-btn" data-bs-dismiss="modal" th:text="#{login.understood}">Got it</button>
                 </div>
             </div>
         </div>

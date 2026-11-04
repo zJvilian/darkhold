@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
-import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import java.util.Locale;
 
@@ -46,10 +46,10 @@ class I18nConfigTest {
     }
 
     @Test
-    @DisplayName("Should return SessionLocaleResolver")
-    void shouldReturnSessionLocaleResolver() {
+    @DisplayName("Should return CookieLocaleResolver")
+    void shouldReturnCookieLocaleResolver() {
         var resolver = config.localeResolver();
-        assertInstanceOf(SessionLocaleResolver.class, resolver);
+        assertInstanceOf(CookieLocaleResolver.class, resolver);
     }
 
     @Test

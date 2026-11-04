@@ -79,7 +79,7 @@ function enterGame() {
 
     // Validate PIN
     if (gamePin.length === 0) {
-        showError("Please enter a game PIN");
+        showError(LanguageManager.text('client.home.enterPin'));
         gamePinInput.focus();
         return;
     }
@@ -87,7 +87,7 @@ function enterGame() {
     // If we're in name entry step
     if (isNameStepActive()) {
         if (username.length === 0) {
-            showError("Please enter your name");
+            showError(LanguageManager.text('client.home.enterName'));
             usernameInput.focus();
             return;
         }
@@ -101,7 +101,7 @@ function enterGame() {
 
     // Validate PIN format (should be numeric)
     if (!/^\d+$/.test(gamePin)) {
-        showError("PIN should only contain numbers");
+        showError(LanguageManager.text('client.home.numericPin'));
         gamePinInput.focus();
         return;
     }
@@ -138,19 +138,19 @@ function enterGame() {
                 if (xhr.responseText === 'true') {
                     showNameStep();
                 } else {
-                    showError("Invalid PIN. Please check and try again.");
+                    showError(LanguageManager.text('client.home.invalidPin'));
                     gamePinInput.focus();
                     gamePinInput.select();
                 }
             }
         } else {
-            showError("Connection error. Please try again.");
+            showError(LanguageManager.text('client.home.connectionError'));
             gamePinInput.focus();
         }
     };
     xhr.onerror = function() {
         setLoadingState(false);
-        showError("Connection error. Please try again.");
+        showError(LanguageManager.text('client.home.connectionError'));
         gamePinInput.focus();
     };
     xhr.send(encodeURI('gamePin=' + gamePin));
@@ -224,16 +224,16 @@ function handlePinError(response, gamePinInput) {
     switch (status) {
         case 'INVALID':
             if (remainingAttempts !== undefined && remainingAttempts > 0) {
-                showError(`Invalid PIN. ${remainingAttempts} attempts remaining.`);
+                showError(LanguageManager.text('client.home.remaining', remainingAttempts));
             } else {
-                showError("Invalid PIN. Please check and try again.");
+                showError(LanguageManager.text('client.home.invalidPin'));
             }
             break;
         case 'RATE_LIMITED':
-            showError("Too many attempts. Please slow down.");
+            showError(LanguageManager.text('client.home.rateLimit'));
             break;
         case 'BLOCKED':
-            showError("Too many failed attempts. You have been temporarily blocked for 15 minutes.");
+            showError(LanguageManager.text('client.home.blocked'));
             // Disable the button when blocked
             const joinBtn = document.getElementById("joinBtn");
             if (joinBtn) {
@@ -244,7 +244,7 @@ function handlePinError(response, gamePinInput) {
             }
             break;
         default:
-            showError("Invalid PIN. Please check and try again.");
+            showError(LanguageManager.text('client.home.invalidPin'));
     }
 
     gamePinInput.focus();
@@ -253,7 +253,7 @@ function handlePinError(response, gamePinInput) {
 
 // Legacy function name support
 function incorrectPin() {
-    showError("Please enter a valid Game PIN!");
+    showError(LanguageManager.text('client.home.validPin'));
 }
 
 function getName() {

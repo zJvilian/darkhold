@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{activegames.title} + ' - Darkhold'">My Active Games - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -14,6 +14,7 @@
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
     <script type="text/javascript" src="/scripts/audio-manager.js"></script>
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body class="admin-page">
     <div th:insert="~{navbar :: navbar}"></div>
@@ -75,7 +76,7 @@
                     <span th:text="#{activegames.title}">Active Games</span>
                 </div>
                 <h1 class="active-games-title" th:text="#{activegames.title}">My Active Games</h1>
-                <p class="active-games-subtitle">Monitor and manage your live quiz sessions in real-time</p>
+                <p class="active-games-subtitle" th:text="#{activegames.subtitle}">Monitor and manage your live quiz sessions in real-time</p>
             </header>
 
             <!-- Stats Bar (only show when there are games) -->

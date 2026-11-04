@@ -1,6 +1,6 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{home.title}">Darkhold - Interactive Quiz Platform</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -49,13 +49,13 @@
                 <div class="hero-text animate-fade-in">
                     <div class="hero-badge">
                         <i class="fas fa-bolt"></i>
-                        <span>Real-time multiplayer quizzes</span>
+                        <span th:text="#{home.liveBadge}">Real-time multiplayer quizzes</span>
                     </div>
                     <h1 class="hero-title font-display">
                         <span class="hero-title-line" th:text="#{app.name}">Darkhold</span>
                     </h1>
                     <p class="hero-subtitle" th:text="#{app.tagline}">Interactive Quiz Platform</p>
-                    <p class="hero-description">
+                    <p class="hero-description" th:text="#{home.heroDescription}">
                         Engage your audience with live quizzes, instant feedback, and real-time leaderboards.
                         Built for classrooms, meetings, and events.
                     </p>
@@ -315,7 +315,7 @@
                             <span th:text="#{home.welcome}">Welcome back</span>,
                             <span class="text-gradient" th:text="${#authentication.getPrincipal().getUsername()}">User</span>
                         </h2>
-                        <p class="section-subheading">Jump right back in. Here are your quick actions.</p>
+                        <p class="section-subheading" th:text="#{home.quickDescription}">Jump right back in. Here are your quick actions.</p>
                     </div>
                     <div class="dashboard-grid">
                         <a th:href="@{/challenge/create}" class="dashboard-card">
@@ -324,7 +324,7 @@
                             </div>
                             <div class="dashboard-card-body">
                                 <span class="dashboard-card-title" th:text="#{home.createQuiz}">Create Quiz</span>
-                                <span class="dashboard-card-desc">Build a new quiz from scratch or import</span>
+                                <span class="dashboard-card-desc" th:text="#{home.createDescription}">Build a new quiz from scratch or import</span>
                             </div>
                             <i class="fas fa-arrow-right dashboard-card-arrow"></i>
                         </a>
@@ -334,7 +334,7 @@
                             </div>
                             <div class="dashboard-card-body">
                                 <span class="dashboard-card-title" th:text="#{home.viewChallenges}">My Quizzes</span>
-                                <span class="dashboard-card-desc">View, edit, or launch your saved quizzes</span>
+                                <span class="dashboard-card-desc" th:text="#{home.libraryDescription}">View, edit, or launch your saved quizzes</span>
                             </div>
                             <i class="fas fa-arrow-right dashboard-card-arrow"></i>
                         </a>
@@ -344,7 +344,7 @@
                             </div>
                             <div class="dashboard-card-body">
                                 <span class="dashboard-card-title" th:text="#{nav.activeGames}">Active Games</span>
-                                <span class="dashboard-card-desc">Monitor and manage running sessions</span>
+                                <span class="dashboard-card-desc" th:text="#{home.activeDescription}">Monitor and manage running sessions</span>
                             </div>
                             <i class="fas fa-arrow-right dashboard-card-arrow"></i>
                         </a>
@@ -354,7 +354,7 @@
                             </div>
                             <div class="dashboard-card-body">
                                 <span class="dashboard-card-title" th:text="#{nav.pastGames}">Past Games</span>
-                                <span class="dashboard-card-desc">Review results, scores, and analytics</span>
+                                <span class="dashboard-card-desc" th:text="#{home.pastDescription}">Review results, scores, and analytics</span>
                             </div>
                             <i class="fas fa-arrow-right dashboard-card-arrow"></i>
                         </a>
@@ -436,24 +436,24 @@
                             </svg>
                             <span class="footer-brand-name font-display">Darkhold</span>
                         </div>
-                        <p class="footer-tagline">Open-source, self-hosted quiz platform for interactive learning and engagement.</p>
+                        <p class="footer-tagline" th:text="#{home.footerDescription}">Open-source, self-hosted quiz platform for interactive learning and engagement.</p>
                     </div>
                     <div class="footer-links">
-                        <h4 class="footer-heading">Platform</h4>
+                        <h4 class="footer-heading" th:text="#{home.platform}">Platform</h4>
                         <ul>
-                            <li><a href="#" onclick="toHome(); return false;">Home</a></li>
-                            <li sec:authorize="isAuthenticated()"><a th:href="@{/challenge/view}">My Quizzes</a></li>
-                            <li sec:authorize="isAuthenticated()"><a th:href="@{/activegames}">Active Games</a></li>
-                            <li sec:authorize="isAnonymous()"><a href="#" onclick="logMeIn(); return false;">Login / Sign Up</a></li>
+                            <li><a href="#" onclick="toHome(); return false;" th:text="#{nav.home}">Home</a></li>
+                            <li sec:authorize="isAuthenticated()"><a th:href="@{/challenge/view}" th:text="#{home.viewChallenges}">My Quizzes</a></li>
+                            <li sec:authorize="isAuthenticated()"><a th:href="@{/activegames}" th:text="#{nav.activeGames}">Active Games</a></li>
+                            <li sec:authorize="isAnonymous()"><a href="#" onclick="logMeIn(); return false;" th:text="#{nav.login}">Login / Sign Up</a></li>
                         </ul>
                     </div>
                     <div class="footer-links">
-                        <h4 class="footer-heading">Resources</h4>
+                        <h4 class="footer-heading" th:text="#{home.resources}">Resources</h4>
                         <ul>
-                            <li><a href="#">Documentation</a></li>
-                            <li><a href="#">API Reference</a></li>
-                            <li><a href="#">Release Notes</a></li>
-                            <li><a href="#">Community</a></li>
+                            <li><a href="#" th:text="#{home.documentation}">Documentation</a></li>
+                            <li><a href="#" th:text="#{home.api}">API Reference</a></li>
+                            <li><a href="#" th:text="#{home.releases}">Release Notes</a></li>
+                            <li><a href="#" th:text="#{home.community}">Community</a></li>
                         </ul>
                     </div>
                 </div>
@@ -463,7 +463,7 @@
                         <span th:text="${#dates.year(#dates.createNow())}">2024</span>
                         <span th:text="#{home.copyright}">Darkhold Quiz Platform</span>
                     </p>
-                    <p class="footer-note">Self-hosted &middot; Open Source &middot; Privacy First</p>
+                    <p class="footer-note" th:text="#{home.footerNote}">Self-hosted &middot; Open Source &middot; Privacy First</p>
                 </div>
             </div>
         </footer>

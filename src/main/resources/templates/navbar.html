@@ -68,7 +68,7 @@
                                 data-bs-toggle="dropdown" aria-expanded="false"
                                 th:title="#{language.select}" th:aria-label="#{language.select}">
                             <i class="fas fa-globe"></i>
-                            <span class="dh-lang-code" id="current-lang-code">EN</span>
+                            <span class="dh-lang-code" id="current-lang-code" th:text="${#strings.toUpperCase(#locale.language)}">EN</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end language-dropdown" aria-labelledby="languageDropdown">
                             <li>
@@ -83,6 +83,13 @@
                                    id="lang-es" th:classappend="${#locale.language == 'es'} ? 'active' : ''">
                                     <span class="lang-check" th:if="${#locale.language == 'es'}"><i class="fas fa-check"></i></span>
                                     <span th:text="#{language.es}">Espanol</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="?lang=de" onclick="changeLanguage('de'); return false;"
+                                   th:classappend="${#locale.language == 'de'} ? 'active' : ''">
+                                    <span class="lang-check" th:if="${#locale.language == 'de'}"><i class="fas fa-check"></i></span>
+                                    <span th:text="#{language.de}">Deutsch</span>
                                 </a>
                             </li>
                         </ul>
@@ -134,7 +141,7 @@
                                 data-bs-toggle="dropdown" aria-expanded="false"
                                 th:title="#{language.select}" th:aria-label="#{language.select}">
                             <i class="fas fa-globe"></i>
-                            <span class="dh-lang-code" id="current-lang-code-anon">EN</span>
+                            <span class="dh-lang-code" id="current-lang-code-anon" th:text="${#strings.toUpperCase(#locale.language)}">EN</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end language-dropdown" aria-labelledby="languageDropdownAnon">
                             <li>
@@ -149,6 +156,13 @@
                                    th:classappend="${#locale.language == 'es'} ? 'active' : ''">
                                     <span class="lang-check" th:if="${#locale.language == 'es'}"><i class="fas fa-check"></i></span>
                                     <span th:text="#{language.es}">Espanol</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="?lang=de" onclick="changeLanguage('de'); return false;"
+                                   th:classappend="${#locale.language == 'de'} ? 'active' : ''">
+                                    <span class="lang-check" th:if="${#locale.language == 'de'}"><i class="fas fa-check"></i></span>
+                                    <span th:text="#{language.de}">Deutsch</span>
                                 </a>
                             </li>
                         </ul>

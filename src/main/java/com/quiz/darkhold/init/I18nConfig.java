@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ReloadableResourceBundleMessageSource;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
-import org.springframework.web.servlet.i18n.SessionLocaleResolver;
+import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import java.util.Locale;
 
@@ -36,20 +36,22 @@ public class I18nConfig {
 
     /**
      * Configures the LocaleResolver to determine the current locale.
-     * Uses session-based locale storage with English as the default.
+     * Keeps the chosen language across navigation, login and new browser sessions.
      *
      * @return configured LocaleResolver bean
      */
     @Bean
     public LocaleResolver localeResolver() {
-        SessionLocaleResolver resolver = new SessionLocaleResolver();
+        CookieLocaleResolver resolver = new CookieLocaleResolver("darkhold_language");
+        resolver.setCookieMaxAge(java.time.Duration.ofDays(365));
+        resolver.setCookieSameSite("Lax");
         resolver.setDefaultLocale(Locale.ENGLISH);
         return resolver;
     }
 
     /**
      * Configures the LocaleChangeInterceptor to allow changing locale via URL parameter.
-     * Users can switch language by adding ?lang=es (or other locale code) to any URL.
+     * Users can switch language by adding ?lang=de (or another locale code) to any URL.
      *
      * @return configured LocaleChangeInterceptor bean
      */

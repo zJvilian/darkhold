@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<script th:fragment="messages" th:inline="javascript">
+    window.DarkholdMessages = /*[[${clientMessages}]]*/ {};
+</script>
+<label th:fragment="liveLanguage" class="live-language">
+    <span class="sr-only" th:text="#{language.select}">Select language</span>
+    <select th:aria-label="#{language.select}" onchange="LanguageManager.changeLanguage(this.value)">
+        <option value="en" th:selected="${#locale.language == 'en'}">EN</option>
+        <option value="de" th:selected="${#locale.language == 'de'}">DE</option>
+        <option value="es" th:selected="${#locale.language == 'es'}">ES</option>
+    </select>
+</label>
+</body>
+</html>

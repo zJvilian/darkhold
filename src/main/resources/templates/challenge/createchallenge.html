@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{challenge.create.title}">Create Challenge - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -16,6 +16,7 @@
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script type="text/javascript" src="/scripts/create-challenge-scripts.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body>
     <div th:insert="~{navbar :: navbar}"></div>
@@ -26,7 +27,7 @@
             <!-- Page Header -->
             <header class="create-challenge-header">
                 <h1 class="create-challenge-title" th:text="#{challenge.create.header}">Create Challenge</h1>
-                <p class="create-challenge-subtitle">Build an engaging quiz with custom questions or import from Excel</p>
+                <p class="create-challenge-subtitle" th:text="#{challenge.create.subtitle}">Build an engaging quiz with custom questions or import from Excel</p>
             </header>
 
             <!-- Main Form Card -->
@@ -41,8 +42,8 @@
                                 <i class="fas fa-info-circle"></i>
                             </div>
                             <div>
-                                <h2 class="section-title">Basic Information</h2>
-                                <p class="section-description">Give your challenge a name and description to help players understand what to expect</p>
+                                <h2 class="section-title" th:text="#{challenge.create.basic}">Basic Information</h2>
+                                <p class="section-description" th:text="#{challenge.create.basicDescription}">Give your challenge a name and description to help players understand what to expect</p>
                             </div>
                         </div>
 
@@ -73,12 +74,12 @@
                             </div>
                             <div>
                                 <h2 class="section-title" th:text="#{challenge.create.uploadQuestions}">Upload Questions (Optional)</h2>
-                                <p class="section-description">Import questions from an Excel file, or skip to add them manually later</p>
+                                <p class="section-description" th:text="#{challenge.create.uploadDescription}">Import questions from an Excel file, or skip to add them manually later</p>
                             </div>
                         </div>
 
                         <div class="form-field">
-                            <label for="upload" class="form-label">Excel File</label>
+                            <label for="upload" class="form-label" th:text="#{challenge.create.excelFile}">Excel File</label>
                             <input class="form-file" type="file" name="upload" id="upload" accept=".xlsx" />
                             <span class="form-hint" th:text="#{challenge.create.uploadHint}">
                                 Upload an Excel file to bulk-add questions, or leave empty to add questions manually later.

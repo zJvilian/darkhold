@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -19,6 +19,7 @@
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
     <script type="text/javascript" src="/scripts/audio-manager.js"></script>
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body class="login-page">
     <div class="login-container">
@@ -71,7 +72,7 @@
                     <label for="password" class="form-label" th:text="#{registration.password}">Password</label>
                     <div class="input-with-icon">
                         <i class="fas fa-lock input-icon"></i>
-                        <input id="password" class="form-input" type="password" th:field="*{password}"
+                        <input id="password" class="form-input" type="password" name="password" autocomplete="new-password"
                                th:placeholder="#{registration.password}" placeholder="Enter password"
                                required minlength="8" maxlength="90" />
                     </div>

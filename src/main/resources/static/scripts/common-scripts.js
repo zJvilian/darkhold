@@ -60,7 +60,7 @@ function toggleSound() {
 
 /**
  * Change the application language
- * @param {string} lang - Language code (en, es)
+ * @param {string} lang - Language code (en, de, es)
  */
 function changeLanguage(lang) {
     if (typeof LanguageManager !== 'undefined') {

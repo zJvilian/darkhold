@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{challenge.edit.title}">Edit Challenge - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -16,6 +16,7 @@
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body class="bg-admin">
 <div th:insert="~{navbar :: navbar}"></div>
@@ -65,7 +66,7 @@
                         <strong class="question-text" th:text="${q.question}">Question text</strong>
                         <span th:if="${q.questionType != null and q.questionType.name() != 'MULTIPLE_CHOICE'}"
                               class="question-type-badge"
-                              th:text="${q.questionType.name() == 'TRUE_FALSE' ? 'T/F' : (q.questionType.name() == 'TYPE_ANSWER' ? 'Type' : 'Poll')}"></span>
+                              th:text="${#messages.msg('client.questionType.' + q.questionType.name())}"></span>
                         <span th:if="${q.timeLimit != null}" class="question-time-badge" th:text="${q.timeLimit} + 's'"></span>
                     </div>
                     <div class="question-answers" th:if="${q.questionType == null or q.questionType.name() == 'MULTIPLE_CHOICE' or q.questionType.name() == 'POLL'}">
@@ -75,8 +76,8 @@
                         <span th:if="${q.answer4}"> | <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'D')} ? 'correct-answer' : ''" th:text="'D: ' + ${q.answer4}"></span></span>
                     </div>
                     <div class="question-answers" th:if="${q.questionType != null and q.questionType.name() == 'TRUE_FALSE'}">
-                        <span th:class="${#strings.contains(q.correctOptions, 'TRUE')} ? 'correct-answer' : ''">True</span> |
-                        <span th:class="${#strings.contains(q.correctOptions, 'FALSE')} ? 'correct-answer' : ''">False</span>
+                        <span th:class="${#strings.contains(q.correctOptions, 'TRUE')} ? 'correct-answer' : ''" th:text="#{live.true}">True</span> |
+                        <span th:class="${#strings.contains(q.correctOptions, 'FALSE')} ? 'correct-answer' : ''" th:text="#{live.false}">False</span>
                     </div>
                     <div class="question-answers" th:if="${q.questionType != null and q.questionType.name() == 'TYPE_ANSWER'}">
                         <span th:text="#{challenge.edit.answer}">Answer:</span> <span class="correct-answer" th:text="${q.answer1}"></span>
@@ -294,7 +295,7 @@ function updateNumbers() {
 
 function showQuestionModal(id = null) {
     document.getElementById('editingQuestionId').value = id || '';
-    document.getElementById('modalTitle').textContent = id ? 'Edit Question' : 'Add Question';
+    document.getElementById('modalTitle').textContent = id ? LanguageManager.text('client.editor.editQuestion') : LanguageManager.text('client.editor.addQuestion');
     document.getElementById('questionText').value = '';
     document.getElementById('questionType').value = 'MULTIPLE_CHOICE';
     document.getElementById('timeLimit').value = '';
@@ -357,7 +358,7 @@ function editQuestion(id) {
         .then(r => r.json())
         .then(q => {
             document.getElementById('editingQuestionId').value = id;
-            document.getElementById('modalTitle').textContent = 'Edit Question';
+            document.getElementById('modalTitle').textContent = LanguageManager.text('client.editor.editQuestion');
             document.getElementById('questionText').value = q.question;
             document.getElementById('questionType').value = q.questionType || 'MULTIPLE_CHOICE';
             document.getElementById('timeLimit').value = q.timeLimit || '';
@@ -409,7 +410,7 @@ function saveQuestion() {
 
     if (type === 'MULTIPLE_CHOICE') {
         correct = ['A','B','C','D'].filter(x => document.getElementById('correct'+x).checked).join(',');
-        if (!correct) { alert('Select at least one correct answer'); return; }
+        if (!correct) { alert(LanguageManager.text('client.editor.chooseCorrect')); return; }
         answer1 = document.getElementById('answer1').value;
         answer2 = document.getElementById('answer2').value;
         answer3 = document.getElementById('answer3').value;
@@ -419,10 +420,10 @@ function saveQuestion() {
         answer2 = 'False';
         if (document.getElementById('tfTrue').checked) correct = 'TRUE';
         else if (document.getElementById('tfFalse').checked) correct = 'FALSE';
-        else { alert('Select the correct answer (True or False)'); return; }
+        else { alert(LanguageManager.text('client.editor.chooseTrueFalse')); return; }
     } else if (type === 'TYPE_ANSWER') {
         answer1 = document.getElementById('typeAnswerCorrect').value;
-        if (!answer1) { alert('Enter the correct answer'); return; }
+        if (!answer1) { alert(LanguageManager.text('client.editor.enterCorrect')); return; }
         correct = 'A'; // Correct is always answer1 for type answer
         acceptableAnswers = document.getElementById('acceptableAnswers').value;
     } else if (type === 'POLL') {
@@ -510,7 +511,7 @@ document.getElementById('questionImageInput').addEventListener('change', functio
     if (file) {
         // Validate file size (2MB)
         if (file.size > 2 * 1024 * 1024) {
-            alert('Image file size must be less than 2MB');
+            alert(LanguageManager.text('client.editor.imageSize'));
             e.target.value = '';
             return;
         }
@@ -576,7 +577,7 @@ function previewYouTubeVideo() {
         document.getElementById('videoPreview').src = embedUrl;
         document.getElementById('videoPreviewContainer').style.display = 'block';
     } else {
-        alert('Invalid YouTube URL. Please use format: https://www.youtube.com/watch?v=VIDEO_ID');
+        alert(LanguageManager.text('client.editor.videoError'));
         document.getElementById('videoPreviewContainer').style.display = 'none';
     }
 }

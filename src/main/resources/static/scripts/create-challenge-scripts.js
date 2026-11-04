@@ -31,7 +31,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
     // Show progress bar and update button
     progressDiv.style.display = "block";
     uploadButton.disabled = true;
-    uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + LanguageManager.text('client.create.uploading');
 
     const formData = new FormData();
     formData.append('upload', file, file.name);
@@ -47,7 +47,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
             const percentage = Math.round((e.loaded / e.total) * 100);
             progress.style.width = percentage + '%';
             progress.setAttribute('aria-valuenow', percentage);
-            uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading ' + percentage + '%';
+            uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + LanguageManager.text('client.create.uploadPercent', percentage);
         }
     };
 
@@ -66,7 +66,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
             progressDiv.style.display = "none";
             resultDiv.innerHTML = '<div class="alert alert-danger">An error occurred while uploading the file.</div>';
             uploadButton.disabled = false;
-            uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> Create Challenge';
+            uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
         }
     };
 
@@ -74,7 +74,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
         progressDiv.style.display = "none";
         resultDiv.innerHTML = '<div class="alert alert-danger">Network error occurred.</div>';
         uploadButton.disabled = false;
-        uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> Create Challenge';
+        uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
     };
 
     xhr.send(formData);
@@ -82,7 +82,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
 
 function createEmptyChallenge(uploadButton, title, description, resultDiv) {
     uploadButton.disabled = true;
-    uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+    uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + LanguageManager.text('client.create.creating');
 
     const formData = new FormData();
     formData.append('title', title);
@@ -113,7 +113,7 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
     .catch(error => {
         resultDiv.innerHTML = '<div class="alert alert-danger">An error occurred: ' + error.message + '</div>';
         uploadButton.disabled = false;
-        uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> Create Challenge';
+        uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
     });
 }
 
@@ -123,7 +123,7 @@ function update_progress(e) {
     if (e.lengthComputable) {
         let percentage = Math.round((e.loaded / e.total) * 100);
         progress.value = percentage;
-        uploadButton.innerHTML = 'Upload ' + percentage + '%';
+        uploadButton.innerHTML = LanguageManager.text('client.create.uploadPercent', percentage);
         console.log("percent " + percentage + '%');
     } else {
         console.log("Unable to compute progress information since the total size is unknown");
@@ -148,7 +148,7 @@ function viewChallenge(elem, challengeId) {
     const viewButton = document.createElement('a');
     viewButton.setAttribute("class", "btn btn-primary ms-2");
     viewButton.setAttribute("href", "/preconfigure?challenges=" + challengeId);
-    viewButton.innerHTML = '<i class="fas fa-eye"></i> View Challenge';
+    viewButton.innerHTML = '<i class="fas fa-eye"></i> ' + LanguageManager.text('client.create.view');
     elem.appendChild(viewButton);
 }
 

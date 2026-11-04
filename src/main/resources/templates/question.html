@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title>Next Question - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -16,6 +16,7 @@
     <script type="text/javascript" src="/scripts/core/sockjs.min.js"></script>
     <script type="text/javascript" src="/scripts/core/stomp.min.js"></script>
     <script type="text/javascript" src="/scripts/question-scripts.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body onload="connect()">
     <input type="hidden" th:value="${#authentication.getPrincipal().getUsername()}" id="name"/>

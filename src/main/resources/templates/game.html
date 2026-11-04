@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title>Playing Quiz - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -19,6 +19,7 @@
     <script type="text/javascript" src="/scripts/language-manager.js"></script>
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body class="game-play-page" onload="connect()">
     <div th:insert="~{navbar :: navbar}"></div>

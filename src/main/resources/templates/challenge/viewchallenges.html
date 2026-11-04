@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{challenge.view.title}">View Challenges - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -15,6 +15,7 @@
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script type="text/javascript" src="/scripts/view-challenges-scripts.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body>
     <div th:insert="~{navbar :: navbar}"></div>
@@ -27,7 +28,7 @@
                 <!-- Page Header -->
                 <header class="view-challenges-header">
                     <h1 class="view-challenges-title" th:text="#{challenge.view.title}">My Challenges</h1>
-                    <p class="view-challenges-subtitle">Browse, edit, and manage your quiz collection</p>
+                    <p class="view-challenges-subtitle" th:text="#{challenge.view.subtitle}">Browse, edit, and manage your quiz collection</p>
                 </header>
 
                 <!-- Search Section -->
@@ -93,11 +94,11 @@
                         <div class="empty-state-icon">
                             <i class="fas fa-clipboard-list"></i>
                         </div>
-                        <h3 class="empty-state-title">No Challenges Yet</h3>
-                        <p class="empty-state-text">Create your first challenge to get started</p>
-                        <a href="/create_challenge" class="btn-primary-create">
+                        <h3 class="empty-state-title" th:text="#{challenge.view.emptyTitle}">No Challenges Yet</h3>
+                        <p class="empty-state-text" th:text="#{challenge.view.emptyDescription}">Create your first challenge to get started</p>
+                        <a href="/challenge/create" class="btn-primary-create">
                             <i class="fas fa-plus-circle"></i>
-                            <span>Create Challenge</span>
+                            <span th:text="#{challenge.create.header}">Create Challenge</span>
                         </a>
                     </div>
                 </section>

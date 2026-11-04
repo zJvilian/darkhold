@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title>Starting Game - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -45,6 +45,7 @@
             document.forms[0].submit();
         }
     </script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body onload="loading()">
     <form action="#" method="post">

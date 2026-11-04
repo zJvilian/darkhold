@@ -1,5 +1,5 @@
 <!DOCTYPE HTML>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
     <title th:text="#{challenge.preview.title}">Preview Challenge - Darkhold</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
@@ -15,6 +15,7 @@
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
     <script type="text/javascript" src="/scripts/preview-scripts.js"></script>
+    <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body>
     <div th:insert="~{navbar :: navbar}"></div>
@@ -32,7 +33,7 @@
                 <!-- Page Header -->
                 <header class="preview-header">
                     <h1 class="preview-title" th:text="${previewInfo.challengeName}">World Geography Quiz</h1>
-                    <p class="preview-subtitle">Review questions and select your game mode</p>
+                    <p class="preview-subtitle" th:text="#{challenge.preview.subtitle}">Review questions and select your game mode</p>
                 </header>
 
                 <!-- Questions Preview Section -->
@@ -42,7 +43,7 @@
                             <div class="questions-title-icon">
                                 <i class="fas fa-list"></i>
                             </div>
-                            <span>Questions Preview</span>
+                            <span th:text="#{challenge.preview.questions}">Questions Preview</span>
                         </h2>
                         <span class="questions-count-badge">
                             <i class="fas fa-question-circle"></i>

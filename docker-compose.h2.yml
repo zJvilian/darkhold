@@ -1,14 +1,11 @@
 # Simple H2 Database Configuration (Development/Testing)
-# Usage: docker-compose -f docker-compose.h2.yml up
-
-version: '3.8'
+# Usage: docker compose -f docker-compose.h2.yml up
 
 services:
   darkhold:
-    image: surajcm/darkhold
+    build: .
+    image: darkhold:local
     container_name: darkhold
-    volumes:
-      - ./db:/tmp/db  # H2 database persistence
     ports:
       - "8181:8181"
     restart: unless-stopped

@@ -1,0 +1,7 @@
+.git
+.gradle
+build
+logs
+db
+user-photos
+question-images

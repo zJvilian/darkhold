@@ -1,6 +1,16 @@
-FROM eclipse-temurin:25.0.1_8-jdk-noble
-COPY . .
-RUN sed -i '/JAVA_HOME/d' build.sh && chmod +x /start.sh && chmod +x build.sh && chmod +x gradlew
-VOLUME ["/tmp/db"]
+FROM eclipse-temurin:25-jdk-noble AS build
+WORKDIR /app
+COPY gradlew settings.gradle build.gradle gradle.properties ./
+COPY gradle ./gradle
+COPY config ./config
+COPY src/main ./src/main
+RUN chmod +x gradlew && ./gradlew --no-daemon bootJar
+
+FROM eclipse-temurin:25-jre-noble
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app/build/libs/darkhold-*.jar app.jar
+COPY start.sh ./start.sh
 EXPOSE 8181
-ENTRYPOINT ["/start.sh"]
+ENTRYPOINT ["sh", "/app/start.sh"]

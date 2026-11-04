@@ -1,11 +1,10 @@
 # PostgreSQL Production Configuration
-# Usage: docker-compose up -d
-
-version: '3.8'
+# Usage: docker compose up -d
 
 services:
   darkhold:
-    image: surajcm/darkhold
+    build: .
+    image: darkhold:local
     container_name: darkhold
     depends_on:
       db:

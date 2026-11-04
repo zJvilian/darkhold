@@ -87,6 +87,14 @@
                     <span class="stat-count" th:text="${(activeGames != null ? #lists.size(activeGames) : 0) + (liveRooms != null ? #lists.size(liveRooms) : 0)}">3</span>
                     <span th:text="#{activegames.activeGamesCount}">active game(s)</span>
                 </div>
+                <form th:action="@{/active-games/terminate-all}" method="post" style="margin: 0;"
+                      onsubmit="return confirm(this.dataset.confirm);"
+                      th:data-confirm="#{activegames.terminateAllConfirm}">
+                    <button type="submit" class="game-action-btn game-action-btn--danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i class="fas fa-stop-circle"></i>
+                        <span th:text="#{activegames.terminateAll}">Terminate All</span>
+                    </button>
+                </form>
             </div>
 
             <!-- Game Grid -->
@@ -99,6 +107,15 @@
                     <div class="game-card-actions">
                         <a class="game-action-btn game-action-btn--primary" th:href="@{/play/{pin}(pin=${room.pin})}"
                            th:text="${room.phase == 'FINISHED' ? #messages.msg('live.viewPodium') : #messages.msg('live.returnHost')}">Return to host screen</a>
+                        <form th:action="@{/active-games/terminate}" method="post" style="margin: 0; flex: 1;"
+                              onsubmit="return confirm(this.dataset.confirm);"
+                              th:data-confirm="#{activegames.terminateConfirm}">
+                            <input type="hidden" name="pin" th:value="${room.pin}"/>
+                            <button type="submit" class="game-action-btn game-action-btn--danger">
+                                <i class="fas fa-times-circle"></i>
+                                <span th:text="#{activegames.terminate}">Terminate</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -185,6 +202,17 @@
                             <button type="submit" class="game-action-btn game-action-btn--warning" style="width: 100%;">
                                 <i class="fas fa-pause-circle"></i>
                                 <span th:text="#{activegames.resumeGame}">Resume Game</span>
+                            </button>
+                        </form>
+
+                        <!-- Terminate classic game -->
+                        <form th:action="@{/active-games/terminate}" method="post" style="margin: 0; flex: 1;"
+                              onsubmit="return confirm(this.dataset.confirm);"
+                              th:data-confirm="#{activegames.terminateConfirm}">
+                            <input type="hidden" name="pin" th:value="${game.pin}"/>
+                            <button type="submit" class="game-action-btn game-action-btn--danger">
+                                <i class="fas fa-times-circle"></i>
+                                <span th:text="#{activegames.terminate}">Terminate</span>
                             </button>
                         </form>
                     </div>

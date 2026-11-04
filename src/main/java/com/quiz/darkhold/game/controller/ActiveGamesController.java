@@ -8,7 +8,10 @@ import com.quiz.darkhold.preview.service.PreviewService;
 import com.quiz.darkhold.live.LiveQuizService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
 import java.util.ArrayList;
@@ -77,6 +80,49 @@ public class ActiveGamesController {
         setChallengeName(info, game.getChallengeId());
         setParticipantCount(info, game.getPin());
         return info;
+    }
+
+    /**
+     * Terminate an active game session (live room or classic game).
+     *
+     * @param pin       game PIN
+     * @param principal authenticated user
+     * @return redirect to active games
+     */
+    @PostMapping("/active-games/terminate")
+    public String terminateGame(@RequestParam("pin") final String pin, final Principal principal) {
+        if (principal == null) {
+            return "redirect:/login";
+        }
+        boolean admin = isAdmin(principal);
+        String host = LiveQuizService.hostIdentity(principal);
+        boolean liveTerminated = liveQuizService.terminate(pin, host, admin);
+        if (!liveTerminated) {
+            previewService.terminateGame(pin, principal.getName(), admin);
+        }
+        return "redirect:/my-active-games";
+    }
+
+    /**
+     * Terminate all active games for the current user.
+     *
+     * @param principal authenticated user
+     * @return redirect to active games
+     */
+    @PostMapping("/active-games/terminate-all")
+    public String terminateAll(final Principal principal) {
+        if (principal == null) {
+            return "redirect:/login";
+        }
+        liveQuizService.terminateAllForHost(LiveQuizService.hostIdentity(principal));
+        previewService.terminateAllGamesForModerator(principal.getName());
+        return "redirect:/my-active-games";
+    }
+
+    private boolean isAdmin(final Principal principal) {
+        return principal instanceof Authentication auth
+                && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 
     private void setChallengeName(final GameInfo info, final String challengeIdStr) {

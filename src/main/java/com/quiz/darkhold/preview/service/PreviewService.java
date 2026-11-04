@@ -223,4 +223,40 @@ public class PreviewService {
     public List<Game> getGamesByModeratorAndStatus(final String moderator, final GameStatus status) {
         return gameRepository.findByModeratorAndGameStatus(moderator, status.name());
     }
+
+    /**
+     * Terminate an active game session by PIN for the given moderator or admin.
+     *
+     * @param pin       game PIN
+     * @param moderator username of moderator
+     * @param isAdmin   whether the caller is an admin
+     * @return true if game was found and terminated
+     */
+    public boolean terminateGame(final String pin, final String moderator, final boolean isAdmin) {
+        Game game = gameRepository.findByPin(pin);
+        if (game == null) {
+            return false;
+        }
+        if (!isAdmin && (moderator == null || !moderator.equals(game.getModerator()))) {
+            return false;
+        }
+        game.setGameStatus(GameStatus.FINISHED.name());
+        gameRepository.save(game);
+        currentGame.stopTheGame(pin);
+        return true;
+    }
+
+    /**
+     * Terminate all active games for the given moderator.
+     *
+     * @param moderator username of moderator
+     */
+    public void terminateAllGamesForModerator(final String moderator) {
+        List<Game> activeGames = getActiveGamesForModerator(moderator);
+        for (Game game : activeGames) {
+            game.setGameStatus(GameStatus.FINISHED.name());
+            gameRepository.save(game);
+            currentGame.stopTheGame(game.getPin());
+        }
+    }
 }

@@ -55,7 +55,7 @@ function connect() {
             let kickedUser = message.body;
             let currentUser = document.getElementById('name').value;
             if (kickedUser === currentUser) {
-                alert('You have been removed from this game.');
+                alert(LanguageManager.text('client.lobby.kicked'));
                 window.location.href = '/';
             }
         });
@@ -108,7 +108,7 @@ function renderTeamView() {
                     <span class="team-color-dot team-color-dot-${team.color}"></span>
                     ${escapeHtmlPlayer(team.name)}
                 </h5>
-                <div class="team-column-count">${(team.members || []).length} members</div>
+                <div class="team-column-count">${LanguageManager.text('client.lobby.members', (team.members || []).length)}</div>
             </div>
             <div class="team-members-list">
                 ${(team.members || []).map(m => renderTeamMember(m, canDrag)).join('')}
@@ -232,7 +232,7 @@ function updateMyTeamDisplay() {
         myTeamBadge.className = 'team-badge team-badge-' + myTeam.color;
     } else {
         myTeamDisplay.style.display = 'block';
-        myTeamBadge.textContent = 'Not assigned yet';
+        myTeamBadge.textContent = LanguageManager.text('client.lobby.notAssigned');
         myTeamBadge.className = 'team-badge';
         myTeamBadge.style.backgroundColor = '#6c757d';
     }
@@ -275,13 +275,13 @@ function showGreeting(message) {
 function buildParticipantRow(username, isModerator, moderator) {
     let html = '<span>' + escapeHtml(username) + '</span>';
     if (username === moderator) {
-        html += ' <span class="badge bg-primary">Moderator</span>';
+        html += ' <span class="badge bg-primary">' + LanguageManager.text('client.lobby.moderator') + '</span>';
     }
     // Add kick button for moderator (can't kick self)
     if (isModerator && username !== moderator) {
         html += ' <button type="button" class="btn btn-sm btn-danger ms-2" '
             + 'data-username="' + escapeHtml(username) + '" '
-            + 'onclick="kickPlayer(this.dataset.username)">Kick</button>';
+            + 'onclick="kickPlayer(this.dataset.username)">' + LanguageManager.text('client.lobby.kick') + '</button>';
     }
     return html;
 }
@@ -293,7 +293,7 @@ function escapeHtml(text) {
 }
 
 function kickPlayer(username) {
-    if (confirm('Are you sure you want to remove ' + username + ' from the game?')) {
+    if (confirm(LanguageManager.text('client.lobby.kickConfirm', username))) {
         let pin = document.getElementById('quizPin').value;
         stompClient.send("/app/kick_player", {}, pin + ':' + username);
     }

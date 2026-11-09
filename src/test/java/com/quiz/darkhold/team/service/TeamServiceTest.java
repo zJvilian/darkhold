@@ -53,7 +53,7 @@ class TeamServiceTest {
         @DisplayName("Should create correct number of teams")
         void shouldCreateCorrectNumberOfTeams() {
             CurrentGameSession session = new CurrentGameSession("12345", "host");
-            when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.save(any())).thenReturn(session);
 
             TeamConfig config = new TeamConfig(3, TeamAssignmentMethod.BALANCED);
@@ -68,6 +68,7 @@ class TeamServiceTest {
         @DisplayName("Should use default team names when not customized")
         void shouldUseDefaultTeamNamesWhenNotCustomized() {
             CurrentGameSession session = new CurrentGameSession("12345", "host");
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.save(any())).thenReturn(session);
 
@@ -82,6 +83,7 @@ class TeamServiceTest {
         @DisplayName("Should cap teams at TEAM_COLORS length")
         void shouldCapTeamsAtTeamColorsLength() {
             CurrentGameSession session = new CurrentGameSession("12345", "host");
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.save(any())).thenReturn(session);
 
@@ -95,7 +97,7 @@ class TeamServiceTest {
         @Test
         @DisplayName("Should throw when game not found")
         void shouldThrowWhenGameNotFound() {
-            when(currentGameRepository.findByPin("99999")).thenReturn(Optional.empty());
+            when(currentGameRepository.lockByPin("99999")).thenReturn(Optional.empty());
 
             TeamConfig config = new TeamConfig(2, TeamAssignmentMethod.BALANCED);
             assertThrows(IllegalArgumentException.class,
@@ -148,7 +150,7 @@ class TeamServiceTest {
         @DisplayName("Should update and save session")
         void shouldUpdateAndSaveSession() {
             CurrentGameSession session = new CurrentGameSession("12345", "host");
-            when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
 
             teamService.setAssignmentMethod("12345", TeamAssignmentMethod.RANDOM);
 
@@ -165,6 +167,7 @@ class TeamServiceTest {
         @DisplayName("Should add player to target team")
         void shouldAddPlayerToTargetTeam() {
             CurrentGameSession session = createSessionWithTeams("12345");
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.save(any())).thenReturn(session);
 
@@ -180,6 +183,7 @@ class TeamServiceTest {
             Map<String, String> playerTeams = new HashMap<>();
             playerTeams.put("player1", "Team Red");
             session.setPlayerTeamsMap(playerTeams);
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
             when(currentGameRepository.save(any())).thenReturn(session);
 

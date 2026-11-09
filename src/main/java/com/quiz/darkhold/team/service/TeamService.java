@@ -8,6 +8,7 @@ import com.quiz.darkhold.team.model.TeamAssignmentMethod;
 import com.quiz.darkhold.team.model.TeamConfig;
 import com.quiz.darkhold.team.model.TeamInfo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,8 +34,9 @@ public class TeamService {
         this.currentGameRepository = currentGameRepository;
     }
 
+    @Transactional
     public void createTeams(final String pin, final TeamConfig config) {
-        CurrentGameSession session = currentGameRepository.findByPin(pin)
+        CurrentGameSession session = currentGameRepository.lockByPin(pin)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
         List<TeamInfo> teams = new ArrayList<>();
@@ -59,15 +61,17 @@ public class TeamService {
         return method != null ? method : TeamAssignmentMethod.BALANCED;
     }
 
+    @Transactional
     public void setAssignmentMethod(final String pin, final TeamAssignmentMethod method) {
-        CurrentGameSession session = currentGameRepository.findByPin(pin)
+        CurrentGameSession session = currentGameRepository.lockByPin(pin)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
         session.setTeamAssignmentMethod(method);
         currentGameRepository.save(session);
     }
 
+    @Transactional
     public void assignPlayerToTeam(final String pin, final String username, final String teamName) {
-        CurrentGameSession session = currentGameRepository.findByPin(pin)
+        CurrentGameSession session = currentGameRepository.lockByPin(pin)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
         List<TeamInfo> teams = getTeamsFromSession(session);
@@ -93,8 +97,9 @@ public class TeamService {
         currentGameRepository.save(session);
     }
 
+    @Transactional
     public void autoAssignPlayer(final String pin, final String username, final TeamAssignmentMethod method) {
-        CurrentGameSession session = currentGameRepository.findByPin(pin)
+        CurrentGameSession session = currentGameRepository.lockByPin(pin)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
         List<TeamInfo> teams = getTeamsFromSession(session);

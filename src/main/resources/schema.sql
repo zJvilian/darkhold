@@ -92,7 +92,10 @@ create table current_game_session (
       team_assignment_method  varchar(20),
       game_status             varchar(20) default 'WAITING',
       game_mode               varchar(20) default 'MULTIPLAYER',
-      paused_at               bigint
+      paused_at               bigint,
+      created_at              bigint,
+      answered_json           text,
+      started_question_no     int
 );
 
 

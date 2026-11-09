@@ -42,7 +42,7 @@
                 <!-- Error Message -->
                 <div th:if="${danger}" class="login-error" role="alert">
                     <i class="fas fa-exclamation-circle"></i>
-                    <span th:text="${danger}" th:utext="#{login.invalidCredentials}">Invalid credentials</span>
+                    <span th:text="#{login.invalidCredentials}">Invalid credentials</span>
                 </div>
 
                 <!-- Login Form -->
@@ -146,7 +146,7 @@
                     <div class="forgot-modal-icon">
                         <i class="fas fa-wrench"></i>
                     </div>
-                    <h5 id="forgotPassLabel" class="forgot-modal-title" th:text="#{gameManagement.comingSoon}">Coming Soon</h5>
+                    <h5 id="forgotPassLabel" class="forgot-modal-title" th:text="#{login.resetTitle}">Password reset</h5>
                     <p class="forgot-modal-text" th:text="#{login.resetHelp}">
                         Password reset is not yet available. Please contact your administrator to reset your password.
                     </p>

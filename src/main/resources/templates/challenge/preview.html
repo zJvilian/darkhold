@@ -111,18 +111,18 @@
                                 <!-- Team Configuration Panel -->
                                 <div id="teamConfigPanel" class="team-config-panel" style="display:none;">
                                     <div class="config-field">
-                                        <label class="config-label" th:text="#{challenge.preview.teams}">Teams:</label>
+                                        <label class="config-label" for="teamCountSelect" th:text="#{challenge.preview.teams}">Teams:</label>
                                         <select id="teamCountSelect" class="config-select" onchange="updateTeamCount()">
-                                            <option value="2">2 Teams</option>
-                                            <option value="3">3 Teams</option>
-                                            <option value="4">4 Teams</option>
-                                            <option value="5">5 Teams</option>
-                                            <option value="6">6 Teams</option>
+                                            <option value="2" th:text="#{challenge.preview.teamCount(2)}">2 Teams</option>
+                                            <option value="3" th:text="#{challenge.preview.teamCount(3)}">3 Teams</option>
+                                            <option value="4" th:text="#{challenge.preview.teamCount(4)}">4 Teams</option>
+                                            <option value="5" th:text="#{challenge.preview.teamCount(5)}">5 Teams</option>
+                                            <option value="6" th:text="#{challenge.preview.teamCount(6)}">6 Teams</option>
                                         </select>
                                     </div>
 
                                     <div class="config-field">
-                                        <label class="config-label" th:text="#{challenge.preview.assignment}">Assignment:</label>
+                                        <label class="config-label" for="assignmentSelect" th:text="#{challenge.preview.assignment}">Assignment:</label>
                                         <select id="assignmentSelect" class="config-select" onchange="updateAssignment()">
                                             <option value="BALANCED" th:text="#{challenge.preview.balanced}">Balanced</option>
                                             <option value="RANDOM" th:text="#{challenge.preview.random}">Random</option>
@@ -138,27 +138,27 @@
                                     <div id="customNamesPanel" class="team-name-inputs" style="display:none;">
                                         <div class="team-name-field">
                                             <span class="team-color-dot" style="background: #ef4444;"></span>
-                                            <input type="text" class="config-select" id="teamName_red" placeholder="Team Red" maxlength="30">
+                                            <input type="text" class="config-select" id="teamName_red" th:placeholder="#{challenge.preview.teamRed}" th:aria-label="#{challenge.preview.teamRed}" placeholder="Team Red" maxlength="30">
                                         </div>
                                         <div class="team-name-field">
                                             <span class="team-color-dot" style="background: #3b82f6;"></span>
-                                            <input type="text" class="config-select" id="teamName_blue" placeholder="Team Blue" maxlength="30">
+                                            <input type="text" class="config-select" id="teamName_blue" th:placeholder="#{challenge.preview.teamBlue}" th:aria-label="#{challenge.preview.teamBlue}" placeholder="Team Blue" maxlength="30">
                                         </div>
                                         <div class="team-name-field" id="teamName_green_row">
                                             <span class="team-color-dot" style="background: #10b981;"></span>
-                                            <input type="text" class="config-select" id="teamName_green" placeholder="Team Green" maxlength="30">
+                                            <input type="text" class="config-select" id="teamName_green" th:placeholder="#{challenge.preview.teamGreen}" th:aria-label="#{challenge.preview.teamGreen}" placeholder="Team Green" maxlength="30">
                                         </div>
                                         <div class="team-name-field" id="teamName_yellow_row">
                                             <span class="team-color-dot" style="background: #f59e0b;"></span>
-                                            <input type="text" class="config-select" id="teamName_yellow" placeholder="Team Yellow" maxlength="30">
+                                            <input type="text" class="config-select" id="teamName_yellow" th:placeholder="#{challenge.preview.teamYellow}" th:aria-label="#{challenge.preview.teamYellow}" placeholder="Team Yellow" maxlength="30">
                                         </div>
                                         <div class="team-name-field" id="teamName_purple_row">
                                             <span class="team-color-dot" style="background: #a855f7;"></span>
-                                            <input type="text" class="config-select" id="teamName_purple" placeholder="Team Purple" maxlength="30">
+                                            <input type="text" class="config-select" id="teamName_purple" th:placeholder="#{challenge.preview.teamPurple}" th:aria-label="#{challenge.preview.teamPurple}" placeholder="Team Purple" maxlength="30">
                                         </div>
                                         <div class="team-name-field" id="teamName_orange_row">
                                             <span class="team-color-dot" style="background: #f97316;"></span>
-                                            <input type="text" class="config-select" id="teamName_orange" placeholder="Team Orange" maxlength="30">
+                                            <input type="text" class="config-select" id="teamName_orange" th:placeholder="#{challenge.preview.teamOrange}" th:aria-label="#{challenge.preview.teamOrange}" placeholder="Team Orange" maxlength="30">
                                         </div>
                                     </div>
                                 </div>
@@ -178,30 +178,6 @@
                             </p>
                             <button type="button" class="mode-btn mode-btn--success" th:text="#{challenge.preview.startPractice}">
                                 Start Practice
-                            </button>
-                        </div>
-
-                        <!-- Self-Paced Mode (Coming Soon) -->
-                        <div class="mode-card disabled" th:title="#{challenge.preview.comingSoon}">
-                            <div class="mode-icon">📅</div>
-                            <h3 class="mode-title" th:text="#{challenge.preview.selfPaced}">Self-Paced</h3>
-                            <p class="mode-description" th:text="#{challenge.preview.selfPacedDesc}">
-                                Shareable link. Take anytime within window. Multiple attempts allowed.
-                            </p>
-                            <button type="button" class="mode-btn" disabled th:text="#{challenge.preview.comingSoon}">
-                                Coming Soon
-                            </button>
-                        </div>
-
-                        <!-- Challenge Mode (Coming Soon) -->
-                        <div class="mode-card disabled" th:title="#{challenge.preview.comingSoon}">
-                            <div class="mode-icon">🏆</div>
-                            <h3 class="mode-title" th:text="#{challenge.preview.challenge}">Challenge</h3>
-                            <p class="mode-description" th:text="#{challenge.preview.challengeDesc}">
-                                Persistent leaderboard. Best scores tracked. Competitive rankings.
-                            </p>
-                            <button type="button" class="mode-btn" disabled th:text="#{challenge.preview.comingSoon}">
-                                Coming Soon
                             </button>
                         </div>
                     </div>

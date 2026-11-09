@@ -26,6 +26,14 @@ class HomeServiceTest {
     }
 
     @Test
+    void validateGamePinRejectsStartedGame() {
+        var game = mockGame();
+        game.setGameStatus(GameStatus.STARTED.name());
+        when(gameRepository.findByPin(anyString())).thenReturn(game);
+        Assertions.assertFalse(homeService.validateGamePin("1234"));
+    }
+
+    @Test
     void validateGamePinFailure() {
         when(gameRepository.findByPin(anyString())).thenReturn(null);
         Assertions.assertFalse(homeService.validateGamePin("1234"));
@@ -38,7 +46,7 @@ class HomeServiceTest {
 
     private Game mockGame() {
         var game = new Game();
-        game.setGameStatus(GameStatus.STARTED.name());
+        game.setGameStatus(GameStatus.WAITING.name());
         return game;
     }
 

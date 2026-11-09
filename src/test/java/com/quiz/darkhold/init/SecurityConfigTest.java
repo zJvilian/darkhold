@@ -12,8 +12,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -100,6 +102,27 @@ class SecurityConfigTest {
     void shouldEncodePasswordsWithBCrypt() {
         var encoded = passwordEncoder.encode("testPassword");
         assertTrue(passwordEncoder.matches("testPassword", encoded));
+    }
+
+    @Test
+    @DisplayName("Repeated bad logins from one IP block even the correct password")
+    void loginIsThrottledPerIp() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(login("admin@admin.com", "wrong", "10.1.1.1"))
+                    .andExpect(redirectedUrl("/login?error"));
+        }
+        mockMvc.perform(login("admin@admin.com", "admin", "10.1.1.1")).andExpect(redirectedUrl("/login?error"));
+        // another client is unaffected
+        mockMvc.perform(login("admin@admin.com", "admin", "10.1.1.2")).andExpect(redirectedUrl("/"));
+    }
+
+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder login(
+            final String username, final String password, final String ip) {
+        return post("/login").with(csrf()).param("username", username).param("password", password)
+                .with(request -> {
+                    request.setRemoteAddr(ip);
+                    return request;
+                });
     }
 
     @Test

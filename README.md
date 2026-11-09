@@ -27,8 +27,14 @@ Self-hosted quiz platform, inspired by `kahoot`. Please note that this is work i
 Build and start this checkout with PostgreSQL:
 
 ```sh
+cp .env.example .env   # then set POSTGRES_PASSWORD (required) and DARKHOLD_ADMIN_PASSWORD
 docker compose up -d --build --wait
 ```
+
+`POSTGRES_PASSWORD` has no default. If you already have a `postgres_data` volume, use the password it
+was created with (previously `darkhold`). On first start the seeded `admin@admin.com` account gets
+`DARKHOLD_ADMIN_PASSWORD`, or a random password logged once at WARN if unset (`docker compose logs darkhold`).
+The database port is not published; only the app is reachable on 8181.
 
 Open http://localhost:8181. Check readiness with `curl -f http://localhost:8181/actuator/health`.
 The image compiles the application during the build; startup runs the packaged JAR.

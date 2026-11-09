@@ -82,7 +82,7 @@ public class HomeController {
     PinValidationResponse enterGame(@ModelAttribute("gamePin") final String gamePin,
                                      final HttpServletRequest request) {
         String sanitizedPin = CommonUtils.sanitizedString(gamePin);
-        String clientIp = getClientIpAddress(request);
+        String clientIp = request.getRemoteAddr();
 
         // Check if IP is currently blocked
         if (rateLimitingService.isBlocked(clientIp)) {
@@ -112,50 +112,36 @@ public class HomeController {
     }
 
     /**
-     * Get the client's IP address from the request.
-     * Handles X-Forwarded-For header for proxied requests.
-     *
-     * @param request HTTP request
-     * @return client IP address
-     */
-    private String getClientIpAddress(final HttpServletRequest request) {
-        // Check for X-Forwarded-For header (proxy/load balancer)
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            // Take first IP if multiple are present
-            int commaIndex = xForwardedFor.indexOf(',');
-            return commaIndex > 0 ? xForwardedFor.substring(0, commaIndex).trim() : xForwardedFor.trim();
-        }
-
-        // Check for X-Real-IP header (nginx)
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty()) {
-            return xRealIp;
-        }
-
-        // Fall back to remote address
-        return request.getRemoteAddr();
-    }
-
-    /**
      * If the user entered pin is correct, go to the page where everyone waits for the game to start.
      *
      * @param gameInfo      user info
      * @param bindingResult validation result
      * @param model         model
      * @param session       HTTP session to store game PIN
+     * @param request       HTTP request to get client IP
      * @return wait screen or index with errors
      */
     @PostMapping("/joinGame")
     public String joinGame(@Valid @ModelAttribute final GameInfo gameInfo,
                            final BindingResult bindingResult,
                            final Model model,
-                           final HttpSession session) {
+                           final HttpSession session,
+                           final HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
             logger.warn("Validation errors in joinGame: {}", bindingResult.getAllErrors());
             model.addAttribute(GAME_INFO, gameInfo);
             return "index";
         }
+        // The PIN can't be trusted just because /enterGame accepted it earlier: re-check it, with the same limiter
+        String clientIp = request.getRemoteAddr();
+        if (!rateLimitingService.isAllowed(clientIp)) {
+            return rejectJoin(gameInfo, bindingResult, model, "Too many attempts. Please try again later.");
+        }
+        if (!homeService.validateGamePin(CommonUtils.sanitizedString(gameInfo.getGamePin()))) {
+            rateLimitingService.recordFailedAttempt(clientIp);
+            return rejectJoin(gameInfo, bindingResult, model, "Invalid game PIN");
+        }
+        rateLimitingService.recordSuccessfulAttempt(clientIp);
         logger.info("joinGame : gameInfo is {}", gameInfo);
         securityService.autoLogin(gameInfo.getName(), UNREGISTERED_USER);
         populateGameInfo(gameInfo);
@@ -184,6 +170,13 @@ public class HomeController {
 
         model.addAttribute(GAME_INFO, gameInfo);
         return "game/gamewait";
+    }
+
+    private String rejectJoin(final GameInfo gameInfo, final BindingResult bindingResult, final Model model,
+                              final String message) {
+        bindingResult.rejectValue("gamePin", "joinGame.rejected", message);
+        model.addAttribute(GAME_INFO, gameInfo);
+        return "index";
     }
 
     private void populateGameInfo(final GameInfo gameInfo) {

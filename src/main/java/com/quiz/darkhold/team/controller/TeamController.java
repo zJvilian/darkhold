@@ -1,9 +1,11 @@
 package com.quiz.darkhold.team.controller;
 
+import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.team.model.TeamAssignmentMethod;
 import com.quiz.darkhold.team.model.TeamConfig;
 import com.quiz.darkhold.team.model.TeamInfo;
 import com.quiz.darkhold.team.service.TeamService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
@@ -22,16 +25,26 @@ import java.util.Map;
 public class TeamController {
 
     private final TeamService teamService;
+    private final CurrentGame currentGame;
 
-    public TeamController(final TeamService teamService) {
+    public TeamController(final TeamService teamService, final CurrentGame currentGame) {
         this.teamService = teamService;
+        this.currentGame = currentGame;
+    }
+
+    private boolean isModerator(final String pin, final Principal principal) {
+        return principal != null && pin != null && principal.getName().equals(currentGame.findModerator(pin));
     }
 
     @PostMapping("/create")
     @ResponseBody
-    public ResponseEntity<String> createTeams(@RequestBody final Map<String, Object> request) {
+    public ResponseEntity<String> createTeams(@RequestBody final Map<String, Object> request,
+                                              final Principal principal) {
         try {
             String pin = (String) request.get("pin");
+            if (!isModerator(pin, principal)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only the game moderator can do this");
+            }
             Integer teamCount = (Integer) request.get("teamCount");
             String assignmentMethodStr = (String) request.get("assignmentMethod");
 
@@ -48,22 +61,26 @@ public class TeamController {
             teamService.createTeams(pin, config);
             return ResponseEntity.ok("Teams created successfully");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error creating teams: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error creating teams");
         }
     }
 
     @PostMapping("/assign")
     @ResponseBody
-    public ResponseEntity<String> assignPlayerToTeam(@RequestBody final Map<String, String> request) {
+    public ResponseEntity<String> assignPlayerToTeam(@RequestBody final Map<String, String> request,
+                                                     final Principal principal) {
         try {
             String pin = request.get("pin");
+            if (!isModerator(pin, principal)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only the game moderator can do this");
+            }
             String username = request.get("username");
             String teamName = request.get("teamName");
 
             teamService.assignPlayerToTeam(pin, username, teamName);
             return ResponseEntity.ok("Player assigned successfully");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error assigning player: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Error assigning player");
         }
     }
 

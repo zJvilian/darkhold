@@ -61,6 +61,7 @@ class HomeControllerTest {
 
         // Default rate limiting setup
         when(rateLimitingService.isAllowed(anyString())).thenReturn(true);
+        when(homeService.validateGamePin(testPin)).thenReturn(true);
     }
 
     // ==================== GET / Tests ====================
@@ -156,35 +157,18 @@ class HomeControllerTest {
     }
 
     @Test
-    void testEnterGame_WithXForwardedFor() throws Exception {
+    void testEnterGame_IgnoresSpoofedForwardingHeaders() throws Exception {
         when(homeService.validateGamePin(testPin)).thenReturn(true);
-        when(rateLimitingService.isBlocked("192.168.1.100")).thenReturn(false);
-        when(rateLimitingService.isAllowed("192.168.1.100")).thenReturn(true);
+        when(rateLimitingService.isBlocked("127.0.0.1")).thenReturn(false);
 
         mockMvc.perform(post("/enterGame")
-                                                .param("gamePin", testPin)
-                        .header("X-Forwarded-For", "192.168.1.100, 10.0.0.1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").value(true))
+                        .param("gamePin", testPin)
+                        .header("X-Forwarded-For", "192.168.1.100")
+                        .header("X-Real-IP", "192.168.1.200")
+                        .remoteAddress("127.0.0.1"))
                 .andExpect(jsonPath("$.status").value("VALID"));
 
-        verify(rateLimitingService).recordSuccessfulAttempt("192.168.1.100");
-    }
-
-    @Test
-    void testEnterGame_WithXRealIP() throws Exception {
-        when(homeService.validateGamePin(testPin)).thenReturn(true);
-        when(rateLimitingService.isBlocked("192.168.1.200")).thenReturn(false);
-        when(rateLimitingService.isAllowed("192.168.1.200")).thenReturn(true);
-
-        mockMvc.perform(post("/enterGame")
-                                                .param("gamePin", testPin)
-                        .header("X-Real-IP", "192.168.1.200"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").value(true))
-                .andExpect(jsonPath("$.status").value("VALID"));
-
-        verify(rateLimitingService).recordSuccessfulAttempt("192.168.1.200");
+        verify(rateLimitingService).recordSuccessfulAttempt("127.0.0.1");
     }
 
     @Test
@@ -321,5 +305,32 @@ class HomeControllerTest {
 
         // Verify PIN is stored in session
         assert session.getAttribute("gamePin").equals(testPin);
+    }
+
+    @Test
+    void testJoinGame_InvalidPinIsRejectedAndCounted() throws Exception {
+        when(homeService.validateGamePin(testPin)).thenReturn(false);
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(post("/joinGame").session(session)
+                        .param("gamePin", testPin).param("name", testUsername))
+                .andExpect(view().name("index"))
+                .andExpect(model().attributeHasFieldErrors("gameInfo", "gamePin"));
+
+        assert session.getAttribute("gamePin") == null;
+        verify(rateLimitingService).recordFailedAttempt("127.0.0.1");
+        verify(securityService, never()).autoLogin(anyString(), anyString());
+    }
+
+    @Test
+    void testJoinGame_RateLimited() throws Exception {
+        when(rateLimitingService.isAllowed("127.0.0.1")).thenReturn(false);
+
+        mockMvc.perform(post("/joinGame")
+                        .param("gamePin", testPin).param("name", testUsername))
+                .andExpect(view().name("index"));
+
+        verify(homeService, never()).validateGamePin(anyString());
+        verify(securityService, never()).autoLogin(anyString(), anyString());
     }
 }

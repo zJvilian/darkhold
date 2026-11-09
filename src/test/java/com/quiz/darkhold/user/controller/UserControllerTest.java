@@ -203,6 +203,8 @@ class UserControllerTest {
 
         try (MockedStatic<com.quiz.darkhold.init.FileUploadUtil> fileUploadUtil
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
+            fileUploadUtil.when(() -> com.quiz.darkhold.init.FileUploadUtil.imageFileName(fileName))
+                    .thenReturn(fileName);
             // When
             var result = userController.saveUser(user, redirectAttributes, multipartFile);
 
@@ -297,6 +299,8 @@ class UserControllerTest {
 
         try (MockedStatic<com.quiz.darkhold.init.FileUploadUtil> fileUploadUtil
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
+            fileUploadUtil.when(() -> com.quiz.darkhold.init.FileUploadUtil.imageFileName(fileName))
+                    .thenReturn(fileName);
             fileUploadUtil.when(() -> saveFile(anyString(), anyString(), any(MultipartFile.class)))
                     .thenThrow(new IOException("File upload failed"));
 
@@ -307,6 +311,28 @@ class UserControllerTest {
                 assertEquals("File upload failed", ex.getMessage());
             }
         }
+    }
+
+    @Test
+    void testSaveUser_NonImageUpload_IsRejectedWithoutSaving() throws IOException {
+        when(multipartFile.isEmpty()).thenReturn(false);
+        when(multipartFile.getOriginalFilename()).thenReturn("../../shell.jsp");
+
+        var result = userController.saveUser(createMockUser(null), redirectAttributes, multipartFile);
+
+        assertEquals("redirect:/userManagement", result);
+        verify(userService, never()).save(any(User.class));
+        verify(redirectAttributes).addFlashAttribute(eq("errorMessage"), anyString());
+    }
+
+    @Test
+    void testBinder_OnlyAllowsFormFields() {
+        var binder = new org.springframework.web.bind.WebDataBinder(new User(), "user");
+        userController.allowOnlyFormFields(binder);
+        org.junit.jupiter.api.Assertions.assertTrue(java.util.Arrays.asList(binder.getAllowedFields())
+                .containsAll(java.util.List.of("email", "password", "roles", "enabled")));
+        org.junit.jupiter.api.Assertions.assertFalse(java.util.Arrays.asList(binder.getAllowedFields())
+                .contains("class"));
     }
 
     // ======================== editUser Tests ========================

@@ -56,7 +56,7 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h5 class="modal-title" id="confirmModalLabel" th:text="#{challenge.view.confirmDelete}">Are you sure?</h5>
-                                <button type="button" id="closeConfirmModal" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                <button type="button" id="closeConfirmModal" class="btn-close" data-bs-dismiss="modal" th:aria-label="#{button.close}" aria-label="Close"></button>
                             </div>
                             <div class="modal-body">
                                 <p th:text="#{quizList.deleteWarning}">Do you really want to delete this quiz? This process cannot be undone.</p>

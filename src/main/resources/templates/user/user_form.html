@@ -91,7 +91,7 @@
 
                     <!-- First Name -->
                     <div class="admin-form-group">
-                        <label class="admin-form-label">
+                        <label class="admin-form-label" for="firstName">
                             <span th:text="#{user.firstName}">First Name</span>
                             <span class="required">*</span>
                         </label>
@@ -102,7 +102,7 @@
 
                     <!-- Last Name -->
                     <div class="admin-form-group">
-                        <label class="admin-form-label">
+                        <label class="admin-form-label" for="lastName">
                             <span th:text="#{user.lastName}">Last Name</span>
                             <span class="required">*</span>
                         </label>
@@ -113,7 +113,7 @@
 
                     <!-- Email -->
                     <div class="admin-form-group">
-                        <label class="admin-form-label">
+                        <label class="admin-form-label" for="email">
                             <span th:text="#{user.email}">Email</span>
                             <span class="required">*</span>
                         </label>
@@ -124,7 +124,7 @@
 
                     <!-- Password -->
                     <div class="admin-form-group">
-                        <label class="admin-form-label">
+                        <label class="admin-form-label" for="password">
                             <span th:text="#{user.password}">Password</span>
                             <span th:if="${userForm.id == null}" class="required">*</span>
                         </label>
@@ -162,7 +162,7 @@
                         <label class="admin-form-label" th:text="#{user.accountStatus}">Account Status</label>
                         <div class="admin-toggle-field">
                             <label class="admin-toggle-switch">
-                                <input type="checkbox" th:field="*{enabled}" />
+                                <input type="checkbox" th:field="*{enabled}" th:aria-label="#{user.accountStatus}" />
                                 <span class="admin-toggle-slider"></span>
                             </label>
                             <span class="admin-toggle-label" th:text="#{user.accountEnabled}">Account Enabled</span>
@@ -174,7 +174,7 @@
 
                     <!-- Photo Upload -->
                     <div class="admin-form-group">
-                        <label class="admin-form-label" th:text="#{user.profilePhoto}">Profile Photo</label>
+                        <label class="admin-form-label" for="fileImage" th:text="#{user.profilePhoto}">Profile Photo</label>
                         <div class="admin-photo-upload">
                             <div class="admin-photo-preview">
                                 <img id="thumbnail" th:if="${userForm.photosImagePath != null}"
@@ -210,7 +210,7 @@
         </main>
 
         <!-- Mobile Sidebar Toggle -->
-        <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()">
+        <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()" th:aria-label="#{nav.toggleNavigation}">
             <i class="fas fa-bars"></i>
         </button>
 

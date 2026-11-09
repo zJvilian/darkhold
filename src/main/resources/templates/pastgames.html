@@ -76,7 +76,7 @@
                     <span th:text="#{pastgames.title}">Past Games</span>
                 </div>
                 <h1 class="past-games-title" th:text="#{pastgames.title}">Past Games</h1>
-                <p class="past-games-subtitle">View your completed games and download detailed reports</p>
+                <p class="past-games-subtitle" th:text="#{pastgames.subtitle}">View your completed games and download detailed reports</p>
             </header>
 
             <!-- Stats Bar (only show when there are games) -->
@@ -166,7 +166,7 @@
                         <a th:href="@{/game-result/{id}/export-csv(id=${game.id})}"
                            class="game-action-btn game-action-btn--secondary">
                             <i class="fas fa-download"></i>
-                            <span>Export CSV</span>
+                            <span th:text="#{pastgames.exportCsv}">Export CSV</span>
                         </a>
                     </div>
                 </div>
@@ -189,7 +189,7 @@
     </main>
 
     <!-- Mobile Sidebar Toggle -->
-    <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()">
+    <button class="admin-sidebar-toggle" onclick="toggleAdminSidebar()" th:aria-label="#{nav.toggleNavigation}">
         <i class="fas fa-bars"></i>
     </button>
 

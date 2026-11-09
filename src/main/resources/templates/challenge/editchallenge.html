@@ -120,13 +120,13 @@
                     </div>
                 </div>
                 <div class="question-actions">
-                    <button type="button" class="question-action-btn" th:onclick="'editQuestion(' + ${q.id} + ')'">
+                    <button type="button" class="question-action-btn" th:onclick="'editQuestion(' + ${q.id} + ')'" th:aria-label="#{button.edit}">
                         <i class="bi bi-pencil"></i>
                     </button>
-                    <button type="button" class="question-action-btn" th:onclick="'duplicateQuestion(' + ${q.id} + ')'">
+                    <button type="button" class="question-action-btn" th:onclick="'duplicateQuestion(' + ${q.id} + ')'" th:aria-label="#{challenge.view.duplicate}">
                         <i class="bi bi-files"></i>
                     </button>
-                    <button type="button" class="question-action-btn question-action-btn--delete" th:onclick="'deleteQuestion(' + ${q.id} + ')'">
+                    <button type="button" class="question-action-btn question-action-btn--delete" th:onclick="'deleteQuestion(' + ${q.id} + ')'" th:aria-label="#{button.delete}">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -145,14 +145,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalTitle" th:text="#{challenge.edit.addQuestion}">Add Question</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" th:aria-label="#{button.close}"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editingQuestionId"/>
                 <!-- Question Type and Settings Row -->
                 <div class="row mb-3">
                     <div class="col-md-4" id="questionTypeCol">
-                        <label class="form-label" th:text="#{challenge.edit.questionType}">Question Type</label>
+                        <label class="form-label" for="questionType" th:text="#{challenge.edit.questionType}">Question Type</label>
                         <select id="questionType" class="form-select" onchange="onQuestionTypeChange()">
                             <option value="MULTIPLE_CHOICE" th:text="#{challenge.edit.multipleChoice}">Multiple Choice</option>
                             <option value="TRUE_FALSE" th:text="#{challenge.edit.trueFalse}">True/False</option>
@@ -163,7 +163,7 @@
                         </select>
                     </div>
                     <div class="col-md-4" id="timeLimitCol">
-                        <label class="form-label" th:text="#{challenge.edit.timeLimit}">Time Limit</label>
+                        <label class="form-label" for="timeLimit" th:text="#{challenge.edit.timeLimit}">Time Limit</label>
                         <select id="timeLimit" class="form-select">
                             <option value="" th:text="#{challenge.edit.default}">Default</option>
                             <option value="5">5 <span th:text="#{challenge.edit.seconds}">seconds</span></option>
@@ -177,69 +177,69 @@
                         </select>
                     </div>
                     <div class="col-md-4" id="pointsCol">
-                        <label class="form-label" th:text="#{challenge.edit.points}">Points</label>
+                        <label class="form-label" for="points" th:text="#{challenge.edit.points}">Points</label>
                         <input type="number" id="points" class="form-control" value="1000" min="0" max="10000">
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" th:text="#{challenge.edit.questionLabel}">Question *</label>
+                    <label class="form-label" for="questionText" th:text="#{challenge.edit.questionLabel}">Question *</label>
                     <textarea id="questionText" class="form-control" rows="2" maxlength="425" required></textarea>
                 </div>
                 <!-- Multiple Choice / Poll Answers -->
                 <div id="multipleChoiceAnswers">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="#{challenge.edit.answerA}">Answer A *</label>
+                            <label class="form-label" for="answer1" th:text="#{challenge.edit.answerA}">Answer A *</label>
                             <div class="input-group">
-                                <div class="input-group-text"><input type="checkbox" id="correctA" class="form-check-input mt-0"></div>
+                                <div class="input-group-text"><input type="checkbox" id="correctA" class="form-check-input mt-0" th:aria-label="#{challenge.edit.markCorrect('A')}"></div>
                                 <input type="text" id="answer1" class="form-control" maxlength="225" required>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="#{challenge.edit.answerB}">Answer B *</label>
+                            <label class="form-label" for="answer2" th:text="#{challenge.edit.answerB}">Answer B *</label>
                             <div class="input-group">
-                                <div class="input-group-text"><input type="checkbox" id="correctB" class="form-check-input mt-0"></div>
+                                <div class="input-group-text"><input type="checkbox" id="correctB" class="form-check-input mt-0" th:aria-label="#{challenge.edit.markCorrect('B')}"></div>
                                 <input type="text" id="answer2" class="form-control" maxlength="225" required>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3" id="answerCGroup">
-                            <label class="form-label" th:text="#{challenge.edit.answerC}">Answer C</label>
+                            <label class="form-label" for="answer3" th:text="#{challenge.edit.answerC}">Answer C</label>
                             <div class="input-group">
-                                <div class="input-group-text"><input type="checkbox" id="correctC" class="form-check-input mt-0"></div>
+                                <div class="input-group-text"><input type="checkbox" id="correctC" class="form-check-input mt-0" th:aria-label="#{challenge.edit.markCorrect('C')}"></div>
                                 <input type="text" id="answer3" class="form-control" maxlength="225">
                             </div>
                         </div>
                         <div class="col-md-6 mb-3" id="answerDGroup">
-                            <label class="form-label" th:text="#{challenge.edit.answerD}">Answer D</label>
+                            <label class="form-label" for="answer4" th:text="#{challenge.edit.answerD}">Answer D</label>
                             <div class="input-group">
-                                <div class="input-group-text"><input type="checkbox" id="correctD" class="form-check-input mt-0"></div>
+                                <div class="input-group-text"><input type="checkbox" id="correctD" class="form-check-input mt-0" th:aria-label="#{challenge.edit.markCorrect('D')}"></div>
                                 <input type="text" id="answer4" class="form-control" maxlength="225">
                             </div>
                         </div>
                     </div>
                     <div id="sortingExtraAnswers" class="row" style="display:none;">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'E')}">Answer E</label>
+                            <label class="form-label" for="answer5" th:text="${#messages.msg('client.sorting.answerLabel', 'E')}">Answer E</label>
                             <input type="text" id="answer5" class="form-control" maxlength="225">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'F')}">Answer F</label>
+                            <label class="form-label" for="answer6" th:text="${#messages.msg('client.sorting.answerLabel', 'F')}">Answer F</label>
                             <input type="text" id="answer6" class="form-control" maxlength="225">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'G')}">Answer G</label>
+                            <label class="form-label" for="answer7" th:text="${#messages.msg('client.sorting.answerLabel', 'G')}">Answer G</label>
                             <input type="text" id="answer7" class="form-control" maxlength="225">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'H')}">Answer H</label>
+                            <label class="form-label" for="answer8" th:text="${#messages.msg('client.sorting.answerLabel', 'H')}">Answer H</label>
                             <input type="text" id="answer8" class="form-control" maxlength="225">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'I')}">Answer I</label>
+                            <label class="form-label" for="answer9" th:text="${#messages.msg('client.sorting.answerLabel', 'I')}">Answer I</label>
                             <input type="text" id="answer9" class="form-control" maxlength="225">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label" th:text="${#messages.msg('client.sorting.answerLabel', 'J')}">Answer J</label>
+                            <label class="form-label" for="answer10" th:text="${#messages.msg('client.sorting.answerLabel', 'J')}">Answer J</label>
                             <input type="text" id="answer10" class="form-control" maxlength="225">
                         </div>
                     </div>
@@ -269,11 +269,11 @@
                 <!-- Type Answer Input -->
                 <div id="typeAnswerInput" style="display:none;">
                     <div class="mb-3">
-                        <label class="form-label" th:text="#{challenge.edit.correctAnswer}">Correct Answer *</label>
+                        <label class="form-label" for="typeAnswerCorrect" th:text="#{challenge.edit.correctAnswer}">Correct Answer *</label>
                         <input type="text" id="typeAnswerCorrect" class="form-control" maxlength="225" th:placeholder="#{challenge.edit.correctAnswerPlaceholder}" placeholder="Enter the correct answer">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" th:text="#{challenge.edit.alternativeAnswers}">Alternative Answers (optional)</label>
+                        <label class="form-label" for="acceptableAnswers" th:text="#{challenge.edit.alternativeAnswers}">Alternative Answers (optional)</label>
                         <input type="text" id="acceptableAnswers" class="form-control" maxlength="500" th:placeholder="#{challenge.edit.alternativeAnswersPlaceholder}" placeholder="Comma-separated alternatives, e.g.: answer1, answer2, answer3">
                         <small class="text-muted" th:text="#{challenge.edit.fuzzyMatchingHint}">Typos will be tolerated using fuzzy matching</small>
                     </div>
@@ -298,17 +298,17 @@
                 <hr>
                 <h6 class="mb-3" th:text="#{challenge.edit.mediaOptional}">Media (Optional)</h6>
                 <div class="mb-3">
-                    <label class="form-label" th:text="#{challenge.edit.questionImage}">Question Image</label>
+                    <label class="form-label" for="questionImageInput" th:text="#{challenge.edit.questionImage}">Question Image</label>
                     <input type="file" id="questionImageInput" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm">
                     <small class="text-muted" th:text="#{challenge.edit.imageHint}">Max 2MB. JPEG, PNG, or GIF. Will be auto-resized to 1200x800.</small>
                     <div id="imagePreviewContainer" style="margin-top: 10px; display: none;">
-                        <img id="imagePreview" style="max-width: 200px; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;">
+                        <img id="imagePreview" th:alt="#{challenge.edit.questionImage}" alt="Question Image" style="max-width: 200px; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;">
                         <audio id="audioPreview" controls style="display: none; vertical-align: middle; max-width: 250px;"></audio>
                         <button type="button" id="removeImageBtn" class="btn btn-sm btn-danger ms-2" onclick="removeImage()" th:text="#{challenge.edit.remove}">Remove</button>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" th:text="#{challenge.edit.youtubeUrl}">YouTube Video URL</label>
+                    <label class="form-label" for="videoUrl" th:text="#{challenge.edit.youtubeUrl}">YouTube Video URL</label>
                     <input type="text" id="videoUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=..." onchange="previewYouTubeVideo()">
                     <small class="text-muted" th:text="#{challenge.edit.youtubeHint}">Enter a YouTube video URL to embed in the question</small>
                     <div id="videoPreviewContainer" style="margin-top: 10px; display: none;">
@@ -330,15 +330,15 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" th:text="#{challenge.edit.editChallengeInfo}">Edit Challenge Info</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" th:aria-label="#{button.close}"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label" th:text="#{challenge.edit.titleLabel}">Title *</label>
+                    <label class="form-label" for="editTitle" th:text="#{challenge.edit.titleLabel}">Title *</label>
                     <input type="text" id="editTitle" class="form-control" maxlength="100" th:value="${challenge.title}">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label" th:text="#{challenge.create.description}">Description</label>
+                    <label class="form-label" for="editDescription" th:text="#{challenge.create.description}">Description</label>
                     <textarea id="editDescription" class="form-control" rows="3" maxlength="250" th:text="${challenge.description}"></textarea>
                 </div>
             </div>

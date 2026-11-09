@@ -90,7 +90,7 @@
                 <!-- Question Image / Audio -->
                 <div th:if="${challenge.QuestionSet.imageUrl != null}" class="question-image-container">
                     <img id="questionImage" th:src="${challenge.QuestionSet.imageUrl}"
-                         alt="Question Image"
+                         th:alt="#{game.questionImage}" alt="Question Image"
                          class="question-image">
                     <audio id="questionAudio" preload="auto" style="display:none;"></audio>
                     <button th:if="${not #sets.isEmpty(#authentication.getPrincipal().getAuthorities())}"
@@ -170,14 +170,14 @@
                 <!-- TRUE_FALSE: True/False Options -->
                 <div th:if="${question_type == 'TRUE_FALSE'}" class="answer-grid">
                     <div id="optionTRUE" class="answer-option-card"
-                         role="button" tabindex="0" aria-label="Answer: True"
+                         role="button" tabindex="0" th:aria-label="#{game.answerTrue}" aria-label="Answer: True"
                          onclick="waitAndShowTrueFalse(this)">
                         <div class="answer-card-inner answer-card-inner--true">
                             <h2 th:text="#{game.true}">TRUE</h2>
                         </div>
                     </div>
                     <div id="optionFALSE" class="answer-option-card"
-                         role="button" tabindex="0" aria-label="Answer: False"
+                         role="button" tabindex="0" th:aria-label="#{game.answerFalse}" aria-label="Answer: False"
                          onclick="waitAndShowTrueFalse(this)">
                         <div class="answer-card-inner answer-card-inner--false">
                             <h2 th:text="#{game.false}">FALSE</h2>
@@ -192,8 +192,7 @@
                         <input type="text" id="typeAnswerInput" class="type-answer-input"
                                th:placeholder="#{game.enterAnswerPlaceholder}"
                                placeholder="Enter your answer here..."
-                               maxlength="225" autocomplete="off"
-                               aria-label="Type your answer"/>
+                               maxlength="225" autocomplete="off"/>
                         <button type="button" class="type-answer-submit" onclick="submitTypeAnswer()">
                             <i class="fas fa-check"></i>
                             <span th:text="#{game.submitAnswer}">Submit Answer</span>

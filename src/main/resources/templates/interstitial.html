@@ -69,8 +69,8 @@
                 </div>
 
                 <!-- Main Message -->
-                <h1 class="interstitial-title">Get Ready!</h1>
-                <p class="interstitial-message">
+                <h1 class="interstitial-title" th:text="#{interstitial.title}">Get Ready!</h1>
+                <p class="interstitial-message" th:text="#{interstitial.message}">
                     The game is about to start. Prepare yourself for an exciting quiz!
                 </p>
 
@@ -78,45 +78,45 @@
                 <div class="status-pills">
                     <div class="status-pill">
                         <i class="fas fa-bolt"></i>
-                        <span>Fast Paced</span>
+                        <span th:text="#{interstitial.fastPaced}">Fast Paced</span>
                     </div>
                     <div class="status-pill">
                         <i class="fas fa-trophy"></i>
-                        <span>Competitive</span>
+                        <span th:text="#{interstitial.competitive}">Competitive</span>
                     </div>
                     <div class="status-pill">
                         <i class="fas fa-brain"></i>
-                        <span>Test Your Knowledge</span>
+                        <span th:text="#{interstitial.testKnowledge}">Test Your Knowledge</span>
                     </div>
                 </div>
 
                 <!-- Quick Tips -->
                 <div class="tips-section">
-                    <h2 class="tips-title">Quick Tips</h2>
+                    <h2 class="tips-title" th:text="#{interstitial.tips}">Quick Tips</h2>
                     <ul class="tips-list">
                         <li class="tip-item">
                             <div class="tip-icon">
                                 <i class="fas fa-check"></i>
                             </div>
-                            <span>Answer quickly to earn bonus points for speed</span>
+                            <span th:text="#{interstitial.tip1}">Answer quickly to earn bonus points for speed</span>
                         </li>
                         <li class="tip-item">
                             <div class="tip-icon">
                                 <i class="fas fa-check"></i>
                             </div>
-                            <span>Build up answer streaks for multiplier bonuses</span>
+                            <span th:text="#{interstitial.tip2}">Build up answer streaks for multiplier bonuses</span>
                         </li>
                         <li class="tip-item">
                             <div class="tip-icon">
                                 <i class="fas fa-check"></i>
                             </div>
-                            <span>Stay focused and read each question carefully</span>
+                            <span th:text="#{interstitial.tip3}">Stay focused and read each question carefully</span>
                         </li>
                         <li class="tip-item">
                             <div class="tip-icon">
                                 <i class="fas fa-check"></i>
                             </div>
-                            <span>Have fun and enjoy the competition!</span>
+                            <span th:text="#{interstitial.tip4}">Have fun and enjoy the competition!</span>
                         </li>
                     </ul>
                 </div>

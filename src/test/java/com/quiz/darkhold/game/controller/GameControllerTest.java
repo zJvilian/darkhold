@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -185,7 +186,7 @@ class GameControllerTest {
 
             // Then
             assertEquals("finalscore", result);
-            verify(gameService).cleanUpCurrentGame();
+            verify(gameService, never()).cleanUpCurrentGame();
         }
 
         @Test
@@ -274,6 +275,36 @@ class GameControllerTest {
         }
 
         @Test
+        @DisplayName("should go to final score instead of failing when there is no current question")
+        void testStartGame_WithoutCurrentQuestion_ShouldGoToFinalScore() {
+            // Given
+            when(gameService.getCurrentQuestionPointer(anyString())).thenReturn(createQuestionPointer(5, 5));
+            when(gameService.getCurrentScore()).thenReturn(createScoreMap());
+
+            // When
+            String result = gameController.startGame(model, "QUIZ123", principal);
+
+            // Then
+            assertEquals("finalscore", result);
+            verify(gameService, never()).questionShown(anyInt());
+        }
+
+        @Test
+        @DisplayName("should record the question shown to the player")
+        void testStartGame_ShouldRecordShownQuestion() {
+            // Given
+            QuestionPointer pointer = createQuestionPointerWithQuestion(2, createQuestionSet(3, "Q?"));
+            when(gameService.getCurrentQuestionPointer(anyString())).thenReturn(pointer);
+            when(gameService.getGameMode(anyString())).thenReturn(GameMode.MULTIPLAYER);
+
+            // When
+            gameController.startGame(model, "QUIZ123", principal);
+
+            // Then
+            verify(gameService).questionShown(2);
+        }
+
+        @Test
         @DisplayName("should increment question number in challenge")
         void testStartGame_ShouldIncrementQuestionNumber() {
             // Given
@@ -297,34 +328,56 @@ class GameControllerTest {
     class FinalScoreMethodTests {
 
         @Test
-        @DisplayName("should add score to model and clean up game")
-        void testFinalScore_ShouldAddScoreAndCleanup() {
+        @DisplayName("should add score to model for a non-moderator without finalizing the game")
+        void testFinalScore_ForPlayer_ShouldOnlyShowScores() {
             // Given
             java.util.Map<String, Integer> scoreMap = createScoreMap();
             when(gameService.getCurrentScore()).thenReturn(scoreMap);
 
             // When
-            String result = gameController.finalScore(model, null);
+            String result = gameController.finalScore(model, "QUIZ123", principal);
 
             // Then
             assertEquals("finalscore", result);
             ArgumentCaptor<CurrentScore> scoreCaptor = ArgumentCaptor.forClass(CurrentScore.class);
             verify(model).addAttribute(ArgumentMatchers.eq("score"), scoreCaptor.capture());
             assertEquals(scoreMap, scoreCaptor.getValue().getScore());
-            verify(gameService).cleanUpCurrentGame();
+            verify(resultService, never()).saveGameResult(anyString(), anyString());
+            verify(gameService, never()).markGame(anyString(), ArgumentMatchers.any());
+            verify(gameService, never()).cleanUpCurrentGame();
         }
 
         @Test
-        @DisplayName("should return finalscore view")
-        void testFinalScore_ShouldReturnFinalScoreView() {
+        @DisplayName("should save the result with the real title and mark the game finished for the moderator")
+        void testFinalScore_ForModerator_ShouldFinalizeGame() {
             // Given
             when(gameService.getCurrentScore()).thenReturn(createScoreMap());
+            when(gameService.isModerator("QUIZ123", principal)).thenReturn(true);
+            when(gameService.challengeTitle("QUIZ123")).thenReturn("Capitals");
+            when(gameService.getGameMode("QUIZ123")).thenReturn(GameMode.MULTIPLAYER);
 
             // When
-            String result = gameController.finalScore(model, null);
+            gameController.finalScore(model, "QUIZ123", principal);
 
             // Then
-            assertEquals("finalscore", result);
+            verify(resultService).saveGameResult("QUIZ123", "Capitals");
+            verify(gameService).markGame("QUIZ123", com.quiz.darkhold.game.entity.GameStatus.FINISHED);
+            verify(gameService, never()).cleanUpCurrentGame();
+        }
+
+        @Test
+        @DisplayName("should clean up a finished practice session straight away")
+        void testFinalScore_ForPracticeModerator_ShouldCleanUp() {
+            // Given
+            when(gameService.getCurrentScore()).thenReturn(createScoreMap());
+            when(gameService.isModerator("PRACTICE-1", principal)).thenReturn(true);
+            when(gameService.getGameMode("PRACTICE-1")).thenReturn(GameMode.PRACTICE);
+
+            // When
+            gameController.finalScore(model, "PRACTICE-1", principal);
+
+            // Then
+            verify(gameService).cleanUpCurrentGame();
         }
 
         @Test
@@ -334,7 +387,7 @@ class GameControllerTest {
             when(gameService.getCurrentScore()).thenReturn(new HashMap<>());
 
             // When
-            String result = gameController.finalScore(model, null);
+            String result = gameController.finalScore(model, null, principal);
 
             // Then
             assertEquals("finalscore", result);
@@ -342,209 +395,170 @@ class GameControllerTest {
             verify(model).addAttribute(ArgumentMatchers.eq("score"), scoreCaptor.capture());
             assertEquals(0, scoreCaptor.getValue().getScore().size());
         }
-
-        @Test
-        @DisplayName("should handle score with multiple entries")
-        void testFinalScore_WithMultipleScores_ShouldHandleCorrectly() {
-            // Given
-            java.util.Map<String, Integer> scoreMap = new HashMap<>();
-            scoreMap.put("player1", 500);
-            scoreMap.put("player2", 750);
-            when(gameService.getCurrentScore()).thenReturn(scoreMap);
-
-            // When
-            gameController.finalScore(model, null);
-
-            // Then
-            ArgumentCaptor<CurrentScore> scoreCaptor = ArgumentCaptor.forClass(CurrentScore.class);
-            verify(model).addAttribute(ArgumentMatchers.eq("score"), scoreCaptor.capture());
-            assertEquals(2, scoreCaptor.getValue().getScore().size());
-        }
     }
 
     @Nested
     @DisplayName("enterGame() method tests")
     class EnterGameMethodTests {
 
-        @Test
-        @DisplayName("should save score for non-moderator user with correct answer")
-        void testEnterGame_WhenNonModeratorAndCorrect_ShouldSaveScore() {
-            // Given
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForCorrectAnswer();
+        private QuestionSet question;
 
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                Boolean result = gameController.enterGame("correct", "player1", "5000");
-
-                // Then
-                assertTrue(result);
-                verify(gameService, never()).incrementQuestionNo();
-            }
-        }
-
-        @Test
-        @DisplayName("should increment question for moderator")
-        void testEnterGame_WhenModerator_ShouldIncrementQuestion() {
-            // Given
-            String selectedOptions = "correct";
-            String user = "moderator";
-            String timeTook = "5000";
-            when(gameService.findModerator()).thenReturn("moderator");
-
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                Boolean result = gameController.enterGame(selectedOptions, user, timeTook);
-
-                // Then
-                assertTrue(result);
-                verify(gameService).incrementQuestionNo();
-                verify(gameService, never()).saveCurrentScore(anyString(), anyInt());
-            }
-        }
-
-        @Test
-        @DisplayName("should return zero score for incorrect answer")
-        void testEnterGame_WhenIncorrectAnswer_ShouldReturnZeroScore() {
-            // Given
-            String selectedOptions = "incorrect";
-            String user = "player1";
-            String timeTook = "5000";
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForPlayerAnswer();
-
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                gameController.enterGame(selectedOptions, user, timeTook);
-
-                // Then
-                verify(gameService).saveCurrentScore(user, 0);
-            }
-        }
-
-        private void setupMocksForPlayerAnswer() {
-            QuestionSet questionSet = createQuestionSet(1, "Question?");
-            questionSet.setPoints(1000);
-            QuestionPointer pointer = createQuestionPointerWithQuestion(0, questionSet);
-            when(gameService.getCurrentQuestionPointer()).thenReturn(pointer);
-            when(gameService.updateStreak(anyString(), ArgumentMatchers.anyBoolean())).thenReturn(0);
-            when(gameService.calculateScoreWithStreak(anyInt(), anyInt(), anyInt())).thenReturn(0);
-        }
-
-        @Test
-        @DisplayName("should handle timeout scenario")
-        void testEnterGame_WhenTimeout_ShouldReturnZeroScore() {
-            // Given
-            String selectedOptions = "timeout";
-            String user = "player1";
-            String timeTook = "20000";
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForPlayerAnswer();
-
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                gameController.enterGame(selectedOptions, user, timeTook);
-
-                // Then
-                verify(gameService).saveCurrentScore(user, 0);
-            }
-        }
-
-        @Test
-        @DisplayName("should return true on successful entry")
-        void testEnterGame_ShouldReturnTrue() {
-            // Given
-            String selectedOptions = "correct";
-            String user = "player1";
-            String timeTook = "5000";
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForCorrectAnswer();
-
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                Boolean result = gameController.enterGame(selectedOptions, user, timeTook);
-
-                // Then
-                assertTrue(result);
-            }
-        }
-
-        private void setupMocksForCorrectAnswer() {
-            QuestionSet questionSet = createQuestionSet(1, "Question?");
-            questionSet.setPoints(1000);
-            QuestionPointer pointer = createQuestionPointerWithQuestion(0, questionSet);
-            when(gameService.getCurrentQuestionPointer()).thenReturn(pointer);
-            when(gameService.updateStreak(anyString(), ArgumentMatchers.anyBoolean())).thenReturn(1);
+        @BeforeEach
+        void openQuestion() {
+            question = createQuestionSet(1, "Question?");
+            question.setPoints(1000);
+            when(principal.getName()).thenReturn("player1");
+            when(gameService.shownQuestionNo()).thenReturn(0);
+            when(gameService.questionAt(0)).thenReturn(question);
+            when(gameService.markAnswered("player1", 0)).thenReturn(true);
+            when(gameService.elapsedMillis()).thenReturn(5000L);
+            when(answerValidationService.getPoints(question)).thenReturn(1000);
+            when(answerValidationService.shouldScore(question)).thenReturn(true);
+            when(gameService.updateStreak("player1", true)).thenReturn(1);
             when(gameService.calculateScoreWithStreak(anyInt(), anyInt(), anyInt())).thenReturn(750);
         }
 
         @Test
-        @DisplayName("should handle empty selected options")
-        void testEnterGame_WithEmptyOptions_ShouldReturnZeroScore() {
-            // Given
-            String selectedOptions = "";
-            String user = "player1";
-            String timeTook = "5000";
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForPlayerAnswer();
+        @DisplayName("should score the server-checked choice using server-side elapsed time")
+        void testEnterGame_WithCorrectChoice_ShouldScoreFromServerTime() {
+            when(answerValidationService.validateSelection(question, "A")).thenReturn(true);
 
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                gameController.enterGame(selectedOptions, user, timeTook);
+            assertTrue(gameController.enterGame("A", principal));
 
-                // Then
-                verify(gameService).saveCurrentScore(user, 0);
-            }
+            // (20s default limit - 5s) / 20s -> factor 750
+            verify(gameService).calculateScoreWithStreak(1000, 750, 1);
+            verify(gameService).saveCurrentScore("player1", 750);
+            verify(gameService, never()).incrementQuestionNo();
         }
 
         @Test
-        @DisplayName("should handle non-numeric timeTook value")
-        void testEnterGame_WithNonNumericTime_ShouldReturnZeroScore() {
-            // Given
-            String selectedOptions = "correct";
-            String user = "player1";
-            String timeTook = "invalid";
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForPlayerAnswer();
+        @DisplayName("should use the question's own time limit for the time factor")
+        void testEnterGame_ShouldUseQuestionTimeLimit() {
+            question.setTimeLimit(10);
+            when(answerValidationService.validateSelection(question, "A")).thenReturn(true);
 
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                gameController.enterGame(selectedOptions, user, timeTook);
+            gameController.enterGame("A", principal);
 
-                // Then
-                verify(gameService).saveCurrentScore(user, 0);
-            }
+            // (10s - 5s) / 10s -> factor 500
+            verify(gameService).calculateScoreWithStreak(1000, 500, 1);
         }
 
         @Test
-        @DisplayName("should calculate score correctly for fast correct answer")
-        void testEnterGame_WithFastCorrectAnswer_ShouldCalculateHighScore() {
-            // Given
-            when(gameService.findModerator()).thenReturn("moderator");
-            setupMocksForFastAnswer();
+        @DisplayName("should give no time bonus once the elapsed time exceeds the limit")
+        void testEnterGame_WhenLate_ShouldClampTimeFactorToZero() {
+            when(gameService.elapsedMillis()).thenReturn(Long.MAX_VALUE);
+            when(answerValidationService.validateSelection(question, "A")).thenReturn(true);
 
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                gameController.enterGame("correct", "player1", "1000");
-                verify(gameService).saveCurrentScore("player1", 950);
-            }
+            gameController.enterGame("A", principal);
+
+            verify(gameService).calculateScoreWithStreak(1000, 0, 1);
         }
 
-        private void setupMocksForFastAnswer() {
-            QuestionSet questionSet = createQuestionSet(1, "Question?");
-            questionSet.setPoints(1000);
-            QuestionPointer pointer = createQuestionPointerWithQuestion(0, questionSet);
-            when(gameService.getCurrentQuestionPointer()).thenReturn(pointer);
-            when(gameService.updateStreak(anyString(), ArgumentMatchers.anyBoolean())).thenReturn(1);
+        @Test
+        @DisplayName("should score zero and reset the streak for a wrong choice")
+        void testEnterGame_WithWrongChoice_ShouldScoreZero() {
+            when(answerValidationService.validateSelection(question, "B")).thenReturn(false);
+
+            gameController.enterGame("B", principal);
+
+            verify(gameService).updateStreak("player1", false);
+            verify(gameService).saveCurrentScore("player1", 0);
+        }
+
+        @Test
+        @DisplayName("should score zero on timeout")
+        void testEnterGame_OnTimeout_ShouldScoreZero() {
+            gameController.enterGame("", principal);
+
+            verify(gameService).saveCurrentScore("player1", 0);
+        }
+
+        @Test
+        @DisplayName("should ignore a second answer to the same question")
+        void testEnterGame_WhenAlreadyAnswered_ShouldBeIgnored() {
+            when(gameService.markAnswered("player1", 0)).thenReturn(false);
+
+            assertFalse(gameController.enterGame("A", principal));
+
+            verify(gameService, never()).saveCurrentScore(anyString(), anyInt());
+            verify(gameService, never()).incrementQuestionNo();
+        }
+
+        @Test
+        @DisplayName("should ignore an answer when the player was never shown a question")
+        void testEnterGame_WithoutShownQuestion_ShouldBeIgnored() {
+            when(gameService.shownQuestionNo()).thenReturn(null);
+
+            assertFalse(gameController.enterGame("A", principal));
+
+            verify(gameService, never()).markAnswered(anyString(), anyInt());
+        }
+
+        @Test
+        @DisplayName("should move the game on without scoring when the moderator answers in multiplayer")
+        void testEnterGame_WhenModerator_ShouldIncrementQuestion() {
+            when(gameService.isModerator(principal)).thenReturn(true);
+            when(gameService.isPracticeMode()).thenReturn(false);
+
+            assertTrue(gameController.enterGame("", principal));
+
+            verify(gameService).incrementQuestionNo();
+            verify(gameService, never()).saveCurrentScore(anyString(), anyInt());
+        }
+
+        @Test
+        @DisplayName("should score and then move on when the practice player answers")
+        void testEnterGame_WhenPracticeModerator_ShouldScoreAndIncrement() {
+            when(gameService.isModerator(principal)).thenReturn(true);
+            when(gameService.isPracticeMode()).thenReturn(true);
+            when(answerValidationService.validateSelection(question, "A")).thenReturn(true);
+
+            gameController.enterGame("A", principal);
+
+            verify(gameService).saveCurrentScore("player1", 750);
+            verify(gameService).incrementQuestionNo();
+        }
+    }
+
+    @Nested
+    @DisplayName("validateTypeAnswer() method tests")
+    class ValidateTypeAnswerMethodTests {
+
+        private QuestionSet question;
+
+        @BeforeEach
+        void openQuestion() {
+            question = createQuestionSet(1, "Capital of France?");
+            when(principal.getName()).thenReturn("player1");
+            when(gameService.shownQuestionNo()).thenReturn(0);
+            when(gameService.questionAt(0)).thenReturn(question);
+            when(gameService.markAnswered("player1", 0)).thenReturn(true, false);
+            when(gameService.elapsedMillis()).thenReturn(1000L);
+            when(answerValidationService.validateAnswer(question, "paris")).thenReturn(true);
+            when(answerValidationService.shouldScore(question)).thenReturn(true);
+            when(answerValidationService.getPoints(question)).thenReturn(1000);
+            when(gameService.updateStreak("player1", true)).thenReturn(1);
             when(gameService.calculateScoreWithStreak(anyInt(), anyInt(), anyInt())).thenReturn(950);
+        }
+
+        @Test
+        @DisplayName("should score a correct typed answer once and refuse a repeat")
+        void testValidateTypeAnswer_ShouldScoreOnce() {
+            assertEquals("correct", gameController.validateTypeAnswer("paris", principal));
+            assertEquals("incorrect", gameController.validateTypeAnswer("paris", principal));
+
+            verify(gameService, times(1)).saveCurrentScore("player1", 950);
+        }
+
+        @Test
+        @DisplayName("should not let the multiplayer moderator answer")
+        void testValidateTypeAnswer_ForModerator_ShouldBeRejected() {
+            when(gameService.isModerator(principal)).thenReturn(true);
+            when(gameService.isPracticeMode()).thenReturn(false);
+
+            assertEquals("incorrect", gameController.validateTypeAnswer("paris", principal));
+
+            verify(gameService, never()).markAnswered(anyString(), anyInt());
         }
     }
 
@@ -565,7 +579,7 @@ class GameControllerTest {
             when(teamService.isTeamMode("ABC123")).thenReturn(false);
 
             // When
-            gameController.getGame(game);
+            gameController.getGame(game, namedPrincipal(game.getName()));
 
             // Then
             verify(gameService).saveAndGetAllParticipants("ABC123", "testUser");
@@ -584,7 +598,7 @@ class GameControllerTest {
             when(teamService.isTeamMode("XYZ789")).thenReturn(false);
 
             // When
-            gameController.getGame(game);
+            gameController.getGame(game, namedPrincipal(game.getName()));
 
             // Then
             verify(gameService).saveAndGetAllParticipants("XYZ789", "player1");
@@ -600,7 +614,7 @@ class GameControllerTest {
             when(teamService.isTeamMode("GAME1")).thenReturn(false);
 
             // When
-            gameController.getGame(game);
+            gameController.getGame(game, namedPrincipal(game.getName()));
 
             // Then
             verify(messagingTemplate).convertAndSend(
@@ -610,53 +624,124 @@ class GameControllerTest {
     }
 
     @Nested
+    @DisplayName("getGame() join authorization")
+    class GetGameAuthorizationTests {
+
+        @Test
+        @DisplayName("should ignore a join for a name other than the connected user")
+        void testGetGame_ForAnotherUser_ShouldBeIgnored() {
+            Game game = new Game("someoneElse");
+            game.setPin("ABC123");
+
+            gameController.getGame(game, namedPrincipal("attacker"));
+
+            verify(gameService, never()).saveAndGetAllParticipants(anyString(), anyString());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), ArgumentMatchers.<Object>any());
+        }
+    }
+
+    @Nested
     @DisplayName("startTrigger() WebSocket method tests")
     class StartTriggerMethodTests {
 
         @Test
-        @DisplayName("should send start trigger to PIN-scoped topic")
-        void testStartTrigger_ShouldSendTriggerToPinScopedTopic() {
-            // Given
-            String pin = "GAME123";
+        @DisplayName("should mark the game started and send the trigger for the moderator")
+        void testStartTrigger_ForModerator_ShouldStartGame() {
             when(principal.getName()).thenReturn("moderator");
+            when(gameService.isModerator("GAME123", principal)).thenReturn(true);
 
-            // When
-            gameController.startTrigger(pin, principal);
+            gameController.startTrigger("GAME123", principal);
 
-            // Then
+            verify(gameService).markGame("GAME123", com.quiz.darkhold.game.entity.GameStatus.STARTED);
             verify(messagingTemplate).convertAndSend(
                     ArgumentMatchers.eq("/topic/GAME123/start"),
                     ArgumentMatchers.any(StartTrigger.class));
         }
 
         @Test
-        @DisplayName("should use principal name in logging")
-        void testStartTrigger_ShouldUsePrincipalName() {
-            // Given
-            String pin = "GAME123";
-            when(principal.getName()).thenReturn("john_doe");
+        @DisplayName("should ignore a start from anyone but the moderator")
+        void testStartTrigger_ForPlayer_ShouldBeIgnored() {
+            when(principal.getName()).thenReturn("player");
 
-            // When
-            gameController.startTrigger(pin, principal);
+            gameController.startTrigger("GAME123", principal);
 
-            // Then
-            verify(principal).getName();
+            verify(gameService, never()).markGame(anyString(), ArgumentMatchers.any());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), ArgumentMatchers.<Object>any());
+        }
+    }
+
+    @Nested
+    @DisplayName("host-only WebSocket control tests")
+    class HostControlTests {
+
+        @Test
+        @DisplayName("should pause the PIN's own game for the moderator")
+        void testPause_ForModerator_ShouldUseTheGivenPin() {
+            when(gameService.isModerator("GAME1", principal)).thenReturn(true);
+            when(gameService.pauseGame("GAME1")).thenReturn(true);
+
+            gameController.pauseGame("GAME1", principal);
+
+            verify(messagingTemplate).convertAndSend("/topic/GAME1/game_paused", true);
         }
 
         @Test
-        @DisplayName("should handle null pin")
-        void testStartTrigger_WithNullPin_ShouldSendTrigger() {
-            // Given
-            String pin = null;
-            when(principal.getName()).thenReturn("admin");
+        @DisplayName("should resume, skip, end and count using the given PIN")
+        void testControls_ForModerator_ShouldUseTheGivenPin() {
+            when(gameService.isModerator("GAME1", principal)).thenReturn(true);
+            when(gameService.resumeGame("GAME1")).thenReturn(1500L);
+            when(gameService.getParticipantCount("GAME1")).thenReturn(3);
 
-            // When
-            gameController.startTrigger(pin, principal);
+            gameController.resumeGame("GAME1", principal);
+            gameController.skipQuestion("GAME1", principal);
+            gameController.endGameEarly("GAME1", principal);
+            gameController.getParticipantCount("GAME1", principal);
 
-            // Then
-            verify(messagingTemplate).convertAndSend(
-                    ArgumentMatchers.eq("/topic/null/start"),
-                    ArgumentMatchers.any(StartTrigger.class));
+            verify(messagingTemplate).convertAndSend("/topic/GAME1/game_resumed", 1500L);
+            verify(gameService).skipQuestion("GAME1");
+            verify(gameService).setGameStatus("GAME1", com.quiz.darkhold.game.model.GameStatus.ENDED);
+            verify(gameService).markGame("GAME1", com.quiz.darkhold.game.entity.GameStatus.FINISHED);
+            verify(messagingTemplate).convertAndSend("/topic/GAME1/participant_count", 3);
+        }
+
+        @Test
+        @DisplayName("should kick the player from the given PIN's game for the moderator")
+        void testKick_ForModerator_ShouldUseTheGivenPin() {
+            when(gameService.isModerator("GAME1", principal)).thenReturn(true);
+            when(gameService.kickPlayer("GAME1", "bob")).thenReturn(true);
+
+            gameController.kickPlayer("GAME1:bob", principal);
+
+            verify(messagingTemplate).convertAndSend("/topic/GAME1/player_kicked", "bob");
+        }
+
+        @Test
+        @DisplayName("should ignore every host-only message from a non-moderator")
+        void testControls_ForPlayer_ShouldBeIgnored() {
+            gameController.pauseGame("GAME1", principal);
+            gameController.resumeGame("GAME1", principal);
+            gameController.skipQuestion("GAME1", principal);
+            gameController.endGameEarly("GAME1", principal);
+            gameController.kickPlayer("GAME1:bob", principal);
+            gameController.getParticipantCount("GAME1", principal);
+            gameController.pauseGame("GAME1", null);
+
+            verify(gameService, never()).pauseGame(anyString());
+            verify(gameService, never()).resumeGame(anyString());
+            verify(gameService, never()).skipQuestion(anyString());
+            verify(gameService, never()).setGameStatus(anyString(), ArgumentMatchers.any());
+            verify(gameService, never()).kickPlayer(anyString(), anyString());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), ArgumentMatchers.<Object>any());
+        }
+
+        @Test
+        @DisplayName("should ignore score and team broadcasts from a non-moderator")
+        void testBroadcasts_ForPlayer_ShouldBeIgnored() {
+            gameController.scoresFetch("GAME1", principal);
+            gameController.assignToTeam("GAME1:bob:Red", principal);
+
+            verify(teamService, never()).assignPlayerToTeam(anyString(), anyString(), anyString());
+            verify(messagingTemplate, never()).convertAndSend(anyString(), ArgumentMatchers.<Object>any());
         }
     }
 
@@ -737,8 +822,10 @@ class GameControllerTest {
         @Test
         @DisplayName("should send true to PIN-scoped topic")
         void testScoresFetch_ShouldSendTrueToPinScopedTopic() {
+            when(gameService.isModerator("GAME1", principal)).thenReturn(true);
+
             // When
-            gameController.scoresFetch("GAME1");
+            gameController.scoresFetch("GAME1", principal);
 
             // Then
             verify(messagingTemplate).convertAndSend("/topic/GAME1/read_scores", true);
@@ -747,8 +834,10 @@ class GameControllerTest {
         @Test
         @DisplayName("should send to correct PIN topic")
         void testScoresFetch_ShouldSendToCorrectPinTopic() {
+            when(gameService.isModerator("QUIZ123", principal)).thenReturn(true);
+
             // When
-            gameController.scoresFetch("QUIZ123");
+            gameController.scoresFetch("QUIZ123", principal);
 
             // Then
             verify(messagingTemplate).convertAndSend("/topic/QUIZ123/read_scores", true);
@@ -775,50 +864,14 @@ class GameControllerTest {
                 verify(model).addAttribute("quizPin", quizPin);
             }
         }
-
-        @Test
-        @DisplayName("should handle answer submission and score calculation")
-        void testAnswerSubmissionAndScoring() {
-            // Given
-            when(gameService.findModerator()).thenReturn("moderator");
-            QuestionSet questionSet = createQuestionSet(1, "Question?");
-            questionSet.setPoints(1000);
-            QuestionPointer pointer = createQuestionPointerWithQuestion(0, questionSet);
-            when(gameService.getCurrentQuestionPointer()).thenReturn(pointer);
-            when(gameService.updateStreak(anyString(), ArgumentMatchers.anyBoolean())).thenReturn(1);
-            when(gameService.calculateScoreWithStreak(anyInt(), anyInt(), anyInt())).thenReturn(750);
-
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                Boolean result = gameController.enterGame("correct", "player1", "5000");
-
-                // Then
-                assertTrue(result);
-                verify(gameService).saveCurrentScore("player1", 750);
-            }
-        }
-
-        @Test
-        @DisplayName("should handle moderator skipping questions")
-        void testModeratorSkippingQuestions() {
-            // Given
-            when(gameService.findModerator()).thenReturn("admin");
-
-            // When
-            try (MockedStatic<CommonUtils> mockedUtils = mockStatic(CommonUtils.class)) {
-                mockedUtils.when(() -> CommonUtils.sanitizedString(anyString())).thenReturn("sanitized");
-                gameController.enterGame("correct", "admin", "2000");
-                gameController.enterGame("incorrect", "admin", "3000");
-
-                // Then
-                verify(gameService, times(2)).incrementQuestionNo();
-                verify(gameService, never()).saveCurrentScore(anyString(), anyInt());
-            }
-        }
     }
 
     // ======================== Helper Methods ========================
+
+    private Principal namedPrincipal(final String name) {
+        return new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                name, "n/a", List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("R")));
+    }
 
     private QuestionPointer createQuestionPointer(final int current, final int total) {
         QuestionPointer pointer = new QuestionPointer();

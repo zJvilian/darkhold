@@ -4,7 +4,6 @@ import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.challenge.entity.QuestionType;
 import com.quiz.darkhold.game.model.Challenge;
 import com.quiz.darkhold.game.model.CurrentScore;
-import com.quiz.darkhold.game.model.ExamStatus;
 import com.quiz.darkhold.game.model.Game;
 import com.quiz.darkhold.game.model.GameMode;
 import com.quiz.darkhold.game.model.GameStatus;
@@ -19,14 +18,12 @@ import com.quiz.darkhold.team.model.TeamAssignmentMethod;
 import com.quiz.darkhold.team.model.TeamInfo;
 import com.quiz.darkhold.team.service.TeamService;
 import com.quiz.darkhold.util.CommonUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -40,6 +37,7 @@ import java.util.Map;
 public class GameController {
     private final Logger logger = LogManager.getLogger(GameController.class);
 
+    private static final int MAX_TIME_FACTOR = 1000;
     private static final int MESSAGE_PARTS_KICK_PLAYER = 2;
     private static final int MESSAGE_PARTS_TEAM_ASSIGN = 3;
 
@@ -95,23 +93,34 @@ public class GameController {
         // Check if question pointer is valid (total count should be > 0)
         if (questionPointer.getTotalQuestionCount() == 0) {
             logger.error("Invalid question pointer - total count is 0. PIN: {}", quizPin);
-            return finalScore(model, quizPin);
+            return finalScore(model, quizPin, principal);
         }
 
         if (questionPointer.getCurrentQuestionNumber() == questionPointer.getTotalQuestionCount()) {
             logger.warn("Game ending: currentQuestion == totalQuestions ({} == {})",
                     questionPointer.getCurrentQuestionNumber(),
                     questionPointer.getTotalQuestionCount());
-            return finalScore(model, quizPin);
+            return finalScore(model, quizPin, principal);
         }
         model.addAttribute("quizPin", quizPin);
         logger.info("Going to question page");
         return "question";
     }
 
+    /**
+     * Final scoreboard. Every client views it; only the moderator finalizes the game (saves the
+     * result once and marks the game finished). The session itself stays until the scheduled cleanup
+     * so players who load this page after the moderator still see the scores.
+     *
+     * @param model     model
+     * @param quizPin   the quiz PIN
+     * @param principal auth
+     * @return final score page
+     */
     @PostMapping("/final")
     public String finalScore(final Model model,
-                             @RequestParam(value = "quizPin", required = false) final String quizPin) {
+                             @RequestParam(value = "quizPin", required = false) final String quizPin,
+                             final Principal principal) {
         logger.info("On to the finalScore for PIN: {}", quizPin);
         CurrentScore score = new CurrentScore();
         Map<String, Integer> scores = gameService.getCurrentScore();
@@ -129,23 +138,29 @@ public class GameController {
             model.addAttribute("isTeamMode", false);
         }
 
-        // Save game results for analytics
-        saveGameResultIfAvailable(quizPin);
-
-        gameService.cleanUpCurrentGame();
+        if (quizPin != null && gameService.isModerator(quizPin, principal)) {
+            finalizeGame(quizPin);
+        }
         return "finalscore";
     }
 
+    private void finalizeGame(final String quizPin) {
+        saveGameResultIfAvailable(quizPin);
+        gameService.markGame(quizPin, com.quiz.darkhold.game.entity.GameStatus.FINISHED);
+        if (gameService.getGameMode(quizPin) == GameMode.PRACTICE) {
+            // nobody else views a practice result
+            gameService.cleanUpCurrentGame();
+        }
+    }
+
     private void saveGameResultIfAvailable(final String quizPin) {
-        if (quizPin != null && !quizPin.isEmpty()) {
-            try {
-                String challengeName = "Quiz Session";
-                resultService.saveGameResult(quizPin, challengeName);
-                logger.info("Game results saved for PIN: {}", quizPin);
-                // OK to catch RuntimeException
-            } catch (RuntimeException ex) {
-                logger.error("Failed to save game results for PIN: {}", quizPin, ex);
-            }
+        try {
+            String title = gameService.challengeTitle(quizPin);
+            resultService.saveGameResult(quizPin, title != null ? title : "Quiz Session");
+            logger.info("Game results saved for PIN: {}", quizPin);
+            // OK to catch RuntimeException
+        } catch (RuntimeException ex) {
+            logger.error("Failed to save game results for PIN: {}", quizPin, ex);
         }
     }
 
@@ -166,6 +181,11 @@ public class GameController {
                 ? gameService.getCurrentQuestionPointer(quizPin)
                 : gameService.getCurrentQuestionPointer();
         QuestionSet currentQuestion = questionPointer.getCurrentQuestion();
+        if (currentQuestion == null) {
+            logger.warn("No current question for PIN {}, going to final score", quizPin);
+            return finalScore(model, quizPin, principal);
+        }
+        gameService.questionShown(questionPointer.getCurrentQuestionNumber());
         Challenge challenge = buildChallengeModel(questionPointer, currentQuestion);
         GameMode gameMode = quizPin != null
                 ? gameService.getGameMode(quizPin)
@@ -196,44 +216,47 @@ public class GameController {
         model.addAttribute("question_points", String.valueOf(points));
     }
 
+    /**
+     * Record the caller's answer to the question they were shown. The player, the correctness and the
+     * elapsed time are all derived server-side; only the chosen option comes from the client.
+     *
+     * @param selectedAnswer chosen option (A-D or TRUE/FALSE), empty on timeout
+     * @param principal      the answering player
+     * @return false if the answer was ignored (no open question, or already answered)
+     */
     @PostMapping("/answer/")
     public @ResponseBody
-    Boolean enterGame(@ModelAttribute("selectedOptions") final String selectedOptions,
-                      @ModelAttribute("user") final String user,
-                      @ModelAttribute("timeTook") final String timeTook) {
-        logParams(selectedOptions, user, timeTook);
-        ExamStatus status = getExamStatus(selectedOptions);
-        String moderator = gameService.findModerator();
+    Boolean enterGame(@RequestParam(value = "selectedAnswer", required = false, defaultValue = "")
+                      final String selectedAnswer,
+                      final Principal principal) {
+        String user = principal.getName();
+        Integer questionNo = gameService.shownQuestionNo();
+        QuestionSet question = questionNo == null ? null : gameService.questionAt(questionNo);
+        if (question == null || !gameService.markAnswered(user, questionNo)) {
+            logger.info("Ignoring answer from {}: no open question or already answered",
+                    CommonUtils.sanitizedString(user));
+            return false;
+        }
+        boolean isModerator = gameService.isModerator(principal);
         boolean isPracticeMode = gameService.isPracticeMode();
 
-        logger.info("is user moderator : {}", user.equalsIgnoreCase(moderator));
-        logger.info("is practice mode : {}", isPracticeMode);
-
         // In practice mode, moderator CAN score. In multiplayer, moderator cannot.
-        if (user.equalsIgnoreCase(moderator) && !isPracticeMode) {
-            // Multiplayer: moderator doesn't earn points, just controls game flow
-            gameService.savePreviousScores();
+        if (!isModerator || isPracticeMode) {
+            scoreAnswer(user, question, answerValidationService.validateSelection(question, selectedAnswer));
+        }
+        // Multiplayer: the moderator's answer post moves the game on. Practice: the player is the moderator.
+        if (isModerator) {
             gameService.incrementQuestionNo();
-        } else {
-            // Regular player OR practice mode player (who is also moderator)
-            processPlayerAnswer(user, status, timeTook);
-            // In practice mode, also increment question after scoring
-            if (isPracticeMode && user.equalsIgnoreCase(moderator)) {
-                gameService.savePreviousScores();
-                gameService.incrementQuestionNo();
-            }
         }
         return true;
     }
 
-    private void processPlayerAnswer(final String user, final ExamStatus status, final String timeTook) {
-        boolean isCorrect = status == ExamStatus.SUCCESS;
+    private void scoreAnswer(final String user, final QuestionSet question, final boolean isCorrect) {
         int streak = gameService.updateStreak(user, isCorrect);
-        QuestionPointer questionPointer = gameService.getCurrentQuestionPointer();
-        QuestionSet currentQuestion = questionPointer.getCurrentQuestion();
-        int basePoints = answerValidationService.shouldScore(currentQuestion)
-                ? answerValidationService.getPoints(currentQuestion) : 0;
-        int scoreOnStatus = calculateScoreWithStreak(status, timeTook, basePoints, streak);
+        int basePoints = answerValidationService.shouldScore(question)
+                ? answerValidationService.getPoints(question) : 0;
+        int scoreOnStatus = isCorrect
+                ? calculateTimeFactor(question, gameService.elapsedMillis(), basePoints, streak) : 0;
         logger.info("score is {} (streak: {}, base: {})", scoreOnStatus, streak, basePoints);
         gameService.saveCurrentScore(user, scoreOnStatus);
     }
@@ -242,96 +265,58 @@ public class GameController {
      * Validate a TYPE_ANSWER response server-side using fuzzy matching.
      *
      * @param userAnswer the user's typed answer
-     * @param user       the username
-     * @param timeTook   time taken in ms
+     * @param principal  the answering player
      * @return "correct" or "incorrect"
      */
     @PostMapping("/validate_answer/")
     public @ResponseBody
-    String validateTypeAnswer(@ModelAttribute("userAnswer") final String userAnswer,
-                              @ModelAttribute("user") final String user,
-                              @ModelAttribute("timeTook") final String timeTook) {
-        logger.info("Validating TYPE_ANSWER: '{}' for user {}", userAnswer, user);
-        QuestionPointer questionPointer = gameService.getCurrentQuestionPointer();
-        QuestionSet currentQuestion = questionPointer.getCurrentQuestion();
-
-        boolean isCorrect = answerValidationService.validateAnswer(currentQuestion, userAnswer);
-        ExamStatus status = isCorrect ? ExamStatus.SUCCESS : ExamStatus.FAILURE;
-
-        String moderator = gameService.findModerator();
+    String validateTypeAnswer(@RequestParam(value = "userAnswer", required = false, defaultValue = "")
+                              final String userAnswer,
+                              final Principal principal) {
+        String user = principal.getName();
+        boolean isModerator = gameService.isModerator(principal);
         boolean isPracticeMode = gameService.isPracticeMode();
-
-        // In practice mode, moderator CAN score. In multiplayer, moderator cannot.
-        if (!user.equalsIgnoreCase(moderator) || isPracticeMode) {
-            processPlayerAnswer(user, status, timeTook);
-            // In practice mode, also increment question after scoring
-            if (isPracticeMode && user.equalsIgnoreCase(moderator)) {
-                gameService.savePreviousScores();
-                gameService.incrementQuestionNo();
-            }
+        Integer questionNo = gameService.shownQuestionNo();
+        QuestionSet question = questionNo == null ? null : gameService.questionAt(questionNo);
+        // A repeat answers "incorrect" so the endpoint can't be used to probe for the right answer.
+        if ((isModerator && !isPracticeMode) || question == null || !gameService.markAnswered(user, questionNo)) {
+            logger.info("Ignoring typed answer from {}", CommonUtils.sanitizedString(user));
+            return "incorrect";
         }
-
+        boolean isCorrect = answerValidationService.validateAnswer(question, userAnswer);
+        scoreAnswer(user, question, isCorrect);
+        if (isModerator) {
+            // practice mode: scoring player is the moderator and moves the game on
+            gameService.incrementQuestionNo();
+        }
         return isCorrect ? "correct" : "incorrect";
     }
 
-    private void logParams(final String selectedOptions, final String user, final String timeTook) {
-        String sanitizedOptions = CommonUtils.sanitizedString(selectedOptions);
-        String sanitizedUser = CommonUtils.sanitizedString(user);
-        String sanitizedTime = CommonUtils.sanitizedString(timeTook);
-        logger.info("selectedOptions are {}, user is {}, and timeTook is {}",
-                sanitizedOptions, sanitizedUser, sanitizedTime);
+    private int calculateTimeFactor(final QuestionSet question, final long elapsedMs,
+                                    final int basePoints, final int streak) {
+        int timeLimit = question.getTimeLimit() != null && question.getTimeLimit() > 0
+                ? question.getTimeLimit() : gameConfig.getTimerSeconds();
+        long timerMs = timeLimit * 1000L;
+        long timeTakenMs = Math.min(Math.max(0, elapsedMs), timerMs);
+        int timeFactor = (int) ((timerMs - timeTakenMs) * MAX_TIME_FACTOR / timerMs);
+        return gameService.calculateScoreWithStreak(basePoints, timeFactor, streak);
     }
-
-    private int calculateScoreWithStreak(final ExamStatus status, final String timeTook,
-                                          final int basePoints, final int streak) {
-        if (status != ExamStatus.SUCCESS) {
-            return 0;
-        }
-        return calculateTimeFactor(timeTook, basePoints, streak);
-    }
-
-    private int calculateTimeFactor(final String timeTook, final int basePoints, final int streak) {
-        try {
-            int timeTakenMs = Integer.parseInt(timeTook);
-            if (timeTakenMs <= 0) {
-                return 0;
-            }
-            int timerMs = gameConfig.getTimerSeconds() * 1000;
-            int timeFactor = Math.max(0, (timerMs - timeTakenMs) * 1000 / timerMs);
-            return gameService.calculateScoreWithStreak(basePoints, timeFactor, streak);
-        } catch (NumberFormatException ex) {
-            logger.info("Invalid time format: {}", ex.getMessage());
-            return 0;
-        }
-    }
-
-    private ExamStatus getExamStatus(@RequestParam("selectedOptions") final String selectedOptions) {
-        ExamStatus status;
-        if (StringUtils.isNotEmpty(selectedOptions)) {
-            if (selectedOptions.equalsIgnoreCase("correct")) {
-                status = ExamStatus.SUCCESS;
-            } else if (selectedOptions.equalsIgnoreCase("incorrect")) {
-                status = ExamStatus.FAILURE;
-            } else {
-                status = ExamStatus.TIME_OUT;
-            }
-        } else {
-            status = ExamStatus.TIME_OUT;
-        }
-        return status;
-    }
-
 
     /**
      * Always active, will add the new user and give it back in response.
      * Sends to PIN-scoped topic for concurrent game support.
      * Auto-assigns player to team if team mode is enabled with BALANCED or RANDOM assignment.
      *
-     * @param game game
+     * @param game      game
+     * @param principal the joining player; may only add themselves
      */
     @MessageMapping("/user")
-    public void getGame(final Game game) {
+    public void getGame(final Game game, final Principal principal) {
         logger.info("On to getGame : {}", game);
+        if (principal == null || game.getName() == null || !game.getName().equals(principal.getName())) {
+            logger.warn("Ignoring join for {}: does not match the connected user", game);
+            return;
+        }
         List<String> users = gameService.saveAndGetAllParticipants(game.getPin(), game.getName());
 
         // Auto-assign to team if team mode enabled and not MANUAL assignment
@@ -378,8 +363,11 @@ public class GameController {
     public void startTrigger(final String pin, final Principal principal) {
         // this is triggered by the game moderator
         logger.info("On to startGame : {}", pin);
+        if (!requireHost(pin, principal)) {
+            return;
+        }
         logger.info("On to startGame : user : {}", principal.getName());
-        // who started the game is already in nitrate
+        gameService.markGame(pin, com.quiz.darkhold.game.entity.GameStatus.STARTED);
         StartTrigger trigger = new StartTrigger(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/start", trigger);
     }
@@ -397,7 +385,7 @@ public class GameController {
         String pin = message.contains(":") ? message.substring(0, message.indexOf(":")) : message;
         QuestionPointer questionPointer = gameService.getCurrentQuestionPointer(pin);
         StartTrigger trigger;
-        if (questionPointer.getCurrentQuestionNumber() == questionPointer.getTotalQuestionCount()) {
+        if (questionPointer.getCurrentQuestion() == null) {
             trigger = new StartTrigger("END_GAME");
         } else {
             logger.info("On questionPointer.getCurrentQuestionNumber() : {}",
@@ -415,8 +403,11 @@ public class GameController {
      * @param pin game PIN
      */
     @MessageMapping("/fetch_scores")
-    public void scoresFetch(final String pin) {
+    public void scoresFetch(final String pin, final Principal principal) {
         logger.info("On to scoresFetch for game: {}", pin);
+        if (!requireHost(pin, principal)) {
+            return;
+        }
         messagingTemplate.convertAndSend("/topic/" + pin + "/read_scores", true);
     }
 
@@ -429,9 +420,12 @@ public class GameController {
      * @param pin game pin
      */
     @MessageMapping("/pause_game")
-    public void pauseGame(final String pin) {
+    public void pauseGame(final String pin, final Principal principal) {
         logger.info("Pausing game: {}", pin);
-        boolean result = gameService.pauseGame();
+        if (!requireHost(pin, principal)) {
+            return;
+        }
+        boolean result = gameService.pauseGame(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/game_paused", result);
     }
 
@@ -442,9 +436,12 @@ public class GameController {
      * @param pin game pin
      */
     @MessageMapping("/resume_game")
-    public void resumeGame(final String pin) {
+    public void resumeGame(final String pin, final Principal principal) {
         logger.info("Resuming game: {}", pin);
-        long elapsed = gameService.resumeGame();
+        if (!requireHost(pin, principal)) {
+            return;
+        }
+        long elapsed = gameService.resumeGame(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/game_resumed", elapsed);
     }
 
@@ -455,10 +452,12 @@ public class GameController {
      * @param pin game pin
      */
     @MessageMapping("/skip_question")
-    public void skipQuestion(final String pin) {
+    public void skipQuestion(final String pin, final Principal principal) {
         logger.info("Skipping question for game: {}", pin);
-        gameService.savePreviousScores();
-        gameService.skipQuestion();
+        if (!requireHost(pin, principal)) {
+            return;
+        }
+        gameService.skipQuestion(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/question_skipped", true);
     }
 
@@ -469,9 +468,13 @@ public class GameController {
      * @param pin game pin
      */
     @MessageMapping("/end_game_early")
-    public void endGameEarly(final String pin) {
+    public void endGameEarly(final String pin, final Principal principal) {
         logger.info("Ending game early: {}", pin);
-        gameService.setGameStatus(GameStatus.ENDED);
+        if (!requireHost(pin, principal)) {
+            return;
+        }
+        gameService.setGameStatus(pin, GameStatus.ENDED);
+        gameService.markGame(pin, com.quiz.darkhold.game.entity.GameStatus.FINISHED);
         messagingTemplate.convertAndSend("/topic/" + pin + "/game_ended", true);
     }
 
@@ -482,7 +485,7 @@ public class GameController {
      * @param message format: "pin:username"
      */
     @MessageMapping("/kick_player")
-    public void kickPlayer(final String message) {
+    public void kickPlayer(final String message, final Principal principal) {
         // Expected format: "pin:username"
         String[] parts = message.split(":", MESSAGE_PARTS_KICK_PLAYER);
         if (parts.length != MESSAGE_PARTS_KICK_PLAYER) {
@@ -491,8 +494,11 @@ public class GameController {
         }
         String pin = parts[0];
         String username = parts[1];
+        if (!requireHost(pin, principal)) {
+            return;
+        }
         logger.info("Kicking player {} from game {}", username, pin);
-        boolean kicked = gameService.kickPlayer(username);
+        boolean kicked = gameService.kickPlayer(pin, username);
         String result = kicked ? username : null;
         messagingTemplate.convertAndSend("/topic/" + pin + "/player_kicked", result);
     }
@@ -504,8 +510,11 @@ public class GameController {
      * @param pin game pin
      */
     @MessageMapping("/participant_count")
-    public void getParticipantCount(final String pin) {
-        int count = gameService.getParticipantCount();
+    public void getParticipantCount(final String pin, final Principal principal) {
+        if (!requireHost(pin, principal)) {
+            return;
+        }
+        int count = gameService.getParticipantCount(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/participant_count", count);
     }
 
@@ -518,7 +527,7 @@ public class GameController {
      * @param message format: "pin:username:teamName"
      */
     @MessageMapping("/team/assign")
-    public void assignToTeam(final String message) {
+    public void assignToTeam(final String message, final Principal principal) {
         String[] parts = message.split(":", MESSAGE_PARTS_TEAM_ASSIGN);
         if (parts.length != MESSAGE_PARTS_TEAM_ASSIGN) {
             logger.warn("Invalid team assign message format: {}", message);
@@ -527,6 +536,9 @@ public class GameController {
         String pin = parts[0];
         String username = parts[1];
         String teamName = parts[2];
+        if (!requireHost(pin, principal)) {
+            return;
+        }
 
         logger.info("Assigning player {} to team {} in game {}", username, teamName, pin);
         teamService.assignPlayerToTeam(pin, username, teamName);
@@ -559,5 +571,17 @@ public class GameController {
         logger.info("Fetching team scores for game: {}", pin);
         Map<String, Integer> teamScores = teamService.calculateTeamScores(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/team_scores", teamScores);
+    }
+
+    /**
+     * Host-only WebSocket actions are ignored (and logged) for anyone but the game's moderator.
+     */
+    private boolean requireHost(final String pin, final Principal principal) {
+        if (gameService.isModerator(pin, principal)) {
+            return true;
+        }
+        logger.warn("Ignoring host-only message for game {} from {}", CommonUtils.sanitizedString(pin),
+                principal != null ? CommonUtils.sanitizedString(principal.getName()) : null);
+        return false;
     }
 }

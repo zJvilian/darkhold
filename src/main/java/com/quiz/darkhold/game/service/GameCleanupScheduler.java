@@ -3,7 +3,9 @@ package com.quiz.darkhold.game.service;
 import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.entity.GameStatus;
 import com.quiz.darkhold.game.repository.GameRepository;
+import com.quiz.darkhold.preview.entity.CurrentGameSession;
 import com.quiz.darkhold.preview.repository.CurrentGame;
+import com.quiz.darkhold.preview.repository.CurrentGameSessionRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -26,6 +29,7 @@ public class GameCleanupScheduler {
 
     private final GameRepository gameRepository;
     private final CurrentGame currentGame;
+    private final CurrentGameSessionRepository sessionRepository;
 
     @Value("${darkhold.game.expiration-hours:24}")
     private int expirationHours;
@@ -34,9 +38,11 @@ public class GameCleanupScheduler {
     private int waitingExpirationHours;
 
     public GameCleanupScheduler(final GameRepository gameRepository,
-                                final CurrentGame currentGame) {
+                                final CurrentGame currentGame,
+                                final CurrentGameSessionRepository sessionRepository) {
         this.gameRepository = gameRepository;
         this.currentGame = currentGame;
+        this.sessionRepository = sessionRepository;
     }
 
     /**
@@ -51,6 +57,22 @@ public class GameCleanupScheduler {
         LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
         int cleanedCount = processExpiredGames(activeGames, now);
         logCleanupResults(cleanedCount);
+        deleteOrphanSessions();
+    }
+
+    /**
+     * Delete old live sessions nobody will use again: practice sessions (no Game row) and the
+     * sessions of finished games, which are kept for a grace period so late players can see the scores.
+     */
+    private void deleteOrphanSessions() {
+        long cutoff = System.currentTimeMillis() - Duration.ofHours(expirationHours).toMillis();
+        for (CurrentGameSession session : sessionRepository.findByCreatedAtLessThan(cutoff)) {
+            Game game = gameRepository.findByPin(session.getPin());
+            if (game == null || GameStatus.FINISHED.name().equals(game.getGameStatus())) {
+                logger.info("Deleting orphan session: PIN={}", session.getPin());
+                sessionRepository.delete(session);
+            }
+        }
     }
 
     private int processExpiredGames(final List<Game> games, final LocalDateTime now) {

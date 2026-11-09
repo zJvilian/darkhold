@@ -14,6 +14,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -123,11 +124,16 @@ public class ScoreController {
      * Signal that next question is ready.
      * Sends to PIN-scoped topic for concurrent game support.
      *
-     * @param pin game PIN
+     * @param pin       game PIN
+     * @param principal caller; only the game's moderator may advance the game
      */
     @MessageMapping("/next_question")
-    public void scoresFetch(final String pin) {
+    public void scoresFetch(final String pin, final Principal principal) {
         logger.info("On to ready_for_question for game: {}", pin);
+        if (!gameService.isModerator(pin, principal)) {
+            logger.warn("Ignoring next_question for game {} from a non-moderator", pin);
+            return;
+        }
         messagingTemplate.convertAndSend("/topic/" + pin + "/ready_for_question", true);
     }
 }

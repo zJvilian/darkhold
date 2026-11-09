@@ -23,6 +23,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Service for saving and retrieving game analytics and results.
@@ -52,7 +53,7 @@ public class ResultService {
     }
 
     /**
-     * Save complete game results when a game ends.
+     * Save complete game results when a game ends. Idempotent per PIN: a repeat returns the saved result.
      *
      * @param pin           game PIN
      * @param challengeName challenge name
@@ -62,6 +63,12 @@ public class ResultService {
     public GameResult saveGameResult(final String pin, final String challengeName) {
         logger.info("Saving game result for PIN: {}", pin);
 
+        Optional<GameResult> existing = gameResultRepository.findFirstByPinOrderByIdAsc(pin);
+        if (existing.isPresent()) {
+            logger.info("Game result already saved for PIN: {}", pin);
+            return existing.get();
+        }
+
         Game game = gameRepository.findByPin(pin);
         if (game == null) {
             logger.error("Game not found for PIN: {}", pin);
@@ -69,10 +76,11 @@ public class ResultService {
         }
 
         GameResult gameResult = createGameResult(pin, challengeName, game);
-        addParticipantResults(gameResult, pin, game.getTeamMode());
+        boolean teamMode = Boolean.TRUE.equals(game.getTeamMode());
+        addParticipantResults(gameResult, pin, teamMode);
         addQuestionResults(gameResult, pin);
 
-        if (game.getTeamMode()) {
+        if (teamMode) {
             addTeamResults(gameResult, pin);
         }
 
@@ -120,7 +128,9 @@ public class ResultService {
         sortedScores.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
 
         String moderator = currentGame.findModerator(pin);
-        int rank = 1;
+        int position = 0;
+        int rank = 0;
+        Integer previousScore = null;
 
         List<TeamInfo> teams = null;
         if (isTeamMode) {
@@ -137,6 +147,12 @@ public class ResultService {
             participantResult.setGameResult(gameResult);
             participantResult.setUsername(username);
             participantResult.setFinalScore(entry.getValue());
+            position++;
+            // competition ranking: equal scores share a rank, the next rank skips ahead
+            if (!entry.getValue().equals(previousScore)) {
+                rank = position;
+            }
+            previousScore = entry.getValue();
             participantResult.setFinalRank(rank);
 
             int streak = currentGame.getStreak(pin, username);
@@ -161,11 +177,10 @@ public class ResultService {
 
             gameResult.getParticipantResults().add(participantResult);
 
-            if (rank == 1) {
+            if (position == 1) {
                 gameResult.setWinnerUsername(username);
                 gameResult.setWinnerScore(entry.getValue());
             }
-            rank++;
         }
     }
 
@@ -239,7 +254,9 @@ public class ResultService {
         List<Map.Entry<String, Integer>> sortedTeams = new ArrayList<>(teamScores.entrySet());
         sortedTeams.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
 
-        int rank = 1;
+        int position = 0;
+        int rank = 0;
+        Integer previousScore = null;
         for (Map.Entry<String, Integer> entry : sortedTeams) {
             String teamName = entry.getKey();
             Integer teamScore = entry.getValue();
@@ -252,6 +269,11 @@ public class ResultService {
             if (teamInfo == null) {
                 continue;
             }
+            position++;
+            if (!teamScore.equals(previousScore)) {
+                rank = position;
+            }
+            previousScore = teamScore;
 
             TeamResult teamResult = new TeamResult();
             teamResult.setGameResult(gameResult);
@@ -265,11 +287,10 @@ public class ResultService {
 
             teamResultRepository.save(teamResult);
 
-            if (rank == 1) {
+            if (position == 1) {
                 gameResult.setWinningTeamName(teamName);
                 gameResult.setWinningTeamScore(teamScore);
             }
-            rank++;
         }
     }
 }

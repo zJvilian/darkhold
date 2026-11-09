@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for accessing GameResult entities.
@@ -57,4 +58,12 @@ public interface GameResultRepository extends JpaRepository<GameResult, Long> {
      * @return game result if found
      */
     GameResult findByPin(String pin);
+
+    /**
+     * Find the first saved result for a PIN (older data may hold duplicates).
+     *
+     * @param pin game PIN
+     * @return the earliest result, if any
+     */
+    Optional<GameResult> findFirstByPinOrderByIdAsc(String pin);
 }

@@ -3,7 +3,9 @@ package com.quiz.darkhold.game.service;
 import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.entity.GameStatus;
 import com.quiz.darkhold.game.repository.GameRepository;
+import com.quiz.darkhold.preview.entity.CurrentGameSession;
 import com.quiz.darkhold.preview.repository.CurrentGame;
+import com.quiz.darkhold.preview.repository.CurrentGameSessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -34,11 +36,14 @@ class GameCleanupSchedulerTest {
     @Mock
     private CurrentGame currentGame;
 
+    @Mock
+    private CurrentGameSessionRepository sessionRepository;
+
     private GameCleanupScheduler scheduler;
 
     @BeforeEach
     void setUp() throws Exception {
-        scheduler = new GameCleanupScheduler(gameRepository, currentGame);
+        scheduler = new GameCleanupScheduler(gameRepository, currentGame, sessionRepository);
         setField(scheduler, "expirationHours", 24);
         setField(scheduler, "waitingExpirationHours", 2);
     }
@@ -47,6 +52,32 @@ class GameCleanupSchedulerTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    @Nested
+    @DisplayName("orphan session cleanup tests")
+    class OrphanSessionTests {
+
+        @Test
+        @DisplayName("Should delete old practice and finished-game sessions but keep those of live games")
+        void shouldDeleteOnlyOrphanSessions() {
+            CurrentGameSession practice = new CurrentGameSession("PRACTICE-1", "p");
+            CurrentGameSession finished = new CurrentGameSession("22222", "m");
+            CurrentGameSession live = new CurrentGameSession("33333", "m");
+            when(sessionRepository.findByCreatedAtLessThan(org.mockito.ArgumentMatchers.anyLong()))
+                    .thenReturn(List.of(practice, finished, live));
+            when(gameRepository.findByPin("PRACTICE-1")).thenReturn(null);
+            when(gameRepository.findByPin("22222")).thenReturn(createGame("22222", GameStatus.FINISHED.name(),
+                    LocalDateTime.now().minusHours(30)));
+            when(gameRepository.findByPin("33333")).thenReturn(createGame("33333", GameStatus.STARTED.name(),
+                    LocalDateTime.now().minusHours(1)));
+
+            scheduler.cleanupExpiredGames();
+
+            verify(sessionRepository).delete(practice);
+            verify(sessionRepository).delete(finished);
+            verify(sessionRepository, never()).delete(live);
+        }
     }
 
     @Nested

@@ -54,13 +54,13 @@
                         <div class="status-banner-icon">
                             <i class="fas fa-clock"></i>
                         </div>
-                        <span class="status-banner-text">Waiting for next question...</span>
+                        <span class="status-banner-text" th:text="#{questionWait.status}">Waiting for next question...</span>
                     </div>
 
                     <!-- Main Message (dynamically updated) -->
                     <div id="div_body">
-                        <h1 class="waiting-message">Get Ready!</h1>
-                        <p class="waiting-subtext">The next question is loading</p>
+                        <h1 class="waiting-message" th:text="#{questionWait.title}">Get Ready!</h1>
+                        <p class="waiting-subtext" th:text="#{questionWait.subtitle}">The next question is loading</p>
                     </div>
 
                     <!-- Progress Indicator -->
@@ -75,15 +75,15 @@
                         <div class="tips-grid">
                             <div class="tip-item-small">
                                 <i class="fas fa-tachometer-alt"></i>
-                                <span class="tip-text-small">Speed Bonus</span>
+                                <span class="tip-text-small" th:text="#{questionWait.tipSpeed}">Speed Bonus</span>
                             </div>
                             <div class="tip-item-small">
                                 <i class="fas fa-fire"></i>
-                                <span class="tip-text-small">Streak Multiplier</span>
+                                <span class="tip-text-small" th:text="#{questionWait.tipStreak}">Streak Multiplier</span>
                             </div>
                             <div class="tip-item-small">
                                 <i class="fas fa-trophy"></i>
-                                <span class="tip-text-small">Earn Points</span>
+                                <span class="tip-text-small" th:text="#{questionWait.tipPoints}">Earn Points</span>
                             </div>
                         </div>
                     </div>
@@ -97,32 +97,26 @@
 
     <script>
         // Override the updateTextOrEndGame function to provide better UI updates
-        const originalUpdateTextOrEndGame = window.updateTextOrEndGame;
+        // Texts arrive from the network, so build the nodes with textContent
+        function showWaitingMessage(title, subtext) {
+            const heading = document.createElement('h1');
+            heading.className = 'waiting-message';
+            heading.textContent = title;
+            const sub = document.createElement('p');
+            sub.className = 'waiting-subtext';
+            sub.textContent = subtext;
+            document.getElementById('div_body').replaceChildren(heading, sub);
+        }
+
         window.updateTextOrEndGame = function(message) {
-            console.log(message);
             if (message === "END_GAME") {
-                // Update UI before ending game
-                const divBody = document.getElementById('div_body');
-                divBody.innerHTML = `
-                    <h1 class="waiting-message">Game Complete!</h1>
-                    <p class="waiting-subtext">Calculating final scores...</p>
-                `;
-                setTimeout(function() {
-                    endGame();
-                }, 2000);
+                showWaitingMessage(LanguageManager.text('client.questionWait.gameComplete'),
+                    LanguageManager.text('client.questionWait.calculating'));
+                setTimeout(endGame, 2000);
                 return;
             }
-
-            // Update the message display
-            const divBody = document.getElementById('div_body');
-            divBody.innerHTML = `
-                <h1 class="waiting-message">${message}</h1>
-                <p class="waiting-subtext">Prepare yourself for the next question</p>
-            `;
-
-            setTimeout(function() {
-                startGame();
-            }, 3000);
+            showWaitingMessage(message, LanguageManager.text('client.questionWait.prepare'));
+            setTimeout(startGame, 3000);
         };
     </script>
 </body>

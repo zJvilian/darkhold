@@ -96,7 +96,7 @@
                             <div th:if="${gameinfo != null && gameinfo.message != null}" class="alert-banner alert-success" role="alert">
                                 <i class="fas fa-check-circle"></i>
                                 <span th:text="${gameinfo.message}">Success message</span>
-                                <button type="button" class="alert-close" aria-label="Close">&times;</button>
+                                <button type="button" class="alert-close" th:aria-label="#{button.close}" aria-label="Close">&times;</button>
                             </div>
 
                             <!-- PIN Entry Step -->

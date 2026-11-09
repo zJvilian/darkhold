@@ -2,9 +2,9 @@
 const LanguageManager = (() => {
     'use strict';
     const SUPPORTED_LANGUAGES = {
-        en: { code: 'en', name: 'English', nativeName: 'English' },
-        de: { code: 'de', name: 'German', nativeName: 'Deutsch' },
-        es: { code: 'es', name: 'Spanish', nativeName: 'Español' }
+        en: { code: 'en', nativeName: 'English' },
+        de: { code: 'de', nativeName: 'Deutsch' },
+        es: { code: 'es', nativeName: 'Español' }
     };
     let currentLanguage = 'en';
 

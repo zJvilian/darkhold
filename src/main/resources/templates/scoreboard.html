@@ -67,7 +67,7 @@
 
                 <!-- Team/Individual Toggle (only shown in team mode) -->
                 <div th:if="${isTeamMode}" class="scoreboard-toggle">
-                    <div class="scoreboard-toggle-group" role="group" aria-label="Scoreboard view">
+                    <div class="scoreboard-toggle-group" role="group" th:aria-label="#{scoreboard.view}" aria-label="Scoreboard view">
                         <button type="button" class="scoreboard-toggle-btn active" id="btnIndividual" onclick="showIndividualScores()" th:text="#{scoreboard.individual}">Individual</button>
                         <button type="button" class="scoreboard-toggle-btn" id="btnTeams" onclick="showTeamScores()" th:text="#{scoreboard.teams}">Teams</button>
                     </div>
@@ -109,7 +109,7 @@
 
                 <!-- Individual Scoreboard -->
                 <div id="individualScoreboard" class="scoreboard-table-container">
-                    <table class="scoreboard-table" role="main" aria-label="Game scoreboard">
+                    <table class="scoreboard-table" role="main" th:aria-label="#{scoreboard.title}" aria-label="Game scoreboard">
                         <thead>
                             <tr>
                                 <th class="rank-cell" scope="col" th:text="#{scoreboard.rank}">Rank</th>

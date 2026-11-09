@@ -231,15 +231,10 @@
     transition: all 0.2s ease;
 }
 
-.mode-card:hover:not(.disabled) {
+.mode-card:hover {
     border-color: var(--color-primary);
     transform: translateY(-2px);
     box-shadow: 0 8px 30px rgba(var(--color-primary-rgb, 0, 98, 204), 0.15);
-}
-
-.mode-card.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 .mode-icon {
@@ -376,13 +371,6 @@
 
 .mode-btn--success:hover:not(:disabled) {
     background: #218838;
-}
-
-.mode-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    background: var(--color-bg-tertiary);
-    color: var(--color-text-muted);
 }
 
 /* ----------------------------------------

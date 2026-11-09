@@ -315,7 +315,8 @@ class HomeControllerTest {
         mockMvc.perform(post("/joinGame").session(session)
                         .param("gamePin", testPin).param("name", testUsername))
                 .andExpect(view().name("index"))
-                .andExpect(model().attributeHasFieldErrors("gameInfo", "gamePin"));
+                .andExpect(model().attributeHasFieldErrors("gameInfo", "gamePin"))
+                .andExpect(model().attribute("joinError", "home.invalidPin"));
 
         assert session.getAttribute("gamePin") == null;
         verify(rateLimitingService).recordFailedAttempt("127.0.0.1");

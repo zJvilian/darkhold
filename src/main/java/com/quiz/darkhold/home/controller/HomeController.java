@@ -135,11 +135,11 @@ public class HomeController {
         // The PIN can't be trusted just because /enterGame accepted it earlier: re-check it, with the same limiter
         String clientIp = request.getRemoteAddr();
         if (!rateLimitingService.isAllowed(clientIp)) {
-            return rejectJoin(gameInfo, bindingResult, model, "Too many attempts. Please try again later.");
+            return rejectJoin(gameInfo, bindingResult, model, "home.rateLimitWarning");
         }
         if (!homeService.validateGamePin(CommonUtils.sanitizedString(gameInfo.getGamePin()))) {
             rateLimitingService.recordFailedAttempt(clientIp);
-            return rejectJoin(gameInfo, bindingResult, model, "Invalid game PIN");
+            return rejectJoin(gameInfo, bindingResult, model, "home.invalidPin");
         }
         rateLimitingService.recordSuccessfulAttempt(clientIp);
         logger.info("joinGame : gameInfo is {}", gameInfo);
@@ -173,8 +173,9 @@ public class HomeController {
     }
 
     private String rejectJoin(final GameInfo gameInfo, final BindingResult bindingResult, final Model model,
-                              final String message) {
-        bindingResult.rejectValue("gamePin", "joinGame.rejected", message);
+                              final String messageKey) {
+        bindingResult.rejectValue("gamePin", messageKey);
+        model.addAttribute("joinError", messageKey);
         model.addAttribute(GAME_INFO, gameInfo);
         return "index";
     }

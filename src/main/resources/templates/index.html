@@ -150,7 +150,7 @@
 
                             <!-- Error Message -->
                             <div id="messenger" class="error-container" role="alert" aria-live="polite">
-                                <p id="message_disp" class="error-message"></p>
+                                <p id="message_disp" class="error-message" th:text="${joinError != null} ? #{${joinError}} : ''"></p>
                             </div>
 
                             <!-- Submit Button -->

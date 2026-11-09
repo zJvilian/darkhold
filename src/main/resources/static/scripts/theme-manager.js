@@ -1,5 +1,5 @@
 /**
- * Theme Manager - Darkhold Quiz Application
+ * Theme Manager - Kahvoid Quiz Application
  * Milestone 10: UI/UX Polish
  *
  * Manages theme switching between light and dark modes.

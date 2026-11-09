@@ -38,7 +38,7 @@ public class UserValidator implements Validator {
         }
     }
 
-    private void validatePassword(final Errors errors, final User user) {
+    public void validatePassword(final Errors errors, final User user) {
         ValidationUtils.rejectIfEmptyOrWhitespace(errors, "password", "NotEmpty");
 
         String password = user.getPassword();

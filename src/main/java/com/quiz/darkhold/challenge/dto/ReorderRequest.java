@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class ReorderRequest {
 
-    @NotNull(message = "Challenge ID is required")
+    @NotNull(message = "Quiz ID is required")
     private Long challengeId;
 
     @NotNull(message = "Question IDs list is required")

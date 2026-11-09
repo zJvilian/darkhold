@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{options.title} + ' - Darkhold'">Settings - Darkhold</title>
+    <title th:text="#{options.title} + ' - Kahvoid'">Settings - Kahvoid</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="manifest" href="/manifest.json">
@@ -90,7 +90,7 @@
         <!-- ============================
              ADMINISTRATION
              ============================ -->
-        <section class="options-section">
+        <section class="options-section" sec:authorize="hasAnyAuthority('ADMIN', 'GAME_MANAGER')">
             <div class="options-container">
                 <div class="section-label">
                     <span class="section-label-text" th:text="#{options.administration}">Administration</span>
@@ -108,7 +108,7 @@
                             <i class="fas fa-chevron-right"></i>
                         </div>
                     </div>
-                    <div class="action-card" onclick="manageGame();">
+                    <div class="action-card" onclick="manageGame();" sec:authorize="hasAnyAuthority('ADMIN', 'GAME_MANAGER')">
                         <div class="action-card-icon action-card-icon--green">
                             <i class="fas fa-sliders-h"></i>
                         </div>
@@ -182,7 +182,7 @@
                         </div>
                         <div class="info-card-body">
                             <span class="info-card-label">Version</span>
-                            <span class="info-card-value">Darkhold v1.0</span>
+                            <span class="info-card-value">Kahvoid v1.0</span>
                         </div>
                     </div>
                     <div class="info-card">

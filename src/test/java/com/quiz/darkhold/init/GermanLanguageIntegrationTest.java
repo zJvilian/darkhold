@@ -34,7 +34,7 @@ class GermanLanguageIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("lang=\"de\"")))
                 .andExpect(content().string(containsString(">DE</span>")))
-                .andExpect(content().string(containsString("In Sekunden startklar"))).andReturn();
+                .andExpect(content().string(containsString("Interaktive Quiz-Plattform"))).andReturn();
         Cookie language = result.getResponse().getCookie("darkhold_language");
         assertNotNull(language);
         assertTrue(language.getMaxAge() > 0);
@@ -51,6 +51,7 @@ class GermanLanguageIntegrationTest {
         mvc.perform(get("/challenge/create").param("lang", "de").with(user("host")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Grundinformationen")))
+                .andExpect(content().string(containsString("window.DarkholdMessages =")))
                 .andExpect(model().attribute("clientMessages",
                         hasEntry("client.editor.addQuestion", "Frage hinzufügen")))
                 .andExpect(content().string(containsString("Live-Quiz starten")))

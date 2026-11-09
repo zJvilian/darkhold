@@ -106,4 +106,32 @@ public class UserServiceImpl implements UserService {
     public void updateUserEnabledStatus(final Long id, final boolean enabled) {
         userRepository.updateEnabledStatus(id, enabled);
     }
+
+    @Override
+    public void updateProfile(final Long id, final String firstName, final String lastName, final String email,
+                              final String photo)
+            throws UserNotFoundException {
+        User user = get(id);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setEmail(email);
+        if (photo != null) {
+            user.setPhoto(photo);
+        }
+    }
+
+    @Override
+    public boolean passwordMatches(final Long id, final String rawPassword) throws UserNotFoundException {
+        return encoder.matches(rawPassword, get(id).getPassword());
+    }
+
+    @Override
+    public boolean changePassword(final Long id, final String currentPassword, final String newPassword)
+            throws UserNotFoundException {
+        if (!passwordMatches(id, currentPassword)) {
+            return false;
+        }
+        get(id).setPassword(encodePassword(newPassword));
+        return true;
+    }
 }

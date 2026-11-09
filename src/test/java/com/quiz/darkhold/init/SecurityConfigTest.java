@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -41,6 +42,13 @@ class SecurityConfigTest {
     void shouldAllowAccessToRegistration() throws Exception {
         mockMvc.perform(get("/registration"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Should allow anonymous access to legal pages")
+    void shouldAllowAccessToLegalPages() throws Exception {
+        mockMvc.perform(get("/impressum")).andExpect(status().isOk());
+        mockMvc.perform(get("/datenschutz")).andExpect(status().isOk());
     }
 
     @Test
@@ -92,5 +100,14 @@ class SecurityConfigTest {
     void shouldEncodePasswordsWithBCrypt() {
         var encoded = passwordEncoder.encode("testPassword");
         assertTrue(passwordEncoder.matches("testPassword", encoded));
+    }
+
+    @Test
+    @DisplayName("Game management is open to ADMIN and GAME_MANAGER only")
+    void gameManagementIsRoleRestricted() throws Exception {
+        mockMvc.perform(get("/gameManagement").with(user("gm").authorities(() -> "GAME_MANAGER")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/gameManagement").with(user("p").authorities(() -> "PARTICIPANT")))
+                .andExpect(status().isForbidden());
     }
 }

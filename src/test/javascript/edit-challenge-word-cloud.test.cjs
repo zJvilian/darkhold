@@ -39,7 +39,6 @@ function setupEditor() {
         console,
         challengeId: 101,
         window: { currentImageUrl: null },
-        defaultWordCloudFuzzy: true,
         document: {
             getElementById: (id) => getEl(id)
         },

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
-    <title th:text="#{error.pageTitle}">Something went wrong — Darkhold</title>
+    <title th:text="#{error.pageTitle}">Something went wrong — Kahvoid</title>
     <link rel="icon" href="/images/favicon.png">
     <link rel="stylesheet" href="/styles/darkhold-styles.css">
     <link rel="stylesheet" href="/styles/error.css">
@@ -13,7 +13,7 @@
 <body class="error-page">
     <main class="error-container">
         <div class="error-content" role="alert">
-            <a class="error-brand" href="/">✦ Darkhold</a>
+            <a class="error-brand" href="/">✦ Kahvoid</a>
             <p class="error-code" th:text="${status}">500</p>
             <h1 class="error-title" th:text="${#messages.msg('error.' + errorMessageStatus + '.title')}">Something went wrong</h1>
             <p class="error-message" th:text="${#messages.msg('error.' + errorMessageStatus + '.message')}">Please try again.</p>

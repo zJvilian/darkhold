@@ -9,6 +9,7 @@ import com.quiz.darkhold.preview.model.PreviewInfo;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.user.entity.DarkholdUserDetails;
+import com.quiz.darkhold.user.entity.User;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,7 @@ public class PreviewService {
     }
 
     /**
-     * Load a challenge only when the current user owns it; anything else looks like a missing challenge.
+     * Load a challenge the current user owns (or may manage); anything else looks like a missing challenge.
      *
      * @param challengeId challenge id
      * @return the owned challenge
@@ -61,11 +62,19 @@ public class PreviewService {
     private com.quiz.darkhold.challenge.entity.Challenge ownedChallenge(final String challengeId) {
         com.quiz.darkhold.challenge.entity.Challenge challenge = challengeRepository
                 .findById(Long.valueOf(challengeId))
-                .orElseThrow(() -> new IllegalArgumentException("Challenge not found: " + challengeId));
-        if (challenge.getOwner() == null || !challenge.getOwner().getEmail().equals(currentUserEmail())) {
-            throw new IllegalArgumentException("Challenge not found: " + challengeId);
+                .orElseThrow(() -> new IllegalArgumentException("Quiz not found: " + challengeId));
+        boolean owns = challenge.getOwner() != null && challenge.getOwner().getEmail().equals(currentUserEmail());
+        if (!owns && !currentUserManagesAll()) {
+            throw new IllegalArgumentException("Quiz not found: " + challengeId);
         }
         return challenge;
+    }
+
+    private static boolean currentUserManagesAll() {
+        org.springframework.security.core.Authentication auth =
+                SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> User.CHALLENGE_MANAGER_ROLES.contains(a.getAuthority()));
     }
 
     private String currentUserEmail() {

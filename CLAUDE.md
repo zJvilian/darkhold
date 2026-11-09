@@ -34,6 +34,10 @@ docker-compose up -d                       # Production (PostgreSQL)
 docker-compose -f docker-compose.h2.yml up -d  # Development (H2)
 ```
 
+## Workflow
+
+- **Always restart the app after making changes.** Stop the running instance on port `8181`, then start it again with `./gradlew bootRun` (use the PostgreSQL profile command if that is how it was running). `bootRun` blocks the terminal, so run it in the background.
+
 ## Architecture
 
 ### Technology Stack

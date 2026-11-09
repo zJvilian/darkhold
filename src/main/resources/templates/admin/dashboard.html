@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{admin.dashboard} + ' - Darkhold'">Admin Dashboard - Darkhold</title>
+    <title th:text="#{admin.dashboard} + ' - Kahvoid'">Admin Dashboard - Kahvoid</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="shortcut icon" href="/images/favicon.png">
@@ -100,7 +100,7 @@
                     <i class="fas fa-clipboard-list"></i>
                 </div>
                 <div class="admin-stat-body">
-                    <span class="admin-stat-label">Total Challenges</span>
+                    <span class="admin-stat-label">Total Quizzes</span>
                     <span class="admin-stat-value" th:text="${totalChallenges != null ? totalChallenges : '0'}">0</span>
                 </div>
             </div>
@@ -140,8 +140,8 @@
                             <i class="fas fa-clipboard-list"></i>
                         </div>
                         <div class="admin-action-body">
-                            <h3 class="admin-action-title">Manage Challenges</h3>
-                            <p class="admin-action-desc">Create, edit, and organize quiz challenges</p>
+                            <h3 class="admin-action-title">Manage Quizzes</h3>
+                            <p class="admin-action-desc">Create, edit, and organize quizzes</p>
                         </div>
                         <i class="fas fa-arrow-right admin-action-arrow"></i>
                     </a>

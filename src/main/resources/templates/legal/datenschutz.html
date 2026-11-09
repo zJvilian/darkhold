@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>Datenschutz - Kahvoid</title>
+    <link rel="icon" href="/images/favicon.png">
+    <link rel="stylesheet" href="/styles/darkhold-styles.css">
+    <script src="/scripts/theme-manager.js"></script>
+</head>
+<body>
+    <main class="container py-5" style="max-width: 800px;">
+        <p><a href="/">&larr; Kahvoid</a></p>
+        <h1>Datenschutzerklärung</h1>
+
+        <h2 class="h4 mt-4">1. Verantwortliche Stelle</h2>
+        <p>Fachschaft Informatik, Technische Hochschule Augsburg, An der Hochschule 1, 86161 Augsburg.
+        Kontakt über das <a href="https://void.tha.de/contact/">Kontaktformular auf void.tha.de</a>.
+        Weitere Angaben im <a th:href="@{/impressum}">Impressum</a>.</p>
+
+        <h2 class="h4 mt-4">2. Welche Daten verarbeitet werden</h2>
+        <h3 class="h5">Spielen ohne Konto</h3>
+        <p>Zum Mitspielen werden nur die PIN und ein frei gewählter Spielername (Nickname) benötigt. Spielername,
+        Antworten und Punktestand werden für die Dauer der Runde und zur Auswertung (Ergebnisseite) gespeichert.
+        Bitte keinen Klarnamen verwenden, wenn Sie das nicht möchten.</p>
+
+        <h3 class="h5">Konto für Quiz-Ersteller</h3>
+        <p>Bei der Registrierung werden Name, E-Mail-Adresse und ein Passwort (nur als Hash gespeichert) verarbeitet.
+        Ebenfalls gespeichert werden von Ihnen erstellte Quizze sowie die Ergebnisse der von Ihnen gestarteten Spiele.
+        Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung des Dienstes).</p>
+
+        <h3 class="h5">Server-Logdaten</h3>
+        <p>Beim Aufruf der Seite verarbeitet der Server technisch notwendige Verbindungsdaten (z. B. IP-Adresse,
+        Zeitpunkt, aufgerufene Seite). Die IP-Adresse wird außerdem kurzzeitig im Arbeitsspeicher zur Begrenzung von
+        fehlgeschlagenen Anmeldeversuchen genutzt. Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (Sicherheit und
+        Stabilität des Betriebs).</p>
+
+        <h2 class="h4 mt-4">3. Cookies und lokaler Speicher</h2>
+        <p>Es werden ausschließlich technisch notwendige Cookies verwendet (Sitzungs-Cookie, CSRF-Schutz-Cookie).
+        Im lokalen Speicher des Browsers werden Einstellungen wie Farbschema, Sprache und Tonlautstärke abgelegt.
+        Es gibt kein Tracking und keine Werbung.</p>
+
+        <h2 class="h4 mt-4">4. Externe Ressourcen</h2>
+        <p>Auf den Seiten zur Quiz-Verwaltung (nur für angemeldete Nutzer) werden Skripte bzw. Schriftarten von
+        <code>cdn.jsdelivr.net</code> und <code>fonts.googleapis.com</code> nachgeladen. Dabei wird Ihre IP-Adresse an
+        den jeweiligen Anbieter übertragen. Die Spielseiten für Teilnehmende laden keine externen Ressourcen.</p>
+
+        <h2 class="h4 mt-4">5. Ihre Rechte</h2>
+        <p>Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17),
+        Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21).
+        Außerdem können Sie sich bei einer Datenschutz-Aufsichtsbehörde beschweren, in Bayern beim
+        Bayerischen Landesbeauftragten für den Datenschutz.</p>
+
+        <p class="mt-5"><a th:href="@{/impressum}">Impressum</a></p>
+    </main>
+</body>
+</html>

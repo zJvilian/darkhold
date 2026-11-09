@@ -47,6 +47,9 @@ public class Challenge implements Serializable {
     @Column(name = "word_cloud_fuzzy")
     private Boolean wordCloudFuzzy = Boolean.TRUE;
 
+    @Column(name = "cover_image_url", length = 500)
+    private String coverImageUrl;
+
     @CreatedDate
     @Column(name = "createdOn")
     private LocalDateTime createdOn;
@@ -105,6 +108,14 @@ public class Challenge implements Serializable {
 
     public void setWordCloudFuzzy(final Boolean wordCloudFuzzy) {
         this.wordCloudFuzzy = !Boolean.FALSE.equals(wordCloudFuzzy);
+    }
+
+    public String getCoverImageUrl() {
+        return coverImageUrl;
+    }
+
+    public void setCoverImageUrl(final String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
     }
 
     public LocalDateTime getCreatedOn() {

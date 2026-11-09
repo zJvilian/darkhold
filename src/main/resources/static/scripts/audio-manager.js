@@ -1,5 +1,5 @@
 /**
- * Audio Manager - Darkhold Quiz Application
+ * Audio Manager - Kahvoid Quiz Application
  * Milestone 10: UI/UX Polish
  *
  * Manages sound effects for game events.

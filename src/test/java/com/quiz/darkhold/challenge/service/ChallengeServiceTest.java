@@ -71,7 +71,8 @@ class ChallengeServiceTest {
 
     @BeforeEach
     void setUp() {
-        challengeService = new ChallengeService(challengeRepository, questionSetRepository);
+        challengeService = new ChallengeService(challengeRepository, questionSetRepository,
+                new ImageProcessingService());
         setupSecurityContext();
     }
 
@@ -447,6 +448,59 @@ class ChallengeServiceTest {
     }
 
     @Nested
+    @DisplayName("manager edit permissions")
+    class ManagerEditTests {
+
+        private Challenge othersChallenge() {
+            Challenge challenge = new Challenge();
+            challenge.setId(7L);
+            challenge.setChallengeOwner(testUserId + 100);
+            challenge.setQuestionSets(new ArrayList<>());
+            when(challengeRepository.findById(7L)).thenReturn(Optional.of(challenge));
+            return challenge;
+        }
+
+        private void signInWithRole(final String roleName) {
+            var user = new com.quiz.darkhold.user.entity.User();
+            user.setId(testUserId);
+            user.addRole(new com.quiz.darkhold.user.entity.Role(1L, roleName));
+            when(darkholdUserDetails.getUser()).thenReturn(user);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"ADMIN", "GAME_MANAGER"})
+        @DisplayName("Managers can get and update another user's challenge")
+        void managersCanEdit(final String role) {
+            signInWithRole(role);
+            othersChallenge();
+            when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            assertNotNull(challengeService.getChallengeForEdit(7L));
+            assertEquals("T", challengeService.updateChallenge(7L, "T", "D").getTitle());
+        }
+
+        @Test
+        @DisplayName("Plain user cannot get or update another user's challenge")
+        void plainUserCannotEdit() {
+            signInWithRole("USER");
+            othersChallenge();
+
+            assertNull(challengeService.getChallengeForEdit(7L));
+            assertNull(challengeService.updateChallenge(7L, "T", "D"));
+        }
+
+        @Test
+        @DisplayName("ADMIN still cannot delete another user's challenge")
+        void adminCannotDelete() {
+            signInWithRole("ADMIN");
+            othersChallenge();
+
+            assertEquals(false, challengeService.deleteChallenge(7L));
+            verify(challengeRepository, never()).delete(any());
+        }
+    }
+
+    @Nested
     @DisplayName("duplicateChallenge tests")
     class DuplicateChallengeTests {
 
@@ -644,4 +698,16 @@ class ChallengeServiceTest {
                 bytes);
     }
 
+    @Test
+    void coverImageCannotBeSetOnSomeoneElsesQuiz() {
+        Challenge foreign = new Challenge();
+        foreign.setId(9L);
+        foreign.setChallengeOwner(2L);
+        when(challengeRepository.findById(9L)).thenReturn(Optional.of(foreign));
+        var image = new MockMultipartFile("image", "cover.png", "image/png", new byte[]{1});
+
+        assertNull(challengeService.updateCoverImage(9L, image));
+        assertNull(foreign.getCoverImageUrl());
+        verify(challengeRepository, never()).save(any(Challenge.class));
+    }
 }

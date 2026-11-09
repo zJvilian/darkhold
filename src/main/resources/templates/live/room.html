@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#28104e">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
-    <title th:text="#{live.title}">Live quiz · Darkhold</title>
+    <title th:text="#{live.title}">Live quiz · Kahvoid</title>
     <link rel="icon" href="/images/favicon.png">
     <link rel="stylesheet" href="/styles/live-quiz.css">
     <script th:replace="~{fragments/i18n :: messages}"></script>
@@ -15,7 +15,7 @@
 </head>
 <body class="live-page" th:attr="data-pin=${pin},data-host=${host}">
 <header class="live-nav">
-    <a class="brand" href="/">✦ Darkhold</a>
+    <a class="brand" href="/">✦ Kahvoid</a>
     <span id="role-label" th:text="${host ? #messages.msg('live.hostScreen') : #messages.msg('live.playerScreen')}">Player screen</span>
     <span class="nav-code"><span th:text="#{live.room}">Room</span> <strong th:text="${pin}"></strong></span>
     <div th:replace="~{fragments/i18n :: liveLanguage}"></div>

@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{challenge.edit.title}">Edit Challenge - Darkhold</title>
+    <title th:text="#{challenge.edit.title}">Edit Challenge - Kahvoid</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <script src="/scripts/csrf-manager.js"></script>
@@ -45,6 +45,26 @@
             </div>
         </div>
         <div class="challenge-info-body">
+            <div class="challenge-cover">
+                <img th:if="${challenge.coverImageUrl}" th:src="${challenge.coverImageUrl}"
+                     class="challenge-cover-img" th:alt="#{challenge.edit.coverImage}" alt="Preview picture"/>
+                <div th:unless="${challenge.coverImageUrl}" class="challenge-cover-img challenge-cover-placeholder">
+                    <i class="bi bi-image"></i>
+                </div>
+                <div class="challenge-cover-actions">
+                    <label class="btn btn-sm btn-outline-primary mb-0">
+                        <i class="bi bi-upload"></i>
+                        <span th:text="${challenge.coverImageUrl} ? #{challenge.edit.coverImageChange} : #{challenge.edit.coverImageSet}">Set preview picture</span>
+                        <input type="file" id="coverImageInput" accept="image/jpeg,image/png,image/gif" hidden
+                               onchange="uploadCoverImage(this)"/>
+                    </label>
+                    <button type="button" th:if="${challenge.coverImageUrl}" class="btn btn-sm btn-outline-danger"
+                            onclick="removeCoverImage()">
+                        <i class="bi bi-trash"></i>
+                        <span th:text="#{challenge.edit.coverImageRemove}">Remove</span>
+                    </button>
+                </div>
+            </div>
             <p class="challenge-description" th:text="${challenge.description}" th:unless="${challenge.description == null or challenge.description.isEmpty()}"></p>
             <p class="challenge-description empty" th:text="#{challenge.edit.noDescription}" th:if="${challenge.description == null or challenge.description.isEmpty()}">No description</p>
         </div>
@@ -104,7 +124,7 @@
                         <i class="bi bi-pencil"></i>
                     </button>
                     <button type="button" class="question-action-btn" th:onclick="'duplicateQuestion(' + ${q.id} + ')'">
-                        <i class="bi bi-copy"></i>
+                        <i class="bi bi-files"></i>
                     </button>
                     <button type="button" class="question-action-btn question-action-btn--delete" th:onclick="'deleteQuestion(' + ${q.id} + ')'">
                         <i class="bi bi-trash"></i>
@@ -321,10 +341,6 @@
                     <label class="form-label" th:text="#{challenge.create.description}">Description</label>
                     <textarea id="editDescription" class="form-control" rows="3" maxlength="250" th:text="${challenge.description}"></textarea>
                 </div>
-                <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" role="switch" id="editWordCloudFuzzy" th:checked="${challenge.wordCloudFuzzy}">
-                    <label class="form-check-label" for="editWordCloudFuzzy" th:text="#{challenge.create.wordCloudFuzzy}">Match typos to similar words in Word Cloud questions</label>
-                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" th:text="#{button.cancel}">Cancel</button>
@@ -337,7 +353,6 @@
 <script src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
 <script th:inline="javascript">
 const challengeId = [[${challenge.id}]];
-const defaultWordCloudFuzzy = [[${challenge.wordCloudFuzzy}]];
 const questionModal = new bootstrap.Modal(document.getElementById('questionModal'));
 
 // Initialize drag-and-drop
@@ -375,7 +390,7 @@ function showQuestionModal(id = null) {
     document.getElementById('acceptableAnswers').value = '';
     document.getElementById('tfTrue').checked = false;
     document.getElementById('tfFalse').checked = false;
-    document.getElementById('wordCloudQuestionFuzzy').checked = defaultWordCloudFuzzy !== false;
+    document.getElementById('wordCloudQuestionFuzzy').checked = true;
     ['A','B','C','D'].forEach(x => document.getElementById('correct'+x).checked = false);
     // Reset media fields
     document.getElementById('questionImageInput').value = '';
@@ -484,7 +499,7 @@ function editQuestion(id) {
             } else if (type === 'TYPE_ANSWER') {
                 document.getElementById('typeAnswerCorrect').value = q.answer1 || '';
             } else if (type === 'WORD_CLOUD') {
-                document.getElementById('wordCloudQuestionFuzzy').checked = opts ? opts !== 'EXACT' : (defaultWordCloudFuzzy !== false);
+                document.getElementById('wordCloudQuestionFuzzy').checked = opts !== 'EXACT';
             } else {
                 ['A','B','C','D'].forEach(x => document.getElementById('correct'+x).checked = opts.includes(x));
             }
@@ -633,8 +648,26 @@ function updateChallengeInfo() {
     const formData = new FormData();
     formData.append('title', document.getElementById('editTitle').value);
     formData.append('description', document.getElementById('editDescription').value);
-    formData.append('wordCloudFuzzy', String(document.getElementById('editWordCloudFuzzy').checked));
     RequestClient.json('/update_challenge/' + challengeId, {method: 'POST', headers: CsrfManager.addTokenToFetch(), body: formData})
+        .then(() => location.reload()).catch(error => alert(error.message));
+}
+
+function uploadCoverImage(input) {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+        alert(LanguageManager.text('client.editor.imageSize'));
+        input.value = '';
+        return;
+    }
+    const formData = new FormData();
+    formData.append('image', file);
+    RequestClient.json('/challenge/' + challengeId + '/cover-image', {method: 'POST', headers: CsrfManager.addTokenToFetch(), body: formData})
+        .then(() => location.reload()).catch(error => { input.value = ''; alert(error.message); });
+}
+
+function removeCoverImage() {
+    RequestClient.json('/challenge/' + challengeId + '/cover-image', {method: 'DELETE', headers: CsrfManager.addTokenToFetch()})
         .then(() => location.reload()).catch(error => alert(error.message));
 }
 

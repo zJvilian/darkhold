@@ -1,6 +1,8 @@
 package com.quiz.darkhold.options.controller;
 
 import com.quiz.darkhold.game.service.GameService;
+import com.quiz.darkhold.game.service.GameSettingsService;
+import com.quiz.darkhold.init.GameConfig;
 import com.quiz.darkhold.options.service.OptionsService;
 import com.quiz.darkhold.preview.service.PreviewService;
 import org.apache.commons.logging.Log;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Collections;
 
@@ -19,13 +22,19 @@ public class OptionsController {
     private final OptionsService optionsService;
     private final PreviewService previewService;
     private final GameService gameService;
+    private final GameSettingsService gameSettingsService;
+    private final GameConfig gameConfig;
 
     public OptionsController(final OptionsService optionsService,
                              final PreviewService previewService,
-                             final GameService gameService) {
+                             final GameService gameService,
+                             final GameSettingsService gameSettingsService,
+                             final GameConfig gameConfig) {
         this.optionsService = optionsService;
         this.previewService = previewService;
         this.gameService = gameService;
+        this.gameSettingsService = gameSettingsService;
+        this.gameConfig = gameConfig;
     }
 
     /**
@@ -86,13 +95,29 @@ public class OptionsController {
 
 
     /**
-     * on to create challenge page.
+     * Game defaults page. Access is limited to ADMIN and GAME_MANAGER in SecurityConfig.
      *
-     * @return create challenge page
+     * @param model model
+     * @return game management page
      */
     @GetMapping("/gameManagement")
-    public String manageGame() {
-        log.info("Into the manageGame method");
+    public String manageGame(final Model model) {
+        model.addAttribute("timerSeconds", gameConfig.getTimerSeconds());
+        model.addAttribute("pinLength", gameConfig.getPinLength());
         return "game/gameManagement";
+    }
+
+    /**
+     * Save game defaults.
+     *
+     * @param timerSeconds default question timer
+     * @param pinLength    PIN digits for new games
+     * @return redirect back with a status flag
+     */
+    @PostMapping("/gameManagement")
+    public String saveGameSettings(@RequestParam final int timerSeconds, @RequestParam final int pinLength) {
+        return gameSettingsService.update(timerSeconds, pinLength)
+                ? "redirect:/gameManagement?saved"
+                : "redirect:/gameManagement?invalid";
     }
 }

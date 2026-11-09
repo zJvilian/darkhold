@@ -55,6 +55,37 @@
     padding: 1.5rem 2rem;
 }
 
+.challenge-cover {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.challenge-cover-img {
+    width: 192px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border-light);
+}
+
+.challenge-cover-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--color-text-tertiary);
+    background: var(--color-bg-secondary);
+}
+
+.challenge-cover-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
 .challenge-description {
     color: var(--color-text-secondary);
     margin: 0;
@@ -146,7 +177,7 @@
     min-width: 32px;
     height: 32px;
     background: var(--color-primary);
-    color: white;
+    color: var(--color-btn-primary-text);
     border-radius: var(--radius-full);
     font-weight: 700;
     font-size: 0.9rem;

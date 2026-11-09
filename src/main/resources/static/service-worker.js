@@ -1,11 +1,11 @@
 /**
- * Service Worker for Darkhold Quiz PWA
+ * Service Worker for Kahvoid Quiz PWA
  * Milestone 10: UI/UX Polish
  *
  * Provides offline support and caching for better performance
  */
 
-const CACHE_NAME = 'darkhold-quiz-v3';
+const CACHE_NAME = 'darkhold-quiz-v4';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install

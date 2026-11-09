@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{challenge.create.title}">Create Challenge - Darkhold</title>
+    <title th:text="#{challenge.create.title}">Create Challenge - Kahvoid</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="_csrf" th:content="${_csrf.token}"/>
     <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
@@ -62,18 +62,8 @@
                             <textarea id="description" class="form-textarea" name="description"
                                       rows="3" maxlength="250"
                                       th:placeholder="#{challenge.create.descriptionPlaceholder}"
-                                      placeholder="Provide a brief overview of this challenge (optional)"></textarea>
+                                      placeholder="Provide a brief overview of this quiz (optional)"></textarea>
                             <span class="form-hint" th:text="#{challenge.create.descriptionHint}">Optional, maximum 250 characters</span>
-                        </div>
-
-                        <div class="form-field">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch"
-                                       id="wordCloudFuzzy" name="wordCloudFuzzy" value="true" checked>
-                                <label class="form-check-label form-label" for="wordCloudFuzzy"
-                                       th:text="#{challenge.create.wordCloudFuzzy}">Match typos to similar words in Word Cloud questions</label>
-                            </div>
-                            <span class="form-hint" th:text="#{challenge.create.wordCloudFuzzyHint}">Groups answers with minor spelling mistakes into the same word bubble</span>
                         </div>
                     </section>
 

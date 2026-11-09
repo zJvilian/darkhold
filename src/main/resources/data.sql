@@ -1,61 +1,61 @@
 insert into roles (id, name, description, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (1,'ADMIN','Administrator of the darkhold', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
+    (1,'ADMIN','Administrator of Kahvoid', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
 
 insert into roles (id, name, description, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (2,'GUEST','Guest of the darkhold', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
+    (2,'GUEST','Guest of Kahvoid', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
 
 insert into roles (id, name, description, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (3,'GAME_MANAGER','Manager of the darkhold', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
+    (3,'GAME_MANAGER','Manager of Kahvoid', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
 
 insert into roles (id, name, description, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (4,'PARTICIPANT','Participant of the darkhold', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
+    (4,'PARTICIPANT','Participant of Kahvoid', '2019-11-20 00:00:00','2019-11-20 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (1, 'Administrator','Of Darkhold', 'admin@admin.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (1, 'Administrator','Of Kahvoid', 'admin@admin.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2022-12-27 00:00:00','2022-12-27 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (2, 'Guest','Of Darkhold', 'guest@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (2, 'Guest','Of Kahvoid', 'guest@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-02-14 00:00:00','2024-02-14 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (3, 'Manager','Of Darkhold', 'manager@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (3, 'Manager','Of Kahvoid', 'manager@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-02-14 00:00:00','2024-02-14 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (4, 'Participant','Of Darkhold', 'participant@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (4, 'Participant','Of Kahvoid', 'participant@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-02-14 00:00:00','2024-02-14 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (5, 'Manager 2','Of Darkhold', 'manager.2@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (5, 'Manager 2','Of Kahvoid', 'manager.2@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (6, 'Manager 3','Of Darkhold', 'manager.3@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (6, 'Manager 3','Of Kahvoid', 'manager.3@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (7, 'Manager 4','Of Darkhold', 'manager.4@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (7, 'Manager 4','Of Kahvoid', 'manager.4@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (8, 'Manager 5','Of Darkhold', 'manager.5@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (8, 'Manager 5','Of Kahvoid', 'manager.5@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (9, 'Manager 6','Of Darkhold', 'manager.6@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (9, 'Manager 6','Of Kahvoid', 'manager.6@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (10, 'Manager 7','Of Darkhold', 'manager.7@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (10, 'Manager 7','Of Kahvoid', 'manager.7@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (11, 'Manager 8','Of Darkhold', 'manager.8@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (11, 'Manager 8','Of Kahvoid', 'manager.8@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member (id, firstname, lastname, email, password, enabled, createdOn, modifiedOn, createdBy, modifiedBy) values
-    (12, 'Manager 9','Of Darkhold', 'manager.9@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
+    (12, 'Manager 9','Of Kahvoid', 'manager.9@guest.com', '$2a$10$l0Y76CoFAdXlkZZYkVDsIeRP..4UcpuhQ01H0B4QvTNF2uATZx9Gq',
      true, '2024-03-03 00:00:00','2024-03-03 00:00:00','admin','admin');
 
 insert into member_roles(users_id, roles_id) values (1,1);

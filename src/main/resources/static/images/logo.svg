@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Kahvoid">
+  <title>Kahvoid</title>
+  <defs>
+    <!-- curly braces around a question mark: the void.tha.de glitch motif, as a quiz -->
+    <g id="mark" fill="none" stroke-width="6" stroke-linecap="butt" stroke-linejoin="round">
+      <path d="M38 14C28 14 28 20 28 29V40C28 46 24 50 16 50C24 50 28 54 28 60V71C28 80 28 86 38 86"/>
+      <path d="M62 14C72 14 72 20 72 29V40C72 46 76 50 84 50C76 50 72 54 72 60V71C72 80 72 86 62 86"/>
+      <path stroke-width="5" d="M43.500 38C43.500 30 56.500 30 56.500 38C56.500 44 50 44 50 51"/>
+      <circle cx="50" cy="60" r="3" fill="currentColor" stroke="none"/>
+    </g>
+    <!-- horizontal scanline cuts -->
+    <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100">
+      <rect width="100" height="100" fill="#fff"/>
+      <rect y="27" width="100" height="1.600"/>
+      <rect y="55" width="100" height="1.600"/>
+      <rect y="73" width="100" height="1.600"/>
+    </mask>
+    <clipPath id="band"><rect y="40" width="100" height="7"/></clipPath>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="#121212"/>
+  <g mask="url(#cut)">
+    <use href="#mark" color="#00adc6" stroke="#00adc6" transform="translate(-3 0)"/>
+    <use href="#mark" color="#e30613" stroke="#e30613" transform="translate(3 0)"/>
+    <use href="#mark" color="#fff" stroke="#fff"/>
+  </g>
+  <g clip-path="url(#band)">
+    <use href="#mark" color="#00adc6" stroke="#00adc6" transform="translate(-7 0)"/>
+    <use href="#mark" color="#e30613" stroke="#e30613" transform="translate(7 0)"/>
+  </g>
+</svg>

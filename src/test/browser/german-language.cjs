@@ -24,7 +24,7 @@ const output = process.env.DARKHOLD_TEST_OUTPUT || '/tmp/darkhold-german';
         await host.reload();
         assert.equal(await host.locator('.dh-lang-code:visible').textContent(), 'EN');
         await selectLanguage(host, 'de');
-        await host.getByRole('heading',{name:'In Sekunden startklar'}).waitFor();
+        await host.getByText('Interaktive Quiz-Plattform').first().waitFor();
         await host.screenshot({path:output+'/home-de.png',fullPage:true,animations:'disabled'});
         await host.goto(base + '/join');
         await host.getByText('Wähle deinen Avatar',{exact:true}).waitFor();

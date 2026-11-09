@@ -13,7 +13,7 @@ import jakarta.validation.constraints.Size;
  */
 public class QuestionRequest {
 
-    @NotNull(message = "Challenge ID is required")
+    @NotNull(message = "Quiz ID is required")
     private Long challengeId;
 
     @NotBlank(message = "Question text is required")

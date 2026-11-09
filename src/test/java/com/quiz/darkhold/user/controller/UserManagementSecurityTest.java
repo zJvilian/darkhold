@@ -95,14 +95,14 @@ class UserManagementSecurityTest {
         challenges.saveAndFlush(quiz);
         mvc.perform(get(path).with(admin())).andExpect(status().isOk())
                 .andExpect(content().string(containsString(quiz.getTitle())))
-                .andExpect(content().string(containsString("This quiz has no questions.")));
+                .andExpect(content().string(containsString("Questions: 0")));
         var question = new com.quiz.darkhold.challenge.entity.QuestionSet();
         question.setQuestion("A question owned by another user?");
         question.setChallenge(quiz);
         quiz.setQuestionSets(new java.util.ArrayList<>(java.util.List.of(question)));
         challenges.saveAndFlush(quiz);
         mvc.perform(get(path).with(admin())).andExpect(status().isOk())
-                .andExpect(content().string(containsString(question.getQuestion())));
+                .andExpect(content().string(containsString("Questions: 1")));
         Long adminId = users.findByEmail("admin@admin.com").getId();
         mvc.perform(get("/admin/users/" + adminId + "/quizzes").with(admin()))
                 .andExpect(status().isOk()).andExpect(content().string(not(containsString(quiz.getTitle()))));

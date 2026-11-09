@@ -117,6 +117,13 @@ public class User implements Serializable {
         this.roles.add(role);
     }
 
+    /** Roles that may view and host every user's challenges (editing stays owner-only). */
+    public static final Set<String> CHALLENGE_MANAGER_ROLES = Set.of("ADMIN", "GAME_MANAGER");
+
+    public boolean canManageAllChallenges() {
+        return roles.stream().map(Role::getName).anyMatch(CHALLENGE_MANAGER_ROLES::contains);
+    }
+
     @Override
     public String toString() {
         return new StringJoiner(", ", User.class.getSimpleName() + "[", "]")

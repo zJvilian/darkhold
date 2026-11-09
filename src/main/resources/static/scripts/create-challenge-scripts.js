@@ -37,8 +37,6 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
     formData.append('upload', file, file.name);
     formData.append('title', title);
     formData.append('description', description);
-    const fuzzyToggle = document.getElementById('wordCloudFuzzy');
-    formData.append('wordCloudFuzzy', fuzzyToggle ? String(fuzzyToggle.checked) : 'true');
 
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/upload_challenge', true);
@@ -61,6 +59,7 @@ function uploadWithExcel(uploadButton, file, title, description, resultDiv) {
             const data = validateChallengeResponse(xhr.status, xhr.response);
             uploadButton.style.display = 'none';
             showChallengeMessage(resultDiv, LanguageManager.text('client.create.success'), 'success');
+            editChallengeLink(resultDiv, data.challengeId);
             viewChallenge(resultDiv, data.challengeId);
         } catch (error) {
             showChallengeMessage(resultDiv, error.message, 'danger');
@@ -86,8 +85,6 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    const fuzzyToggle = document.getElementById('wordCloudFuzzy');
-    formData.append('wordCloudFuzzy', fuzzyToggle ? String(fuzzyToggle.checked) : 'true');
 
     return fetch('/save_challenge', {
         method: 'POST',
@@ -103,11 +100,7 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
         showChallengeMessage(resultDiv, LanguageManager.text('client.create.success'), 'success');
         uploadButton.style.display = 'none';
 
-        const editBtn = document.createElement('a');
-        editBtn.href = '/edit_challenge/' + data.challengeId;
-        editBtn.className = 'btn btn-success';
-        editBtn.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.add');
-        resultDiv.appendChild(editBtn);
+        editChallengeLink(resultDiv, data.challengeId);
     })
     .catch(error => {
         showChallengeMessage(resultDiv, error.message, 'danger');
@@ -160,6 +153,14 @@ function toHome() {
     window.location.href = "/";
 }
 
+function editChallengeLink(elem, challengeId) {
+    const editBtn = document.createElement('a');
+    editBtn.href = '/edit_challenge/' + challengeId;
+    editBtn.className = 'btn btn-success';
+    editBtn.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.add');
+    elem.appendChild(editBtn);
+}
+
 function viewChallenge(elem, challengeId) {
     const viewButton = document.createElement('a');
     viewButton.setAttribute("class", "btn btn-primary ms-2");
@@ -170,7 +171,5 @@ function viewChallenge(elem, challengeId) {
 
 function goToChallengePage(challengeId) {
     console.log("ready to got to challenge page");
-    document.getElementById('challenges').value = challengeId;
-    document.forms[0].action = "/preconfigure";
-    document.forms[0].submit();
+    window.location.href = "/preconfigure?challenges=" + encodeURIComponent(challengeId);
 }

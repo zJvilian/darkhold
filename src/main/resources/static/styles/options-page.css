@@ -178,7 +178,7 @@
 
 .action-card:hover .action-card-icon--primary {
     background: var(--color-primary);
-    color: white;
+    color: var(--color-btn-primary-text);
 }
 
 .action-card-icon--teal {
@@ -202,13 +202,13 @@
 }
 
 .action-card-icon--purple {
-    color: #7c3aed;
+    color: var(--color-primary);
     background: rgba(124, 58, 237, 0.08);
 }
 
 .action-card:hover .action-card-icon--purple {
-    background: #7c3aed;
-    color: white;
+    background: var(--color-primary);
+    color: var(--color-btn-primary-text);
 }
 
 .action-card-icon--green {

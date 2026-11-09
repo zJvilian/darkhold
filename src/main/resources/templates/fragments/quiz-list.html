@@ -1,0 +1,87 @@
+<!DOCTYPE HTML>
+<html xmlns:th="https://www.thymeleaf.org">
+<body>
+<!-- Shared quiz list: filter/sort toolbar + one row per quiz. manage=true adds select, duplicate and delete. -->
+<div th:fragment="quizList(quizzes, manage)" id="quizList">
+    <section class="search-section">
+        <div class="quiz-toolbar">
+            <div class="quiz-toolbar-field quiz-toolbar-field--search">
+                <label for="quizSearch" th:text="#{quizList.search}">Search</label>
+                <input type="search" id="quizSearch" class="search-input" autocomplete="off"
+                       th:placeholder="#{quizList.searchPlaceholder}" placeholder="Search by title or description" />
+            </div>
+            <div class="quiz-toolbar-field">
+                <label for="quizSort" th:text="#{quizList.sort}">Sort by</label>
+                <select id="quizSort" class="search-input">
+                    <option value="nameAsc" th:text="#{quizList.sortNameAsc}">Name A-Z</option>
+                    <option value="nameDesc" th:text="#{quizList.sortNameDesc}">Name Z-A</option>
+                    <option value="newest" th:text="#{quizList.sortNewest}">Newest first</option>
+                    <option value="oldest" th:text="#{quizList.sortOldest}">Oldest first</option>
+                    <option value="questionsDesc" th:text="#{quizList.sortQuestionsDesc}">Most questions</option>
+                    <option value="questionsAsc" th:text="#{quizList.sortQuestionsAsc}">Fewest questions</option>
+                </select>
+            </div>
+            <div class="quiz-toolbar-field" id="quizOwnerField" hidden>
+                <label for="quizOwner" th:text="#{quizList.owner}">Owner</label>
+                <select id="quizOwner" class="search-input">
+                    <option value="" th:text="#{quizList.allOwners}">All owners</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <div class="challenges-section-header">
+        <span class="challenges-count" id="quizCount" aria-live="polite"
+              th:text="#{client.quizList.count(${#lists.size(quizzes)}, ${#lists.size(quizzes)})}">3 of 3</span>
+    </div>
+
+    <div class="quiz-list" id="quizRows">
+        <div th:each="ch : ${quizzes}" th:id="${ch.challengeId}" class="quiz-row"
+             th:attr="data-title=${ch.challengeName},data-description=${ch.description},data-owner=${ch.ownerName},data-created=${ch.createdOn},data-questions=${ch.questionCount}">
+            <div class="quiz-row-main" th:attr="data-selectable=${manage} ? 'true'">
+                <img th:if="${ch.coverImageUrl}" th:src="${ch.coverImageUrl}" class="quiz-row-thumb"
+                     alt="" loading="lazy"/>
+                <span th:unless="${ch.coverImageUrl}" class="quiz-row-thumb quiz-row-thumb--empty" aria-hidden="true">
+                    <i class="fas fa-clipboard-list"></i>
+                </span>
+                <div class="quiz-row-body">
+                    <h3 class="challenge-card-title" th:text="${ch.challengeName}">Sample Quiz</h3>
+                    <p class="quiz-row-description" th:if="${ch.description}" th:text="${ch.description}">About</p>
+                    <p class="quiz-row-meta">
+                        <span><i class="fas fa-question-circle" aria-hidden="true"></i>
+                            <span th:text="#{quizList.questions(${ch.questionCount})}">Questions: 5</span></span>
+                        <span th:if="${ch.createdOn}"><i class="fas fa-calendar" aria-hidden="true"></i>
+                            <span th:text="#{quizList.created(${#temporals.format(ch.createdOn, 'yyyy-MM-dd')})}">Created: 2026-01-01</span></span>
+                        <span th:unless="${ch.owned}"><i class="fas fa-user" aria-hidden="true"></i>
+                            <span th:text="#{challenge.view.ownedBy(${ch.ownerName})}">by Alice</span></span>
+                    </p>
+                </div>
+            </div>
+            <div class="challenge-card-actions">
+                <a class="challenge-action-btn challenge-action-btn--edit"
+                   th:href="@{'/edit_challenge/' + ${ch.challengeId}}"
+                   th:title="#{challenge.view.edit}" th:aria-label="#{challenge.view.edit}" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <button type="button" th:if="${manage and ch.owned}"
+                        class="challenge-action-btn challenge-action-btn--duplicate"
+                        onclick="duplicateChallenge(this);"
+                        th:title="#{challenge.view.duplicate}" th:aria-label="#{challenge.view.duplicate}"
+                        title="Duplicate">
+                    <i class="fas fa-copy"></i>
+                </button>
+                <button type="button" th:if="${manage and ch.owned}"
+                        class="challenge-action-btn challenge-action-btn--delete"
+                        data-bs-toggle="modal" data-bs-target="#confirmModal"
+                        onclick="markQuizForDeletion(this);"
+                        th:title="#{challenge.view.delete}" th:aria-label="#{challenge.view.delete}" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <p class="quiz-no-matches" id="quizNoMatches" hidden th:text="#{client.quizList.noMatches}">
+        No quizzes match your filters.</p>
+</div>
+</body>
+</html>

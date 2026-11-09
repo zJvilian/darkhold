@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -58,6 +59,18 @@ class PreviewServiceTest {
 
         Assertions.assertThrows(IllegalArgumentException.class,
                 () -> previewService.fetchQuestions("1234"));
+    }
+
+    @Test
+    void fetchQuestionsAllowsAdminOnAnotherUsersChallenge() {
+        var admin = new com.quiz.darkhold.user.entity.User();
+        admin.setEmail("ADMIN_USER");
+        var details = new DarkholdUserDetails(admin);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                details, "n/a", List.of(new SimpleGrantedAuthority("ADMIN"))));
+        when(challengeRepository.findById(anyLong())).thenReturn(mockOptionalChallenge());
+
+        Assertions.assertEquals("hello", previewService.fetchQuestions("1234").getChallengeName());
     }
 
     @Test

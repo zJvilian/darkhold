@@ -4,30 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="#{user.viewQuizzes}">View quizzes</title>
-    <link href="/styles/darkhold-styles.css" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="shortcut icon" href="/images/favicon.png">
+    <link rel="stylesheet" href="/styles/darkhold-styles.css" />
+    <link rel="stylesheet" href="/styles/view-challenges.css" />
     <script src="/scripts/theme-manager.js"></script>
     <script src="/scripts/audio-manager.js"></script>
     <script src="/scripts/language-manager.js"></script>
     <script src="/scripts/accessibility.js"></script>
+    <script src="/scripts/view-challenges-scripts.js"></script>
     <script src="/scripts/common-scripts.js"></script>
-    <script src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
     <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
 <body>
 <div th:insert="~{navbar :: navbar}"></div>
-<main class="container py-4">
-    <a th:href="@{/userManagement}" th:text="#{user.title}">Manage Users</a>
-    <h1 th:text="#{user.viewQuizzes}">View quizzes</h1>
-    <p th:text="${owner.email}"></p>
-    <p th:if="${#lists.isEmpty(quizzes)}" th:text="#{user.noQuizzes}">This user owns no quizzes.</p>
-    <details th:each="quiz : ${quizzes}" class="card p-3 mb-3">
-        <summary><span th:text="${quiz.title}"></span> (#<span th:text="${quiz.id}"></span>)</summary>
-        <p th:text="${quiz.description}"></p>
-        <p th:if="${#lists.isEmpty(quiz.questionSets)}" th:text="#{user.noQuestions}">This quiz has no questions.</p>
-        <ol>
-            <li th:each="question : ${quiz.questionSets}" th:text="${question.question}"></li>
-        </ol>
-    </details>
+<main class="view-challenges-page">
+    <div class="view-challenges-container">
+        <header class="view-challenges-header">
+            <a th:href="@{/userManagement}" class="view-challenges-back" th:text="#{user.title}">Manage Users</a>
+            <h1 class="view-challenges-title" th:text="#{user.viewQuizzes}">View quizzes</h1>
+            <p class="view-challenges-subtitle" th:text="${owner.email}"></p>
+        </header>
+        <div class="empty-state" th:if="${#lists.isEmpty(quizzes)}">
+            <div class="empty-state-icon"><i class="fas fa-clipboard-list"></i></div>
+            <p class="empty-state-text" th:text="#{user.noQuizzes}">This user owns no quizzes.</p>
+        </div>
+        <section th:unless="${#lists.isEmpty(quizzes)}">
+            <div th:replace="~{fragments/quiz-list :: quizList(${quizzes}, false)}"></div>
+        </section>
+    </div>
 </main>
+<script src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
 </body>
 </html>

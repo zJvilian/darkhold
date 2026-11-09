@@ -1,5 +1,5 @@
 /**
- * Accessibility Utilities - Darkhold Quiz Application
+ * Accessibility Utilities - Kahvoid Quiz Application
  * Milestone 10: UI/UX Polish
  *
  * Provides keyboard navigation, screen reader support, and focus management.

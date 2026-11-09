@@ -1,5 +1,5 @@
 /**
- * Darkhold Theme System - CSS Custom Properties
+ * Kahvoid Theme System - CSS Custom Properties
  * Milestone 10: UI/UX Polish
  *
  * Defines all color, spacing, and design tokens for light and dark themes.
@@ -12,10 +12,10 @@
 :root,
 [data-theme="light"] {
     /* Primary Colors */
-    --color-primary: #0062cc;
-    --color-primary-hover: #0056b3;
-    --color-primary-light: #4183D7;
-    --color-secondary: #60c7c1;
+    --color-primary: #121212;
+    --color-primary-hover: #2c2c2c;
+    --color-primary-light: #444444;
+    --color-secondary: #717171;
     --color-accent: #ff7c0c;
 
     /* Success, Error, Warning */
@@ -28,14 +28,14 @@
 
     /* Background Colors */
     --color-bg-primary: #ffffff;
-    --color-bg-secondary: #f8f9fa;
-    --color-bg-tertiary: #f7f7f7;
+    --color-bg-secondary: #f6f6f6;
+    --color-bg-tertiary: #f6f6f6;
     --color-bg-overlay: rgba(0, 0, 0, 0.5);
 
     /* Text Colors */
-    --color-text-primary: #323232;
-    --color-text-secondary: #666666;
-    --color-text-tertiary: #999999;
+    --color-text-primary: #040404;
+    --color-text-secondary: #444444;
+    --color-text-tertiary: #717171;
     --color-text-muted: #aeaeae;
     --color-text-inverse: #ffffff;
 
@@ -51,8 +51,8 @@
     --color-card-hover-shadow: rgba(0, 0, 0, 0.15);
 
     /* Button Colors */
-    --color-btn-primary-bg: #0062cc;
-    --color-btn-primary-hover: #0056b3;
+    --color-btn-primary-bg: #121212;
+    --color-btn-primary-hover: #2c2c2c;
     --color-btn-primary-text: #ffffff;
     --color-btn-secondary-bg: #6c757d;
     --color-btn-secondary-hover: #5a6268;
@@ -60,9 +60,9 @@
     --color-btn-danger-hover: #c82333;
 
     /* Input Colors */
-    --color-input-bg: #f7f7f7;
+    --color-input-bg: #f6f6f6;
     --color-input-border: #aeaeae;
-    --color-input-focus-border: #0062cc;
+    --color-input-focus-border: #121212;
     --color-input-text: #323232;
 
     /* Game-Specific Colors */
@@ -121,7 +121,7 @@
     --font-size-4xl: 2.25rem;
 
     /* Focus Ring */
-    --focus-ring-color: #0062cc;
+    --focus-ring-color: #121212;
     --focus-ring-width: 3px;
     --focus-ring-offset: 2px;
 }
@@ -131,10 +131,10 @@
    ============================================ */
 [data-theme="dark"] {
     /* Primary Colors - Slightly muted for dark backgrounds */
-    --color-primary: #4183D7;
-    --color-primary-hover: #5a9de8;
-    --color-primary-light: #6db3ff;
-    --color-secondary: #4db8b3;
+    --color-primary: #ffffff;
+    --color-primary-hover: #e0e0e0;
+    --color-primary-light: #ffffff;
+    --color-secondary: #B4AFB6;
     --color-accent: #ff8c2e;
 
     /* Success, Error, Warning - Adjusted for contrast */
@@ -146,42 +146,42 @@
     --color-info: #4fc3f7;
 
     /* Background Colors - Dark grays */
-    --color-bg-primary: #1a1a1a;
-    --color-bg-secondary: #2d2d2d;
-    --color-bg-tertiary: #3a3a3a;
+    --color-bg-primary: #1c1c1c;
+    --color-bg-secondary: #222222;
+    --color-bg-tertiary: #2a2a2a;
     --color-bg-overlay: rgba(0, 0, 0, 0.7);
 
     /* Text Colors - Light for readability */
-    --color-text-primary: #f0f0f0;
-    --color-text-secondary: #c0c0c0;
-    --color-text-tertiary: #999999;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #B4AFB6;
+    --color-text-tertiary: #8d8890;
     --color-text-muted: #757575;
-    --color-text-inverse: #1a1a1a;
+    --color-text-inverse: #121212;
 
     /* Border Colors */
-    --color-border-light: #3a3a3a;
-    --color-border-medium: #4a4a4a;
-    --color-border-dark: #5a5a5a;
+    --color-border-light: #3E3E3E;
+    --color-border-medium: #555555;
+    --color-border-dark: #6a6a6a;
 
     /* Card & Component Colors */
-    --color-card-bg: #2d2d2d;
-    --color-card-border: #3a3a3a;
+    --color-card-bg: #222222;
+    --color-card-border: #3E3E3E;
     --color-card-shadow: rgba(0, 0, 0, 0.3);
     --color-card-hover-shadow: rgba(0, 0, 0, 0.5);
 
     /* Button Colors */
-    --color-btn-primary-bg: #4183D7;
-    --color-btn-primary-hover: #5a9de8;
-    --color-btn-primary-text: #ffffff;
+    --color-btn-primary-bg: #ffffff;
+    --color-btn-primary-hover: #e0e0e0;
+    --color-btn-primary-text: #121212;
     --color-btn-secondary-bg: #4a5568;
     --color-btn-secondary-hover: #5a6578;
     --color-btn-danger-bg: #e63946;
     --color-btn-danger-hover: #d62839;
 
     /* Input Colors */
-    --color-input-bg: #3a3a3a;
-    --color-input-border: #4a4a4a;
-    --color-input-focus-border: #4183D7;
+    --color-input-bg: #222222;
+    --color-input-border: #3E3E3E;
+    --color-input-focus-border: #ffffff;
     --color-input-text: #f0f0f0;
 
     /* Game-Specific Colors */
@@ -200,7 +200,7 @@
     --color-status-finished: #78909c;
 
     /* Focus Ring - Brighter for dark backgrounds */
-    --focus-ring-color: #6db3ff;
+    --focus-ring-color: #ffffff;
 }
 
 /* ============================================

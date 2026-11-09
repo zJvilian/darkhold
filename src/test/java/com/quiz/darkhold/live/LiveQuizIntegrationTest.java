@@ -10,6 +10,7 @@ import com.quiz.darkhold.challenge.entity.QuestionType;
 import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.user.repository.UserRepository;
 import com.quiz.darkhold.user.entity.DarkholdUserDetails;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.JsonNode;
@@ -103,16 +103,21 @@ class LiveQuizIntegrationTest {
         challenges.deleteById(challengeId);
     }
 
-    private MockHttpSession join(final String name, final String avatar) throws Exception {
-        var session = new MockHttpSession();
-        mvc.perform(post("/join").session(session).with(csrf()).param("pin", pin)
+    // A guest is whatever cookies the server handed out when joining (stored session + player cookie).
+    private Cookie[] join(final String name, final String avatar) throws Exception {
+        return mvc.perform(post("/join").with(csrf()).param("pin", pin)
                         .param("name", name).param("avatar", avatar))
-                .andExpect(redirectedUrl("/play/" + pin));
-        return session;
+                .andExpect(redirectedUrl("/play/" + pin)).andReturn().getResponse().getCookies();
     }
 
-    private JsonNode snapshot(final MockHttpSession session) throws Exception {
-        return json(mvc.perform(get("/api/live/" + pin).session(session))
+    private Cookie[] joinRoom(final String roomPin, final String name, final String avatar) throws Exception {
+        return mvc.perform(post("/join").with(csrf()).param("pin", roomPin)
+                        .param("name", name).param("avatar", avatar))
+                .andExpect(status().is3xxRedirection()).andReturn().getResponse().getCookies();
+    }
+
+    private JsonNode snapshot(final Cookie[] session) throws Exception {
+        return json(mvc.perform(get("/api/live/" + pin).cookie(session))
                 .andExpect(status().isOk()).andReturn());
     }
 
@@ -127,8 +132,8 @@ class LiveQuizIntegrationTest {
                 .andExpect(status().isOk()).andReturn());
     }
 
-    private JsonNode answer(final MockHttpSession session, final int index, final String value) throws Exception {
-        return json(mvc.perform(post("/api/live/" + pin + "/answer").session(session).with(csrf())
+    private JsonNode answer(final Cookie[] session, final int index, final String value) throws Exception {
+        return json(mvc.perform(post("/api/live/" + pin + "/answer").cookie(session).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new LiveQuizController.Answer(index, value))))
                 .andExpect(status().isOk()).andReturn());
@@ -163,7 +168,7 @@ class LiveQuizIntegrationTest {
         control("start", -1);
         setClock(false);
         for (String invalid : List.of("A,B", "A,A,B", "A,B,C,D")) {
-            mvc.perform(post("/api/live/" + pin + "/answer").session(correct).with(csrf())
+            mvc.perform(post("/api/live/" + pin + "/answer").cookie(correct).with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(mapper.writeValueAsString(new LiveQuizController.Answer(0, invalid))))
                     .andExpect(status().isBadRequest());
@@ -234,13 +239,13 @@ class LiveQuizIntegrationTest {
         assertEquals("Player One", snapshot(guest).path("me").path("name").asText());
         assertEquals("robot", snapshot(other).path("me").path("avatar").asText());
         assertEquals(2, snapshot(guest).path("players").size());
-        mvc.perform(get("/play/" + pin).session(guest)).andExpect(status().isOk())
+        mvc.perform(get("/play/" + pin).cookie(guest)).andExpect(status().isOk())
                 .andExpect(content().string(containsString("/scripts/live-quiz.js")));
-        mvc.perform(post("/join").session(guest).with(csrf()).param("pin", pin)
+        mvc.perform(post("/join").cookie(guest).with(csrf()).param("pin", pin)
                         .param("name", "Player One").param("avatar", "fox"))
                 .andExpect(redirectedUrl("/play/" + pin));
         assertEquals(2, snapshot(guest).path("players").size());
-        mvc.perform(get("/challenge/create").session(guest)).andExpect(status().is3xxRedirection());
+        mvc.perform(get("/challenge/create").cookie(guest)).andExpect(status().is3xxRedirection());
     }
 
     @Test
@@ -265,9 +270,9 @@ class LiveQuizIntegrationTest {
     void onlyHostControlsTheRoomAndGuestCannotReadAnotherRoom() throws Exception {
         var guest = join("Guest", "owl");
         mvc.perform(get("/api/live/" + pin)).andExpect(status().isForbidden());
-        mvc.perform(get("/api/live/000000").session(guest)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/live/000000").cookie(guest)).andExpect(status().isNotFound());
         String command = "{\"action\":\"start\",\"questionIndex\":-1}";
-        mvc.perform(post("/api/live/" + pin + "/control").session(guest).with(csrf())
+        mvc.perform(post("/api/live/" + pin + "/control").cookie(guest).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(command)).andExpect(status().isForbidden());
         mvc.perform(post("/api/live/" + pin + "/control").with(user("different-host")).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(command)).andExpect(status().isForbidden());
@@ -312,14 +317,14 @@ class LiveQuizIntegrationTest {
         var guest = join("Guest", "lion");
         control("start", -1);
         String payload = "{\"questionIndex\":0,\"answer\":\"A,C\"}";
-        mvc.perform(post("/api/live/" + pin + "/answer").session(guest).with(csrf())
+        mvc.perform(post("/api/live/" + pin + "/answer").cookie(guest).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isConflict());
         setClock(true);
-        mvc.perform(post("/api/live/" + pin + "/answer").session(guest).with(csrf())
+        mvc.perform(post("/api/live/" + pin + "/answer").cookie(guest).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isConflict());
         assertEquals("RESULTS", snapshot(guest).path("phase").asText());
         control("next", 0);
-        mvc.perform(post("/api/live/" + pin + "/answer").session(guest).with(csrf())
+        mvc.perform(post("/api/live/" + pin + "/answer").cookie(guest).with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content(payload)).andExpect(status().isConflict());
         assertEquals(0, snapshot(guest).path("me").path("score").asInt());
     }
@@ -335,8 +340,8 @@ class LiveQuizIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"action\":\"kick\",\"questionIndex\":-1,\"playerName\":\"Guest\"}"))
                 .andExpect(status().isOk());
-        mvc.perform(get("/api/live/" + pin).session(guest)).andExpect(status().isForbidden());
-        mvc.perform(post("/join").session(guest).with(csrf()).param("pin", pin)
+        mvc.perform(get("/api/live/" + pin).cookie(guest)).andExpect(status().isForbidden());
+        mvc.perform(post("/join").cookie(guest).with(csrf()).param("pin", pin)
                         .param("name", "New name").param("avatar", "fox"))
                 .andExpect(flash().attribute("joinError", containsString("removed")));
         join("Ready", "robot");
@@ -377,7 +382,7 @@ class LiveQuizIntegrationTest {
     @Test
     void simultaneousJoinsDoNotLosePlayers() throws Exception {
         try (var executor = Executors.newFixedThreadPool(4)) {
-            var tasks = new ArrayList<java.util.concurrent.Callable<MockHttpSession>>();
+            var tasks = new ArrayList<java.util.concurrent.Callable<Cookie[]>>();
             for (int index = 0; index < 8; index++) {
                 String name = "Player " + index;
                 tasks.add(() -> join(name, "fox"));
@@ -398,13 +403,12 @@ class LiveQuizIntegrationTest {
                 .andExpect(status().is3xxRedirection()).andReturn().getResponse().getRedirectedUrl()
                 .substring("/play/".length());
         try {
-            mvc.perform(get("/api/live/" + otherPin).session(first)).andExpect(status().isForbidden());
-            var second = new MockHttpSession();
-            mvc.perform(post("/join").session(second).with(csrf()).param("pin", otherPin)
+            mvc.perform(get("/api/live/" + otherPin).cookie(first)).andExpect(status().isForbidden());
+            var second = mvc.perform(post("/join").with(csrf()).param("pin", otherPin)
                             .param("name", "Same nickname").param("avatar", "robot"))
-                    .andExpect(redirectedUrl("/play/" + otherPin));
+                    .andExpect(redirectedUrl("/play/" + otherPin)).andReturn().getResponse().getCookies();
             control("start", -1);
-            JsonNode other = json(mvc.perform(get("/api/live/" + otherPin).session(second))
+            JsonNode other = json(mvc.perform(get("/api/live/" + otherPin).cookie(second))
                     .andExpect(status().isOk()).andReturn());
             assertEquals("LOBBY", other.path("phase").asText());
             assertEquals(1, other.path("players").size());
@@ -418,11 +422,9 @@ class LiveQuizIntegrationTest {
     void wordCloudGrowsWithRepeatedAnswersAndRespectsTypoToggle() throws Exception {
         var hostPrincipal = user(new DarkholdUserDetails(users.findByEmail(HOST)));
         var created = json(mvc.perform(post("/save_challenge").with(hostPrincipal).with(csrf())
-                        .param("title", "Cloud " + UUID.randomUUID()).param("description", "")
-                        .param("wordCloudFuzzy", "false"))
+                        .param("title", "Cloud " + UUID.randomUUID()).param("description", ""))
                 .andExpect(status().isOk()).andReturn());
         long wcChallengeId = created.path("challengeId").asLong();
-        assertFalse(challenges.findById(wcChallengeId).orElseThrow().isWordCloudFuzzy());
         mvc.perform(post("/api/question").with(hostPrincipal).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"challengeId\":" + wcChallengeId
@@ -433,22 +435,16 @@ class LiveQuizIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"challengeId\":" + wcChallengeId
                                 + ",\"question\":\"Exact cloud?\",\"questionType\":\"WORD_CLOUD\","
-                                + "\"correctOptions\":\"\",\"points\":0}"))
+                                + "\"correctOptions\":\"EXACT\",\"points\":0}"))
                 .andExpect(status().isOk());
         String wcPin = mvc.perform(post("/live/host").with(hostPrincipal).with(csrf())
                         .param("challenge_id", String.valueOf(wcChallengeId)))
                 .andExpect(status().is3xxRedirection()).andReturn().getResponse()
                 .getRedirectedUrl().substring("/play/".length());
         try {
-            var p1 = new MockHttpSession();
-            var p2 = new MockHttpSession();
-            var p3 = new MockHttpSession();
-            mvc.perform(post("/join").session(p1).with(csrf()).param("pin", wcPin)
-                    .param("name", "Ana").param("avatar", "fox")).andExpect(status().is3xxRedirection());
-            mvc.perform(post("/join").session(p2).with(csrf()).param("pin", wcPin)
-                    .param("name", "Ben").param("avatar", "owl")).andExpect(status().is3xxRedirection());
-            mvc.perform(post("/join").session(p3).with(csrf()).param("pin", wcPin)
-                    .param("name", "Cal").param("avatar", "cat")).andExpect(status().is3xxRedirection());
+            final var p1 = joinRoom(wcPin, "Ana", "fox");
+            final var p2 = joinRoom(wcPin, "Ben", "owl");
+            final var p3 = joinRoom(wcPin, "Cal", "cat");
             mvc.perform(post("/api/live/" + wcPin + "/control").with(user(HOST)).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"action\":\"start\",\"questionIndex\":-1}")).andExpect(status().isOk());
@@ -460,21 +456,21 @@ class LiveQuizIntegrationTest {
             rooms.saveAndFlush(wcRoom);
 
             // Question 0 has FUZZY override: typo "creativ" merges with "Creative" + "bold" also shows
-            mvc.perform(post("/api/live/" + wcPin + "/answer").session(p1).with(csrf())
+            mvc.perform(post("/api/live/" + wcPin + "/answer").cookie(p1).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"questionIndex\":0,\"answer\":\"Creative\"}")).andExpect(status().isOk());
-            assertTrue(json(mvc.perform(get("/api/live/" + wcPin).session(p2)).andReturn())
+            assertTrue(json(mvc.perform(get("/api/live/" + wcPin).cookie(p2)).andReturn())
                     .path("wordCloud").isMissingNode());
-            mvc.perform(post("/api/live/" + wcPin + "/answer").session(p2).with(csrf())
+            mvc.perform(post("/api/live/" + wcPin + "/answer").cookie(p2).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"questionIndex\":0,\"answer\":\"creativ\"}")).andExpect(status().isOk());
             var hostLive = json(mvc.perform(get("/api/live/" + wcPin).with(user(HOST))).andReturn());
             assertEquals(1, hostLive.path("wordCloud").size());
             assertEquals(2, hostLive.path("wordCloud").get(0).path("count").asInt());
-            mvc.perform(post("/api/live/" + wcPin + "/answer").session(p3).with(csrf())
+            mvc.perform(post("/api/live/" + wcPin + "/answer").cookie(p3).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"questionIndex\":0,\"answer\":\"bold\"}")).andExpect(status().isOk());
-            var q0Results = json(mvc.perform(get("/api/live/" + wcPin).session(p1)).andReturn());
+            var q0Results = json(mvc.perform(get("/api/live/" + wcPin).cookie(p1)).andReturn());
             assertEquals("RESULTS", q0Results.path("phase").asText());
             assertEquals(2, q0Results.path("wordCloud").size());
             assertEquals("creative", q0Results.path("wordCloud").get(0).path("text").asText());
@@ -482,7 +478,7 @@ class LiveQuizIntegrationTest {
             assertEquals("bold", q0Results.path("wordCloud").get(1).path("text").asText());
             assertEquals(0, q0Results.path("me").path("score").asInt());
 
-            // Question 1 inherits quiz-level wordCloudFuzzy=false: "creativ" and "Creative" stay separate
+            // Question 1 is set to EXACT: "creativ" and "Creative" stay separate
             mvc.perform(post("/api/live/" + wcPin + "/control").with(user(HOST)).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"action\":\"next\",\"questionIndex\":0}")).andExpect(status().isOk());
@@ -492,10 +488,10 @@ class LiveQuizIntegrationTest {
             wcState.endsAt = System.currentTimeMillis() + 18000;
             wcRoom.setStateJson(mapper.writeValueAsString(wcState));
             rooms.saveAndFlush(wcRoom);
-            mvc.perform(post("/api/live/" + wcPin + "/answer").session(p1).with(csrf())
+            mvc.perform(post("/api/live/" + wcPin + "/answer").cookie(p1).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"questionIndex\":1,\"answer\":\"Creative\"}")).andExpect(status().isOk());
-            mvc.perform(post("/api/live/" + wcPin + "/answer").session(p2).with(csrf())
+            mvc.perform(post("/api/live/" + wcPin + "/answer").cookie(p2).with(csrf())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"questionIndex\":1,\"answer\":\"creativ\"}")).andExpect(status().isOk());
             var q1Host = json(mvc.perform(get("/api/live/" + wcPin).with(user(HOST))).andReturn());

@@ -240,6 +240,35 @@ public class ImageProcessingService {
     }
 
     /**
+     * Save a challenge cover (preview) image. Audio is not accepted here.
+     *
+     * @param challengeId the challenge ID
+     * @param file        the image file
+     * @return the relative URL path to the saved image
+     * @throws ImageValidationException if validation or save fails
+     */
+    public String saveChallengeCover(final Long challengeId, final MultipartFile file)
+            throws ImageValidationException {
+        if (isAudioFile(file)) {
+            throw new ImageValidationException("Invalid file type. Allowed types: JPEG, PNG, GIF");
+        }
+        validateImage(file);
+        Path uploadPath = Paths.get(questionImagesDir, challengeId.toString(), "cover");
+        try {
+            byte[] processedBytes = resizeAndCompressImage(file);
+            Files.createDirectories(uploadPath);
+            String extension = getFileExtension(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
+            String filename = String.format("cover_%d.%s", System.currentTimeMillis(), extension);
+            Files.write(uploadPath.resolve(filename), processedBytes);
+            String imageUrl = String.format("/question-images/%d/cover/%s", challengeId, filename);
+            logger.info("Saved challenge cover: {}", imageUrl);
+            return imageUrl;
+        } catch (IOException ioException) {
+            throw new ImageValidationException("Failed to save image: " + ioException.getMessage());
+        }
+    }
+
+    /**
      * Delete a question image from the filesystem.
      *
      * @param imageUrl the relative URL of the image to delete

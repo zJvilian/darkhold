@@ -168,7 +168,7 @@ body::before {
     padding: 12px 24px;
     font-size: 1rem;
     font-weight: 600;
-    color: white;
+    color: var(--color-btn-primary-text);
     background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
     border: none;
     border-radius: var(--radius-full);

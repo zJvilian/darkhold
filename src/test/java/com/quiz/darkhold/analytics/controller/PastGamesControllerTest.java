@@ -222,7 +222,7 @@ class PastGamesControllerTest {
                         "attachment; filename=\"game-result-12345.csv\""))
                 .andExpect(content().string(containsString("Game Results Export")))
                 .andExpect(content().string(containsString("PIN,12345")))
-                .andExpect(content().string(containsString("Challenge,Test Quiz")))
+                .andExpect(content().string(containsString("Quiz,Test Quiz")))
                 .andExpect(content().string(containsString("player1")))
                 .andExpect(content().string(containsString("What is 2+2?")))
                 .andDo(result -> verify(resultService).getGameResultById(1L));

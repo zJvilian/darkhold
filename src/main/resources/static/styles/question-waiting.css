@@ -11,7 +11,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #121212;
     padding: 2rem;
     position: relative;
     overflow: hidden;
@@ -113,7 +113,7 @@
     align-items: center;
     justify-content: center;
     margin: 0 auto;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #121212;
     border-radius: 50%;
     box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
     animation: iconPulse 2s ease-in-out infinite;
@@ -202,7 +202,7 @@
     }
     50% {
         transform: scale(1.5);
-        background: var(--color-primary);
+        background: #121212;
     }
 }
 
@@ -227,7 +227,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #121212;
     border-radius: 50%;
     color: white;
     font-size: 0.9rem;
@@ -267,7 +267,7 @@
 
 .tip-item-small i {
     font-size: 1.5rem;
-    color: #667eea;
+    color: var(--color-primary);
 }
 
 .tip-text-small {

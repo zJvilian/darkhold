@@ -8,7 +8,7 @@
    ---------------------------------------- */
 .finalscore-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #121212;
     padding: 2rem 1rem;
     position: relative;
     overflow: hidden;
@@ -404,7 +404,7 @@
     font-size: 1.1rem;
     font-weight: 700;
     color: white;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #121212;
     border: none;
     border-radius: var(--radius-lg);
     cursor: pointer;

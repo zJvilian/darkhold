@@ -54,10 +54,10 @@ public class PracticeService {
         // Fetch challenge questions
         Long challengeIdLong = Long.valueOf(challengeId);
         com.quiz.darkhold.challenge.entity.Challenge challenge = challengeRepository.findById(challengeIdLong)
-                .orElseThrow(() -> new IllegalArgumentException("Challenge not found: " + challengeId));
+                .orElseThrow(() -> new IllegalArgumentException("Quiz not found: " + challengeId));
 
         if (challenge.getOwner() == null || !challenge.getOwner().getEmail().equals(currentUserEmail())) {
-            throw new IllegalArgumentException("Challenge not found: " + challengeId);
+            throw new IllegalArgumentException("Quiz not found: " + challengeId);
         }
 
         List<QuestionSet> questionsList = new ArrayList<>(challenge.getQuestionSets());

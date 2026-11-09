@@ -278,7 +278,7 @@ body:not(.admin-page) .active-games-page {
 }
 
 .game-action-btn--primary {
-    color: white;
+    color: var(--color-btn-primary-text);
     background: var(--color-primary);
 }
 
@@ -286,7 +286,7 @@ body:not(.admin-page) .active-games-page {
     background: var(--color-primary-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(var(--color-primary-rgb, 0, 98, 204), 0.3);
-    color: white;
+    color: var(--color-btn-primary-text);
     text-decoration: none;
 }
 
@@ -374,7 +374,7 @@ body:not(.admin-page) .active-games-page {
     padding: 0.85rem 1.75rem;
     font-size: 0.95rem;
     font-weight: 600;
-    color: white;
+    color: var(--color-btn-primary-text);
     background: var(--color-primary);
     border: none;
     border-radius: var(--radius-lg);
@@ -386,7 +386,7 @@ body:not(.admin-page) .active-games-page {
     background: var(--color-primary-hover);
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(var(--color-primary-rgb, 0, 98, 204), 0.3);
-    color: white;
+    color: var(--color-btn-primary-text);
     text-decoration: none;
 }
 

@@ -48,27 +48,16 @@ public class ChallengeController {
         return "options/options";
     }
 
-    public ResponseEntity<ChallengeWithResponse> handleFileUpload(final MultipartFile upload,
-                                                                   final String title,
-                                                                   final String description,
-                                                                   final RedirectAttributes redirectAttributes) {
-        return handleFileUpload(upload, title, description, true, redirectAttributes);
-    }
-
     /**
      * Upload the challenge as a predefined Excel sheet.
      */
     @PostMapping("/upload_challenge")
     public ResponseEntity<ChallengeWithResponse> handleFileUpload(
             final MultipartFile upload, final String title, final String description,
-            @RequestParam(defaultValue = "true") final boolean wordCloudFuzzy,
             final RedirectAttributes redirectAttributes) {
         logParams(upload, title, description);
         try {
             Long challengeId = challengeService.readProcessAndSaveChallenge(upload, title, description);
-            if (!wordCloudFuzzy) {
-                challengeService.setWordCloudFuzzy(challengeId, false);
-            }
             String responseText = "Successfully created " + CommonUtils.sanitizedString(title) + " !!!";
             return ResponseEntity.ok(new ChallengeWithResponse(challengeId, responseText));
         } catch (ChallengeException challengeException) {
@@ -118,15 +107,11 @@ public class ChallengeController {
     @PostMapping("/save_challenge")
     public ResponseEntity<ChallengeWithResponse> saveChallenge(
             @RequestParam @NotBlank @Size(max = 100) final String title,
-            @RequestParam @Size(max = 250) final String description,
-            @RequestParam(defaultValue = "true") final boolean wordCloudFuzzy) {
+            @RequestParam @Size(max = 250) final String description) {
         String sanitizedTitle = CommonUtils.sanitizedString(title);
         logger.info("Creating new challenge: title={}", sanitizedTitle);
         com.quiz.darkhold.challenge.entity.Challenge challenge =
                 challengeService.createEmptyChallenge(title, description);
-        if (!wordCloudFuzzy && challenge != null) {
-            challengeService.setWordCloudFuzzy(challenge.getId(), false);
-        }
         return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                 "Successfully created " + sanitizedTitle + " !!!"));
     }
@@ -144,14 +129,13 @@ public class ChallengeController {
     }
 
     /**
-     * Update an existing challenge's title, description, and optional word-cloud typo setting.
+     * Update an existing challenge's title and description.
      */
     @PostMapping("/update_challenge/{id}")
     public ResponseEntity<ChallengeWithResponse> updateChallenge(
             @PathVariable final Long id,
             @RequestParam @NotBlank @Size(max = 100) final String title,
-            @RequestParam @Size(max = 250) final String description,
-            @RequestParam(required = false) final Boolean wordCloudFuzzy) {
+            @RequestParam @Size(max = 250) final String description) {
         String sanitizedTitle = CommonUtils.sanitizedString(title);
         logger.info("Updating challenge {}: title={}", id, sanitizedTitle);
         com.quiz.darkhold.challenge.entity.Challenge challenge =
@@ -159,11 +143,35 @@ public class ChallengeController {
         if (challenge == null) {
             return ResponseEntity.notFound().build();
         }
-        if (wordCloudFuzzy != null) {
-            challengeService.setWordCloudFuzzy(id, wordCloudFuzzy);
-        }
         return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                 "Successfully updated " + sanitizedTitle + " !!!"));
+    }
+
+    /**
+     * Upload or replace the cover (preview) picture of a challenge.
+     */
+    @PostMapping("/challenge/{id}/cover-image")
+    public ResponseEntity<java.util.Map<String, String>> uploadCoverImage(
+            @PathVariable final Long id,
+            @RequestParam("image") final MultipartFile file) {
+        logger.info("Uploading cover image for challenge: {}", id);
+        String imageUrl = challengeService.updateCoverImage(id, file);
+        if (imageUrl == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(java.util.Map.of("imageUrl", imageUrl));
+    }
+
+    /**
+     * Remove the cover (preview) picture of a challenge.
+     */
+    @DeleteMapping("/challenge/{id}/cover-image")
+    public ResponseEntity<java.util.Map<String, Boolean>> deleteCoverImage(@PathVariable final Long id) {
+        logger.info("Deleting cover image for challenge: {}", id);
+        if (!challengeService.removeCoverImage(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(java.util.Map.of("deleted", true));
     }
 
     @PostMapping("/duplicate_challenge/{id}")

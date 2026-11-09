@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{account.settings} + ' - Darkhold'">Account Settings - Darkhold</title>
+    <title th:text="#{account.settings} + ' - Kahvoid'">Account Settings - Kahvoid</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="shortcut icon" href="/images/favicon.png">
@@ -47,15 +47,47 @@
                             </span>
                         </div>
                     </div>
+                    <div th:if="${message != null}" class="alert alert-success" role="status" th:text="#{${message}}"></div>
+                    <div th:if="${errorMessage != null}" class="alert alert-danger" role="alert" th:text="#{${errorMessage}}"></div>
                     <div class="settings-actions">
-                        <button class="btn btn-secondary" onclick="alert('Profile edit feature coming soon!')">
-                            <i class="fas fa-edit"></i>
-                            Edit Profile
-                        </button>
-                        <button class="btn btn-secondary" onclick="alert('Password change feature coming soon!')">
-                            <i class="fas fa-key"></i>
-                            Change Password
-                        </button>
+                        <details>
+                            <summary class="btn btn-secondary"><i class="fas fa-edit"></i> <span th:text="#{account.editProfile}">Edit Profile</span></summary>
+                            <form th:action="@{/account/profile}" method="post" enctype="multipart/form-data" class="mt-3">
+                                <img th:src="@{${#authentication.getPrincipal().getUser().photosImagePath}}" th:alt="#{user.profilePhoto}" alt="Profile photo"
+                                     width="64" height="64" style="border-radius: 50%; object-fit: cover;" />
+                                <label class="settings-option-label" for="firstName" th:text="#{user.firstName}">First name</label>
+                                <input class="form-control" id="firstName" name="firstName" maxlength="64" required
+                                       th:value="${#authentication.getPrincipal().getUser().firstName}" />
+                                <label class="settings-option-label" for="lastName" th:text="#{user.lastName}">Last name</label>
+                                <input class="form-control" id="lastName" name="lastName" maxlength="64" required
+                                       th:value="${#authentication.getPrincipal().getUser().lastName}" />
+                                <label class="settings-option-label" for="email" th:text="#{user.email}">Email</label>
+                                <input class="form-control" type="email" id="email" name="email" maxlength="128" required
+                                       th:value="${#authentication.getPrincipal().getUser().email}" />
+                                <label class="settings-option-label" for="profilePassword" th:text="#{account.passwordForEmail}">Current password (only needed to change the email)</label>
+                                <input class="form-control" type="password" id="profilePassword" name="currentPassword"
+                                       autocomplete="current-password" />
+                                <label class="settings-option-label" for="image" th:text="#{account.profilePicture}">Profile picture</label>
+                                <input class="form-control" type="file" id="image" name="image"
+                                       accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif" />
+                                <button type="submit" class="btn btn-primary mt-2" th:text="#{user.save}">Save</button>
+                            </form>
+                        </details>
+                        <details>
+                            <summary class="btn btn-secondary"><i class="fas fa-key"></i> <span th:text="#{account.changePassword}">Change Password</span></summary>
+                            <form th:action="@{/account/password}" method="post" class="mt-3">
+                                <label class="settings-option-label" for="currentPassword" th:text="#{account.currentPassword}">Current password</label>
+                                <input class="form-control" type="password" id="currentPassword" name="currentPassword"
+                                       autocomplete="current-password" required />
+                                <label class="settings-option-label" for="newPassword" th:text="#{account.newPassword}">New password</label>
+                                <input class="form-control" type="password" id="newPassword" name="newPassword"
+                                       autocomplete="new-password" minlength="8" maxlength="32" required />
+                                <label class="settings-option-label" for="confirmPassword" th:text="#{account.confirmPassword}">Confirm new password</label>
+                                <input class="form-control" type="password" id="confirmPassword" name="confirmPassword"
+                                       autocomplete="new-password" required />
+                                <button type="submit" class="btn btn-primary mt-2" th:text="#{account.changePasswordSubmit}">Change password</button>
+                            </form>
+                        </details>
                     </div>
                 </div>
             </section>

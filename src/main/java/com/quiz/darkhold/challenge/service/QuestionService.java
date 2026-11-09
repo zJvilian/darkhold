@@ -164,7 +164,7 @@ public class QuestionService {
 
     private Challenge getOwnedChallenge(final Long challengeId) {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
-        if (challengeOpt.isEmpty() || !isOwner(challengeOpt.get())) {
+        if (challengeOpt.isEmpty() || !canEdit(challengeOpt.get())) {
             logger.warn("Challenge {} not found or not owned", challengeId);
             return null;
         }
@@ -178,15 +178,11 @@ public class QuestionService {
             return null;
         }
         QuestionSet question = questionOpt.get();
-        if (question.getChallenge() == null || !isOwner(question.getChallenge())) {
+        if (question.getChallenge() == null || !canEdit(question.getChallenge())) {
             logger.warn("Question {} not owned by user", questionId);
             return null;
         }
         return question;
-    }
-
-    private boolean isOwner(final Challenge challenge) {
-        return challenge.getChallengeOwner().equals(currentUserId());
     }
 
     private int getNextDisplayOrder(final Challenge challenge) {
@@ -291,9 +287,16 @@ public class QuestionService {
         // Note: imageUrl is NOT copied - each question should have unique images
     }
 
-    private Long currentUserId() {
+    private com.quiz.darkhold.user.entity.User currentUser() {
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Object principal = auth.getPrincipal();
-        return ((DarkholdUserDetails) principal).getUser().getId();
+        return ((DarkholdUserDetails) auth.getPrincipal()).getUser();
+    }
+
+    private Long currentUserId() {
+        return currentUser().getId();
+    }
+
+    private boolean canEdit(final Challenge challenge) {
+        return challenge.getChallengeOwner().equals(currentUserId()) || currentUser().canManageAllChallenges();
     }
 }

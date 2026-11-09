@@ -124,7 +124,7 @@ public class PastGamesController {
         writer.println("Game Results Export");
         writer.println();
         writer.println("PIN," + gameResult.getPin());
-        writer.println("Challenge," + gameResult.getChallengeName());
+        writer.println("Quiz," + gameResult.getChallengeName());
         writer.println("Mode," + gameResult.getGameMode());
         writer.println("Completed," + gameResult.getCompletedAt().format(formatter));
         writer.println("Duration (minutes)," + gameResult.getDurationMinutes());

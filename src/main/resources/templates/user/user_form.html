@@ -7,7 +7,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <meta name="description" content="darkhold create user page" />
         <meta name="author" content="Suraj" />
-        <title th:text="#{user.title} + ' - Darkhold'">User Management - Darkhold</title>
+        <title th:text="#{user.title} + ' - Kahvoid'">User Management - Kahvoid</title>
         <link rel="manifest" href="/manifest.json">
         <link rel="shortcut icon" href="/images/favicon.png">
         <link href="/styles/darkhold-styles.css" rel="stylesheet" />
@@ -186,10 +186,10 @@
                             </div>
                             <input type="hidden" th:field="*{photo}" />
                             <input type="file" id="fileImage" name="image" class="admin-file-input"
-                                   accept="image/png, image/jpeg"
+                                   accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif"
                                    onchange="changeThumbnail(this);" />
                             <div class="admin-form-hint" th:text="#{user.photoHint}">
-                                Maximum file size: 1MB. Formats: PNG, JPEG
+                                Maximum file size: 5MB. Formats: PNG, JPEG, GIF
                             </div>
                         </div>
                     </div>
@@ -255,8 +255,8 @@
                 console.log("File changed : " + input.files[0].name);
                 const fileSize = input.files[0].size;
                 console.log("File size : " + fileSize);
-                if (fileSize > 1048576) {
-                    input.setCustomValidity("Please select a file with a size less than 1 MB.");
+                if (fileSize > 5242880) {
+                    input.setCustomValidity("Please select a file with a size less than 5 MB.");
                     input.reportValidity();
                 } else {
                     input.setCustomValidity("");

@@ -34,11 +34,14 @@ public class ChallengeService {
     private final Logger logger = LogManager.getLogger(ChallengeService.class);
     private final ChallengeRepository challengeRepository;
     private final QuestionSetRepository questionSetRepository;
+    private final ImageProcessingService imageProcessingService;
 
     public ChallengeService(final ChallengeRepository challengeRepository,
-                            final QuestionSetRepository questionSetRepository) {
+                            final QuestionSetRepository questionSetRepository,
+                            final ImageProcessingService imageProcessingService) {
         this.challengeRepository = challengeRepository;
         this.questionSetRepository = questionSetRepository;
+        this.imageProcessingService = imageProcessingService;
     }
 
     /**
@@ -78,6 +81,7 @@ public class ChallengeService {
             java.util.List<QuestionSet> questionSets = challenge.get().getQuestionSets();
             questionSetRepository.deleteAll(questionSets);
             challengeRepository.delete(challenge.get());
+            imageProcessingService.deleteQuestionImage(challenge.get().getCoverImageUrl());
             response = Boolean.TRUE;
         }
         return response;
@@ -104,21 +108,13 @@ public class ChallengeService {
      * @param challengeId the challenge ID
      * @param title       new title
      * @param description new description
-     * @return the updated challenge or null if not found/not owned
+     * @return the updated challenge or null if not found/not editable
      */
-    public void setWordCloudFuzzy(final Long challengeId, final boolean fuzzy) {
-        Challenge challenge = getChallengeForEdit(challengeId);
-        if (challenge != null) {
-            challenge.setWordCloudFuzzy(fuzzy);
-            challengeRepository.save(challenge);
-        }
-    }
-
     public Challenge updateChallenge(final Long challengeId, final String title, final String description) {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
         if (challengeOpt.isPresent()) {
             Challenge challenge = challengeOpt.get();
-            if (!challenge.getChallengeOwner().equals(currentUserId())) {
+            if (!canEdit(challenge)) {
                 logger.warn("User {} attempted to update challenge {} owned by {}",
                         currentUserId(), challengeId, challenge.getChallengeOwner());
                 return null;
@@ -173,16 +169,52 @@ public class ChallengeService {
     }
 
     /**
-     * Get a challenge by ID if owned by current user.
+     * Set or replace the cover (preview) picture of a challenge.
      *
      * @param challengeId the challenge ID
-     * @return the challenge or null if not found/not owned
+     * @param file        the image file
+     * @return the new image URL, or null if not found/not editable
+     */
+    public String updateCoverImage(final Long challengeId, final MultipartFile file) {
+        Challenge challenge = getChallengeForEdit(challengeId);
+        if (challenge == null) {
+            return null;
+        }
+        String imageUrl = imageProcessingService.saveChallengeCover(challengeId, file);
+        imageProcessingService.deleteQuestionImage(challenge.getCoverImageUrl());
+        challenge.setCoverImageUrl(imageUrl);
+        challengeRepository.save(challenge);
+        return imageUrl;
+    }
+
+    /**
+     * Remove the cover (preview) picture of a challenge.
+     *
+     * @param challengeId the challenge ID
+     * @return true if a cover was removed
+     */
+    public boolean removeCoverImage(final Long challengeId) {
+        Challenge challenge = getChallengeForEdit(challengeId);
+        if (challenge == null || challenge.getCoverImageUrl() == null) {
+            return false;
+        }
+        imageProcessingService.deleteQuestionImage(challenge.getCoverImageUrl());
+        challenge.setCoverImageUrl(null);
+        challengeRepository.save(challenge);
+        return true;
+    }
+
+    /**
+     * Get a challenge by ID if the current user owns it or may manage all challenges.
+     *
+     * @param challengeId the challenge ID
+     * @return the challenge or null if not found/not editable
      */
     public Challenge getChallengeForEdit(final Long challengeId) {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
         if (challengeOpt.isPresent()) {
             Challenge challenge = challengeOpt.get();
-            if (challenge.getChallengeOwner().equals(currentUserId())) {
+            if (canEdit(challenge)) {
                 return challenge;
             }
             logger.warn("User {} attempted to access challenge {} owned by {}",
@@ -257,10 +289,17 @@ public class ChallengeService {
         return dest;
     }
 
-    private Long currentUserId() {
+    private com.quiz.darkhold.user.entity.User currentUser() {
         org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Object principal = auth.getPrincipal();
-        return ((DarkholdUserDetails) principal).getUser().getId();
+        return ((DarkholdUserDetails) auth.getPrincipal()).getUser();
+    }
+
+    private Long currentUserId() {
+        return currentUser().getId();
+    }
+
+    private boolean canEdit(final Challenge challenge) {
+        return challenge.getChallengeOwner().equals(currentUserId()) || currentUser().canManageAllChallenges();
     }
 
     //replace LinkedList with ArrayDeque as the return type

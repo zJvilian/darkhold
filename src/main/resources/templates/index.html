@@ -2,17 +2,17 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{home.title}">Darkhold - Interactive Quiz Platform</title>
+    <title th:text="#{home.title}">Kahvoid - Interactive Quiz Platform</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" th:content="#{home.metaDescription}" content="Join live quizzes with a PIN code. Darkhold is the interactive classroom quiz experience.">
-    <meta name="theme-color" content="#0062cc">
-    <meta property="og:title" th:content="#{home.title}" content="Darkhold - Interactive Quiz Platform">
+    <meta name="description" th:content="#{home.metaDescription}" content="Join live quizzes with a PIN code. Kahvoid is the interactive classroom quiz experience.">
+    <meta name="theme-color" content="#121212">
+    <meta property="og:title" th:content="#{home.title}" content="Kahvoid - Interactive Quiz Platform">
     <meta property="og:description" th:content="#{home.metaDescription}" content="Join live quizzes with a PIN code.">
     <meta property="og:type" content="website">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Darkhold Quiz">
+    <meta name="apple-mobile-web-app-title" content="Kahvoid Quiz">
     <link rel="shortcut icon" href="/images/favicon.png">
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/images/icons/icon-192.png">
@@ -54,7 +54,7 @@
                         <span th:text="#{home.liveBadge}">Real-time multiplayer quizzes</span>
                     </div>
                     <h1 class="hero-title font-display">
-                        <span class="hero-title-line" th:text="#{app.name}">Darkhold</span>
+                        <span class="hero-title-line" th:text="#{app.name}">Kahvoid</span>
                     </h1>
                     <p class="hero-subtitle" th:text="#{app.tagline}">Interactive Quiz Platform</p>
                     <p class="hero-description" th:text="#{home.heroDescription}">
@@ -240,7 +240,7 @@
                                 <path d="M32 4L58 18V46L32 60L6 46V18L32 4Z" stroke="currentColor" stroke-width="2" fill="none"/>
                                 <path d="M32 20L42 26V38L32 44L22 38V26L32 20Z" fill="currentColor"/>
                             </svg>
-                            <span class="footer-brand-name font-display">Darkhold</span>
+                            <span class="footer-brand-name font-display">Kahvoid</span>
                         </div>
                         <p class="footer-tagline" th:text="#{home.footerDescription}">Open-source, self-hosted quiz platform for interactive learning and engagement.</p>
                     </div>
@@ -254,12 +254,10 @@
                         </ul>
                     </div>
                     <div class="footer-links">
-                        <h4 class="footer-heading" th:text="#{home.resources}">Resources</h4>
+                        <h4 class="footer-heading" th:text="#{home.legal}">Legal</h4>
                         <ul>
-                            <li><a href="#" th:text="#{home.documentation}">Documentation</a></li>
-                            <li><a href="#" th:text="#{home.api}">API Reference</a></li>
-                            <li><a href="#" th:text="#{home.releases}">Release Notes</a></li>
-                            <li><a href="#" th:text="#{home.community}">Community</a></li>
+                            <li><a th:href="@{/impressum}" th:text="#{home.imprint}">Imprint</a></li>
+                            <li><a th:href="@{/datenschutz}" th:text="#{home.privacy}">Privacy Policy</a></li>
                         </ul>
                     </div>
                 </div>
@@ -267,9 +265,9 @@
                     <p class="copyright">
                         <span>&copy; </span>
                         <span th:text="${#dates.year(#dates.createNow())}">2024</span>
-                        <span th:text="#{home.copyright}">Darkhold Quiz Platform</span>
+                        <span th:text="#{home.copyright}">Kahvoid Quiz Platform</span>
                     </p>
-                    <p class="footer-note" th:text="#{home.footerNote}">Self-hosted &middot; Open Source &middot; Privacy First</p>
+                    <p class="footer-note" th:text="#{home.footerNote}">Fork of Darkhold &middot; Open Source</p>
                 </div>
             </div>
         </footer>

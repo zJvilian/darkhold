@@ -1,11 +1,11 @@
 {
-  "name": "Darkhold Quiz",
-  "short_name": "Darkhold",
+  "name": "Kahvoid Quiz",
+  "short_name": "Kahvoid",
   "description": "Interactive classroom quiz experience with real-time gameplay",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#0062cc",
+  "theme_color": "#121212",
   "orientation": "any",
   "scope": "/",
   "icons": [

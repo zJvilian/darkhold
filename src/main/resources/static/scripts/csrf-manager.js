@@ -106,6 +106,10 @@ const CsrfManager = (() => {
      */
     function protectForms() {
         document.querySelectorAll('form').forEach(form => {
+            // GET forms need no token, and it would end up in the URL and browser history
+            if (form.method.toUpperCase() === 'GET') {
+                return;
+            }
             // Skip forms that already have CSRF token
             if (form.querySelector('input[name="_csrf"]')) {
                 return;

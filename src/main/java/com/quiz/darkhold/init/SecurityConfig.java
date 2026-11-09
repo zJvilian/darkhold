@@ -15,7 +15,18 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.session.FindByIndexNameSessionRepository;
+import org.springframework.session.config.SessionRepositoryCustomizer;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+
+import java.time.Duration;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -31,6 +42,28 @@ public class SecurityConfig {
     @Bean
     public static BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /** Index stored sessions by user id (not by the non-unique first name Spring would use). */
+    @Bean
+    public SessionRepositoryCustomizer<JdbcIndexedSessionRepository> sessionUserIdIndex() {
+        return repository -> repository.setIndexResolver(session -> {
+            var context = session.<SecurityContext>getAttribute(
+                    HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+            if (context != null && context.getAuthentication() != null
+                    && context.getAuthentication().getPrincipal() instanceof DarkholdUserDetails details) {
+                return Map.of(FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME,
+                        String.valueOf(details.getUser().getId()));
+            }
+            return Map.of();
+        });
+    }
+
+    /** Boot ignores cookie max-age for stored sessions, so without this a login ends when the browser closes. */
+    @Bean
+    public DefaultCookieSerializerCustomizer sessionCookieLifetime(
+            @Value("${spring.session.timeout}") final Duration timeout) {
+        return serializer -> serializer.setCookieMaxAge((int) timeout.toSeconds());
     }
 
     @Bean
@@ -57,6 +90,7 @@ public class SecurityConfig {
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/admin", "/admin/**", "/userManagement", "/user/**", "/users/**")
                 .hasAuthority("ADMIN")
+                .requestMatchers("/gameManagement").hasAnyAuthority("ADMIN", "GAME_MANAGER")
                 .anyRequest().authenticated());
         http.formLogin((formLogin) -> formLogin.loginPage("/login").defaultSuccessUrl("/", true).permitAll());
         var login = new LoginUrlAuthenticationEntryPoint("/login");
@@ -86,7 +120,8 @@ public class SecurityConfig {
                 "/scripts/core/**", "/styles/core/*", "/styles/webfonts/**",
                 "/fonts/**", "/favicon.ico",
                 "/logme", "/h2-console/**",
-                "/enterGame", "/joinGame", "/join", "/play/**", "/api/live/**"
+                "/enterGame", "/joinGame", "/join", "/play/**", "/api/live/**",
+                "/impressum", "/datenschutz"
         };
     }
 

@@ -311,7 +311,7 @@
     padding: 0.8rem 1.5rem;
     font-size: 0.95rem;
     font-weight: 700;
-    color: white;
+    color: var(--color-btn-primary-text);
     background: var(--color-primary);
     border: none;
     border-radius: var(--radius-md);
@@ -506,7 +506,7 @@
     padding: 0.6rem 1.75rem;
     font-size: 0.9rem;
     font-weight: 600;
-    color: white;
+    color: var(--color-btn-primary-text);
     background: var(--color-primary);
     border: none;
     border-radius: var(--radius-md);

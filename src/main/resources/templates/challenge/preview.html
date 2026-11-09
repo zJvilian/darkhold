@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="https://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <title th:text="#{challenge.preview.title}">Preview Challenge - Darkhold</title>
+    <title th:text="#{challenge.preview.title}">Preview Challenge - Kahvoid</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="manifest" href="/manifest.json">
@@ -47,7 +47,7 @@
                         </h2>
                         <span class="questions-count-badge">
                             <i class="fas fa-question-circle"></i>
-                            <span th:text="${#lists.size(previewInfo.questionSets)} + ' questions'">10 questions</span>
+                            <span th:text="#{challenge.preview.questionCount(${#lists.size(previewInfo.questionSets)})}">10 questions</span>
                         </span>
                     </div>
 
@@ -58,27 +58,31 @@
                                 <span class="question-text" th:text="${ch.question}">What is the capital of France?</span>
                                 <i class="fas fa-chevron-down question-toggle-icon"></i>
                             </div>
-                            <div class="question-body" th:id="'question-body-' + ${chStat.index}">
-                                <div th:if="${ch.answer1 != null}"
-                                     th:class="${#strings.contains(ch.correctOptions, 'A')} ? 'answer-option correct' : 'answer-option'">
-                                    <span class="answer-label">A</span>
+                            <div class="question-body" th:id="'question-body-' + ${chStat.index}"
+                                 th:with="type=${ch.questionType != null ? ch.questionType.name() : 'MULTIPLE_CHOICE'}, opts=${ch.correctOptions ?: ''}">
+                                <th:block th:if="${type == 'MULTIPLE_CHOICE' or type == 'POLL'}">
+                                    <div th:each="answer, st : ${ {ch.answer1, ch.answer2, ch.answer3, ch.answer4} }" th:if="${answer != null}"
+                                         th:with="letter=${#strings.substring('ABCD', st.index, st.index + 1)}"
+                                         th:class="${type != 'POLL' and #strings.contains(opts, letter)} ? 'answer-option correct' : 'answer-option'">
+                                        <span class="answer-label" th:text="${letter}">A</span>
+                                        <span th:text="${answer}">Paris</span>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${type == 'TRUE_FALSE'}">
+                                    <div th:class="${#strings.contains(opts, 'TRUE')} ? 'answer-option correct' : 'answer-option'">
+                                        <span th:text="#{live.true}">True</span>
+                                    </div>
+                                    <div th:class="${#strings.contains(opts, 'FALSE')} ? 'answer-option correct' : 'answer-option'">
+                                        <span th:text="#{live.false}">False</span>
+                                    </div>
+                                </th:block>
+                                <div th:if="${type == 'TYPE_ANSWER'}" class="answer-option correct">
                                     <span th:text="${ch.answer1}">Paris</span>
+                                    <span th:if="${ch.acceptableAnswers}"> (<span th:text="#{client.alsoAccepts}">also accepts:</span> <span th:text="${ch.acceptableAnswers}"></span>)</span>
                                 </div>
-                                <div th:if="${ch.answer2 != null}"
-                                     th:class="${#strings.contains(ch.correctOptions, 'B')} ? 'answer-option correct' : 'answer-option'">
-                                    <span class="answer-label">B</span>
-                                    <span th:text="${ch.answer2}">London</span>
-                                </div>
-                                <div th:if="${ch.answer3 != null}"
-                                     th:class="${#strings.contains(ch.correctOptions, 'C')} ? 'answer-option correct' : 'answer-option'">
-                                    <span class="answer-label">C</span>
-                                    <span th:text="${ch.answer3}">Berlin</span>
-                                </div>
-                                <div th:if="${ch.answer4 != null}"
-                                     th:class="${#strings.contains(ch.correctOptions, 'D')} ? 'answer-option correct' : 'answer-option'">
-                                    <span class="answer-label">D</span>
-                                    <span th:text="${ch.answer4}">Madrid</span>
-                                </div>
+                                <div th:if="${type == 'SORTING'}" class="answer-option" th:text="${opts}"></div>
+                                <div th:if="${type == 'WORD_CLOUD'}" class="answer-option"
+                                     th:text="${opts == 'EXACT' ? #messages.msg('challenge.edit.wordCloudExactSummary') : #messages.msg('challenge.edit.wordCloudFuzzySummary')}"></div>
                             </div>
                         </div>
                     </div>

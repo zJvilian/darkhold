@@ -1,6 +1,6 @@
 /* ============================================
    VIEW CHALLENGES PAGE
-   Modern challenge library with grid layout
+   Quiz list (shared by /view_challenges and the admin per-user page)
    ============================================ */
 
 /* ----------------------------------------
@@ -40,14 +40,14 @@
 }
 
 /* ----------------------------------------
-   Search Section
+   Filter / sort toolbar
    ---------------------------------------- */
 .search-section {
     background: var(--color-bg-primary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--radius-xl);
-    padding: 2rem;
-    margin-bottom: 2.5rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 40px rgba(0, 0, 0, 0.08);
 }
 
@@ -55,14 +55,32 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 8px 40px rgba(0, 0, 0, 0.25);
 }
 
-.search-form {
+.quiz-toolbar {
     display: flex;
-    gap: 0.75rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.quiz-toolbar-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-width: 180px;
+}
+
+.quiz-toolbar-field--search {
+    flex: 2 1 260px;
+}
+
+.quiz-toolbar-field label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-tertiary);
 }
 
 .search-input {
-    flex: 1;
-    padding: 0.75rem 1rem;
+    width: 100%;
+    padding: 0.65rem 1rem;
     font-size: 0.92rem;
     color: var(--color-text-primary);
     background: var(--color-bg-secondary);
@@ -75,25 +93,6 @@
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 0, 98, 204), 0.1);
-}
-
-.search-btn {
-    padding: 0.75rem 2rem;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: white;
-    background: var(--color-primary);
-    border: none;
-    border-radius: var(--radius-lg);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.search-btn:hover {
-    background: var(--color-primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(var(--color-primary-rgb, 0, 98, 204), 0.3);
 }
 
 /* ----------------------------------------
@@ -123,64 +122,108 @@
 }
 
 /* ----------------------------------------
-   Challenge Grid
+   Quiz list rows
    ---------------------------------------- */
-.challenges-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1.25rem;
+.quiz-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-/* ----------------------------------------
-   Challenge Card
-   ---------------------------------------- */
-.challenge-card {
-    position: relative;
+.quiz-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     background: var(--color-bg-primary);
     border: 1px solid var(--color-border-light);
     border-radius: var(--radius-xl);
-    padding: 1.5rem;
+    padding: 0.85rem 1.25rem;
     transition: all 0.2s ease;
-    cursor: pointer;
 }
 
-.challenge-card:hover {
-    transform: translateY(-2px);
+.quiz-row:hover {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
     border-color: var(--color-primary);
 }
 
-[data-theme="dark"] .challenge-card:hover {
+[data-theme="dark"] .quiz-row:hover {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
-.challenge-card-header {
+.quiz-row-main {
     display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    flex: 1;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
 }
 
-.challenge-id-badge {
+.quiz-row-main[data-selectable] {
+    cursor: pointer;
+}
+
+.quiz-row-thumb {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    font-size: 0.85rem;
-    font-weight: 700;
+    width: 72px;
+    height: 48px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+}
+
+.quiz-row-thumb--empty {
+    font-size: 1.25rem;
     color: var(--color-primary);
     background: rgba(var(--color-primary-rgb, 0, 98, 204), 0.08);
-    border-radius: var(--radius-md);
-    flex-shrink: 0;
+}
+
+.quiz-row-body {
+    min-width: 0;
+}
+
+.quiz-row-description {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin: 0.15rem 0 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.quiz-row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.8rem;
+    color: var(--color-text-tertiary);
+    margin: 0.35rem 0 0;
+}
+
+.quiz-row-meta i {
+    margin-right: 0.3rem;
+}
+
+.quiz-no-matches {
+    text-align: center;
+    color: var(--color-text-tertiary);
+    padding: 2rem 0;
+}
+
+.view-challenges-back {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    color: var(--color-primary);
+    text-decoration: none;
 }
 
 .challenge-card-title {
-    flex: 1;
     font-size: 1.05rem;
     font-weight: 700;
     color: var(--color-text-primary);
-    margin: 0.25rem 0 0;
+    margin: 0;
     line-height: 1.4;
     word-break: break-word;
 }
@@ -188,8 +231,7 @@
 .challenge-card-actions {
     display: flex;
     gap: 0.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--color-border-light);
+    flex-shrink: 0;
 }
 
 .challenge-action-btn {
@@ -270,16 +312,12 @@
         padding: 1.5rem;
     }
 
-    .search-form {
-        flex-direction: column;
+    .quiz-row {
+        flex-wrap: wrap;
     }
 
-    .search-btn {
-        width: 100%;
-    }
-
-    .challenges-grid {
-        grid-template-columns: 1fr;
+    .quiz-row-main {
+        flex-basis: 100%;
     }
 
     .challenges-section-header {
@@ -287,4 +325,10 @@
         align-items: flex-start;
         gap: 0.75rem;
     }
+}
+
+.quiz-row[hidden],
+.quiz-toolbar-field[hidden],
+.quiz-no-matches[hidden] {
+    display: none;
 }

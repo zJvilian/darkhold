@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" th:content="#{app.description}" content="darkhold registration page" />
     <meta name="author" content="Suraj" />
-    <title th:text="#{registration.title} + ': ' + #{app.name} + ' ' + #{app.description}">Registration: Darkhold classroom quiz experience</title>
+    <title th:text="#{registration.title} + ': ' + #{app.name} + ' ' + #{app.description}">Registration: Kahvoid classroom quiz experience</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="shortcut icon" href="/images/favicon.png">
@@ -26,9 +26,9 @@
         <div class="login-card">
             <!-- Logo/Brand -->
             <div class="login-brand">
-                <img src="/images/favicon.png" alt="Darkhold" class="login-logo">
+                <img src="/images/favicon.png" alt="Kahvoid" class="login-logo">
                 <h1 class="login-title" th:text="#{registration.title}">Create Account</h1>
-                <p class="login-subtitle" th:text="#{registration.subtitle}">Join Darkhold to create and play quizzes</p>
+                <p class="login-subtitle" th:text="#{registration.subtitle}">Join Kahvoid to create and play quizzes</p>
             </div>
             <!-- Registration Form -->
             <form th:action="@{/registration}" method="post" th:object="${user}" class="login-form">

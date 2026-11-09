@@ -3,6 +3,8 @@ package com.quiz.darkhold.options;
 import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.game.service.GameService;
+import com.quiz.darkhold.game.service.GameSettingsService;
+import com.quiz.darkhold.init.GameConfig;
 import com.quiz.darkhold.preview.repository.CurrentGameSessionRepository;
 import com.quiz.darkhold.user.repository.UserRepository;
 import com.quiz.darkhold.options.controller.OptionsController;
@@ -20,7 +22,9 @@ public class OptionsConfigurations {
         return new OptionsController(
                 Mockito.mock(OptionsService.class),
                 Mockito.mock(PreviewService.class),
-                Mockito.mock(GameService.class));
+                Mockito.mock(GameService.class),
+                Mockito.mock(GameSettingsService.class),
+                new GameConfig());
     }
 
     @Bean

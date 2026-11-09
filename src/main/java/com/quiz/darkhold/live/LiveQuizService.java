@@ -74,13 +74,13 @@ public class LiveQuizService {
         Challenge challenge = challenges.findById(challengeId)
                 .orElseThrow(() -> failure(HttpStatus.NOT_FOUND, "live.error.quizNotFound"));
         var owner = users.findByEmail(host);
-        require(owner != null && Objects.equals(challenge.getChallengeOwner(), owner.getId()),
+        require(owner != null && (Objects.equals(challenge.getChallengeOwner(), owner.getId())
+                        || owner.canManageAllChallenges()),
                 HttpStatus.FORBIDDEN, "live.error.ownerOnly");
         require(challenge.getQuestionSets() != null && !challenge.getQuestionSets().isEmpty(),
                 HttpStatus.BAD_REQUEST, "live.error.noQuestions");
         LiveState state = new LiveState();
         state.title = challenge.getTitle();
-        state.wordCloudFuzzy = challenge.isWordCloudFuzzy();
         state.questions = new ArrayList<>(challenge.getQuestionSets());
         LiveRoom room = new LiveRoom();
         room.setPin(newPin());
@@ -391,8 +391,7 @@ public class LiveQuizService {
     }
 
     private List<Map<String, Object>> wordCloud(final LiveState state, final QuestionSet question) {
-        String mode = question.getCorrectOptions();
-        boolean fuzzy = "FUZZY".equalsIgnoreCase(mode) || (!"EXACT".equalsIgnoreCase(mode) && state.wordCloudFuzzy);
+        boolean fuzzy = !"EXACT".equalsIgnoreCase(question.getCorrectOptions());
         List<String> submitted = state.players.values().stream()
                 .filter(p -> !p.removed && p.answeredQuestion == state.questionIndex && p.answer != null)
                 .map(p -> p.answer).toList();

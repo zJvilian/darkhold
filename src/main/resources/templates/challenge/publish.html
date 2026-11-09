@@ -115,7 +115,7 @@
                         <div class="empty-state-icon-lobby">
                             <i class="fas fa-user-plus"></i>
                         </div>
-                        <p class="empty-state-text-lobby">Waiting for players to join...</p>
+                        <p class="empty-state-text-lobby" th:text="#{game.lobby.emptyState}">Waiting for players to join...</p>
                     </div>
 
                     <!-- Hidden table for WebSocket compatibility -->
@@ -132,24 +132,24 @@
                     <div class="info-card">
                         <h3 class="info-card-title">
                             <i class="fas fa-lightbulb"></i>
-                            <span>Quick Tips</span>
+                            <span th:text="#{game.lobby.tipsTitle}">Quick Tips</span>
                         </h3>
                         <ul class="info-list">
                             <li class="info-list-item">
                                 <i class="fas fa-circle"></i>
-                                <span>Share the PIN with your participants</span>
+                                <span th:text="#{game.lobby.tip1}">Share the PIN with your participants</span>
                             </li>
                             <li class="info-list-item">
                                 <i class="fas fa-circle"></i>
-                                <span>Players will appear here as they join</span>
+                                <span th:text="#{game.lobby.tip2}">Players will appear here as they join</span>
                             </li>
                             <li class="info-list-item">
                                 <i class="fas fa-circle"></i>
-                                <span>Start the game when everyone is ready</span>
+                                <span th:text="#{game.lobby.tip3}">Start the game when everyone is ready</span>
                             </li>
                             <li class="info-list-item">
                                 <i class="fas fa-circle"></i>
-                                <span>You'll moderate the game from your screen</span>
+                                <span th:text="#{game.lobby.tip4}">You'll moderate the game from your screen</span>
                             </li>
                         </ul>
                     </div>
@@ -158,9 +158,9 @@
                     <div class="info-card">
                         <h3 class="info-card-title">
                             <i class="fas fa-info-circle"></i>
-                            <span>How Players Join</span>
+                            <span th:text="#{game.lobby.howToJoin}">How Players Join</span>
                         </h3>
-                        <p class="info-card-text">
+                        <p class="info-card-text" th:text="#{game.lobby.howToJoinText}">
                             Players can join by visiting your Kahvoid URL and entering the PIN displayed above.
                             They'll be added to the lobby in real-time.
                         </p>
@@ -198,13 +198,6 @@
             }
         }
 
-        // Player names arrive from the network, so never interpolate them raw
-        function escapePlayerName(value) {
-            const div = document.createElement('div');
-            div.textContent = value == null ? '' : String(value);
-            return div.innerHTML.replace(/"/g, '&quot;');
-        }
-
         // Enhance the showGreeting function to use the new grid layout
         const originalShowGreeting = window.showGreeting;
         window.showGreeting = function(users) {
@@ -225,7 +218,7 @@
                         <div class="player-avatar">
                             <i class="fas fa-user"></i>
                         </div>
-                        <span class="player-name">${escapePlayerName(user)}</span>
+                        <span class="player-name">${escapeHtml(user)}</span>
                     </div>
                 `).join('');
                 if (emptyState) emptyState.style.display = 'none';

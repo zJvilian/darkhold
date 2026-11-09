@@ -109,18 +109,19 @@ function renderTeamView() {
     // Render unassigned players
     unassignedDiv.innerHTML = '';
     if (unassigned.length === 0) {
-        unassignedDiv.innerHTML = '<span class="text-muted">All players assigned</span>';
+        unassignedDiv.innerHTML = '<span class="text-muted">' + escapeHtml(LanguageManager.text('client.publish.allAssigned')) + '</span>';
     } else {
         unassigned.forEach(player => {
             let badge = document.createElement('div');
             badge.className = 'team-member-item';
             badge.innerHTML = `
                 <span>${escapeHtml(player)}</span>
-                <select class="team-assign-dropdown" onchange="assignPlayerToTeam('${escapeHtml(player)}', this.value)">
-                    <option value="">Assign to...</option>
+                <select class="team-assign-dropdown">
+                    <option value="">${escapeHtml(LanguageManager.text('client.publish.assignTo'))}</option>
                     ${teamData.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('')}
                 </select>
             `;
+            badge.querySelector('select').addEventListener('change', e => assignPlayerToTeam(player, e.target.value));
             unassignedDiv.appendChild(badge);
         });
     }
@@ -136,15 +137,12 @@ function renderTeamView() {
                     <span class="team-color-dot team-color-dot-${team.color}"></span>
                     ${escapeHtml(team.name)}
                 </h5>
-                <div class="team-column-count">${(team.members || []).length} members</div>
+                <div class="team-column-count">${escapeHtml(LanguageManager.text('client.publish.members', (team.members || []).length))}</div>
             </div>
             <div class="team-members-list">
                 ${(team.members || []).map(m => `
                     <div class="team-member-item">
                         <span>${escapeHtml(m)}</span>
-                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFromTeam('${escapeHtml(m)}')">
-                            &times;
-                        </button>
                     </div>
                 `).join('')}
             </div>
@@ -172,12 +170,6 @@ function assignPlayerToTeam(username, teamName) {
     .catch(() => alert(LanguageManager.text('client.request.network')));
 }
 
-function removeFromTeam(username) {
-    // Removing a player means assigning them to no team
-    // For now, we'll just refresh - backend would need unassign endpoint
-    loadTeamsAndRender();
-}
-
 function autoAssignAllPlayers() {
     let pin = document.getElementById('quizPin').value;
     let assignmentMethod = document.getElementById('assignmentMethod')?.value || 'BALANCED';
@@ -192,7 +184,7 @@ function autoAssignAllPlayers() {
     let unassigned = allPlayers.filter(p => !assignedPlayers.has(p) && p !== moderator);
 
     if (unassigned.length === 0) {
-        alert('All players are already assigned to teams');
+        alert(LanguageManager.text('client.publish.allAlreadyAssigned'));
         return;
     }
 
@@ -229,7 +221,7 @@ function escapeHtml(text) {
     if (!text) return '';
     let div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    return div.innerHTML.replace(/"/g, '&quot;');
 }
 
 function showGreeting(message) {

@@ -249,6 +249,8 @@ function waitAndShowAnswer(elem) {
             if (!isAnswerSelected) {
                 isAnswerSelected = true;
             }
+            // Submit now: the server times the answer, so it must not wait for the timer to run out.
+            saveAnswerOnAjax();
         } else {
             console.log('answer already selected !!!');
         }
@@ -326,6 +328,7 @@ function waitAndShowTrueFalse(elem) {
 
     hideTrueFalseOptions();
     endTime = new Date().getTime();
+    saveAnswerOnAjax();
 }
 
 function hideTrueFalseOptions() {
@@ -369,9 +372,6 @@ function submitTypeAnswer() {
 }
 
 function validateTypeAnswerOnServer(userAnswer) {
-    let username = document.getElementById("user").value;
-    let timeTook = endTime - startTime;
-
     let xhr = new XMLHttpRequest();
     xhr.open('POST', "/validate_answer/");
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -393,7 +393,7 @@ function validateTypeAnswerOnServer(userAnswer) {
             document.getElementById('selectedOptions').value = "incorrect";
         }
     };
-    xhr.send(encodeURI('userAnswer=' + userAnswer + "&user=" + username + "&timeTook=" + timeTook));
+    xhr.send('userAnswer=' + encodeURIComponent(userAnswer));
 }
 
 function hideOptions() {
@@ -437,12 +437,10 @@ function hideOptions() {
 
 }
 
+// The server derives player, correctness and timing; the client only reports the chosen option.
+// Sent on click, and again on timeout (which the server ignores if the player already answered).
 function saveAnswerOnAjax() {
-    let selectedOptions = document.getElementById("selectedOptions").value;
-    console.log("selectedOptions is " + selectedOptions);
-    let timeTookForFirstClick = endTime - startTime;
-    console.log('Execution time: ' + timeTookForFirstClick);
-    let username = document.getElementById("user").value;
+    let selectedAnswer = document.getElementById("selectedAnswer").value;
     xhr = new XMLHttpRequest();
     xhr.open('POST', "/answer/");
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -462,8 +460,7 @@ function saveAnswerOnAjax() {
             console.log('Request failed.  Returned status of ' + xhr.status);
         }
     };
-    xhr.send(encodeURI('selectedOptions=' + selectedOptions
-        + "&user=" + username + "&timeTook=" + timeTookForFirstClick));
+    xhr.send('selectedAnswer=' + encodeURIComponent(selectedAnswer));
 }
 
 function showScoreboard() {
@@ -626,8 +623,7 @@ async function submitSortingAnswer() {
         const response = await fetch('/validate_answer/', {
             method: 'POST',
             headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/x-www-form-urlencoded'}),
-            body: new URLSearchParams({userAnswer: [...sortingSelection].join(','),
-                user: document.getElementById('user').value, timeTook: endTime - startTime})
+            body: new URLSearchParams({userAnswer: [...sortingSelection].join(',')})
         });
         if (!response.ok) throw new Error(LanguageManager.text('live.requestFailed'));
         document.getElementById('selectedOptions').value = await response.text();

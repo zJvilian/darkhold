@@ -38,6 +38,20 @@ class AnswerValidationServiceTest {
         }
     }
 
+    @Test
+    void validateSelectionAcceptsAnyOfSeveralCorrectOptionsAndIgnoresOtherTypes() {
+        var multiple = makeQuestion(QuestionType.MULTIPLE_CHOICE, null, null);
+        multiple.setCorrectOptions("A,C");
+        assertTrue(service.validateSelection(multiple, "c"));
+        assertFalse(service.validateSelection(multiple, "B"));
+        assertFalse(service.validateSelection(multiple, ""));
+        var trueFalse = makeQuestion(QuestionType.TRUE_FALSE, null, null);
+        trueFalse.setCorrectOptions("TRUE");
+        assertTrue(service.validateSelection(trueFalse, "TRUE"));
+        assertFalse(service.validateSelection(trueFalse, "FALSE"));
+        assertFalse(service.validateSelection(makeQuestion(QuestionType.TYPE_ANSWER, "A", null), "A"));
+    }
+
     @Nested
     @DisplayName("validateAnswer - null handling")
     class NullHandling {

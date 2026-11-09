@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -66,8 +67,9 @@ public class CurrentGame {
      * @param pin      of the game
      * @param userName of user
      */
+    @Transactional
     public void saveUserToActiveGame(final String pin, final String userName) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             List<String> users = gameSession.getUsersList();
@@ -86,8 +88,9 @@ public class CurrentGame {
      * @param pin          of the game
      * @param questionSets of the game
      */
+    @Transactional
     public void saveQuestionsToActiveGame(final String pin, final List<QuestionSet> questionSets) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             List<QuestionSet> questions = gameSession.getQuestionsList();
@@ -139,8 +142,9 @@ public class CurrentGame {
      *
      * @param pin of game
      */
+    @Transactional
     public void incrementQuestionCount(final String pin) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             Integer questionNo = gameSession.getCurrentQuestionNo();
@@ -169,8 +173,9 @@ public class CurrentGame {
      * @param name   of user
      * @param status success or not
      */
+    @Transactional
     public void saveCurrentScore(final String pin, final String name, final Integer status) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             Map<String, Integer> scores = gameSession.getScoresMap();
@@ -235,8 +240,9 @@ public class CurrentGame {
      * @param isCorrect whether the answer was correct
      * @return the new streak value
      */
+    @Transactional
     public int updateStreak(final String pin, final String username, final boolean isCorrect) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             Map<String, Integer> streaks = gameSession.getStreakMap();
@@ -273,8 +279,9 @@ public class CurrentGame {
      *
      * @param pin game pin
      */
+    @Transactional
     public void savePreviousScores(final String pin) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             Map<String, Integer> currentScores = gameSession.getScoresMap();
@@ -299,6 +306,53 @@ public class CurrentGame {
         return new HashMap<>();
     }
 
+    // ==================== Answer Tracking Methods ====================
+
+    /**
+     * Record that a player answered a question. Atomic: only the first call per player and question wins.
+     *
+     * @param pin        game pin
+     * @param username   player
+     * @param questionNo zero-based question number
+     * @return true if this was the first answer from the player for that question
+     */
+    @Transactional
+    public boolean markAnswered(final String pin, final String username, final int questionNo) {
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
+        if (session.isEmpty()) {
+            return false;
+        }
+        CurrentGameSession gameSession = session.get();
+        Map<String, Integer> answered = gameSession.getAnsweredMap();
+        Integer last = answered.get(username);
+        if (last != null && last >= questionNo) {
+            return false;
+        }
+        answered.put(username, questionNo);
+        gameSession.setAnsweredMap(answered);
+        repository.save(gameSession);
+        return true;
+    }
+
+    /**
+     * Mark a question as started. The first caller per question snapshots the scores as the
+     * baseline for the scoreboard delta; later callers (other players loading the page) are no-ops.
+     *
+     * @param pin        game pin
+     * @param questionNo zero-based question number
+     */
+    @Transactional
+    public void startQuestion(final String pin, final int questionNo) {
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
+        if (session.isPresent() && !Integer.valueOf(questionNo).equals(session.get().getStartedQuestionNo())) {
+            CurrentGameSession gameSession = session.get();
+            gameSession.setStartedQuestionNo(questionNo);
+            Map<String, Integer> scores = gameSession.getScoresMap();
+            gameSession.setPreviousScoresMap(scores != null ? new HashMap<>(scores) : new HashMap<>());
+            repository.save(gameSession);
+        }
+    }
+
     // ==================== Game Status Methods ====================
 
     /**
@@ -307,8 +361,9 @@ public class CurrentGame {
      * @param pin    game pin
      * @param status new status
      */
+    @Transactional
     public void setGameStatus(final String pin, final GameStatus status) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             gameSession.setGameStatus(status);
@@ -338,8 +393,9 @@ public class CurrentGame {
      * @param pin game pin
      * @return true if paused successfully
      */
+    @Transactional
     public boolean pauseGame(final String pin) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             gameSession.setGameStatus(GameStatus.PAUSED);
@@ -357,8 +413,9 @@ public class CurrentGame {
      * @param pin game pin
      * @return elapsed pause time in milliseconds (for timer adjustment)
      */
+    @Transactional
     public long resumeGame(final String pin) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             gameSession.setGameStatus(GameStatus.ACTIVE);
@@ -384,8 +441,9 @@ public class CurrentGame {
      * @param username user to remove
      * @return true if removed successfully
      */
+    @Transactional
     public boolean removeUserFromGame(final String pin, final String username) {
-        Optional<CurrentGameSession> session = repository.findByPin(pin);
+        Optional<CurrentGameSession> session = repository.lockByPin(pin);
         if (session.isPresent()) {
             CurrentGameSession gameSession = session.get();
             List<String> users = gameSession.getUsersList();

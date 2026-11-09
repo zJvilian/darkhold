@@ -56,6 +56,29 @@ public class AnswerValidationService {
     }
 
     /**
+     * Validate a single chosen option (A-D, TRUE or FALSE) as posted by the click-to-answer flow.
+     * With several correct options, picking any one of them is correct. Typed and sorting answers
+     * are validated through {@link #validateAnswer} instead, so they never match here.
+     *
+     * @param question the question being answered
+     * @param selected the chosen option, blank when the player timed out
+     * @return true if the choice is correct
+     */
+    public boolean validateSelection(final QuestionSet question, final String selected) {
+        if (question == null || selected == null || selected.isBlank()) {
+            return false;
+        }
+        QuestionType questionType = question.getQuestionType() == null
+                ? QuestionType.MULTIPLE_CHOICE : question.getQuestionType();
+        return switch (questionType) {
+            case MULTIPLE_CHOICE -> question.getCorrectOptions() != null
+                    && optionSet(question.getCorrectOptions()).contains(selected.strip().toUpperCase(Locale.ROOT));
+            case TRUE_FALSE -> validateTrueFalse(question, selected);
+            default -> false;
+        };
+    }
+
+    /**
      * Check if this question type should be scored.
      */
     public boolean shouldScore(final QuestionSet question) {

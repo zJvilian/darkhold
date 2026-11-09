@@ -72,7 +72,7 @@ class CurrentGameTest {
     @Test
     void saveUserToActiveGame() {
         CurrentGameSession session = createMockSession();
-        when(repository.findByPin("1234")).thenReturn(Optional.of(session));
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
 
         Assertions.assertAll(() -> currentGame.saveUserToActiveGame("1234", "admin"));
     }
@@ -80,7 +80,7 @@ class CurrentGameTest {
     @Test
     void saveQuestionsToActiveGame() {
         CurrentGameSession session = createMockSession();
-        when(repository.findByPin("1234")).thenReturn(Optional.of(session));
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
 
         List<QuestionSet> questionSets = new ArrayList<>();
         Assertions.assertAll(() -> currentGame.saveQuestionsToActiveGame("1234", questionSets));
@@ -106,7 +106,7 @@ class CurrentGameTest {
     @Test
     void incrementQuestionCount() {
         CurrentGameSession session = createMockSession();
-        when(repository.findByPin("1234")).thenReturn(Optional.of(session));
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
 
         Assertions.assertAll(() -> currentGame.incrementQuestionCount("1234"));
     }
@@ -122,7 +122,7 @@ class CurrentGameTest {
     @Test
     void saveCurrentScore() {
         CurrentGameSession session = createMockSession();
-        when(repository.findByPin("1234")).thenReturn(Optional.of(session));
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
 
         Assertions.assertAll(() -> currentGame.saveCurrentScore("1234", "admin", 1));
         Assertions.assertAll(() -> currentGame.saveCurrentScore("1234", "test", 1));
@@ -137,4 +137,29 @@ class CurrentGameTest {
         Assertions.assertEquals(5, scores.get("admin"));
     }
 
+    @Test
+    void markAnswered_onlyFirstAnswerPerQuestionCounts() {
+        CurrentGameSession session = createMockSession();
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
+
+        Assertions.assertAll(
+                () -> Assertions.assertTrue(currentGame.markAnswered("1234", "tester", 0)),
+                () -> Assertions.assertFalse(currentGame.markAnswered("1234", "tester", 0)),
+                () -> Assertions.assertTrue(currentGame.markAnswered("1234", "tester", 1)),
+                () -> Assertions.assertTrue(currentGame.markAnswered("1234", "other", 1)));
+    }
+
+    @Test
+    void startQuestion_snapshotsScoresOncePerQuestion() {
+        CurrentGameSession session = createMockSession();
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
+
+        currentGame.startQuestion("1234", 2);
+        session.setScoresMap(new java.util.HashMap<>(java.util.Map.of("admin", 900)));
+        currentGame.startQuestion("1234", 2);
+
+        Assertions.assertEquals(5, session.getPreviousScoresMap().get("admin"));
+        currentGame.startQuestion("1234", 3);
+        Assertions.assertEquals(900, session.getPreviousScoresMap().get("admin"));
+    }
 }

@@ -181,6 +181,37 @@ class ResultServiceTest {
         }
 
         @Test
+        @DisplayName("Should return the already saved result instead of saving a second one")
+        void shouldBeIdempotentPerPin() {
+            GameResult existing = new GameResult();
+            when(gameResultRepository.findFirstByPinOrderByIdAsc("12345")).thenReturn(Optional.of(existing));
+
+            GameResult result = resultService.saveGameResult("12345", "Quiz");
+
+            assertEquals(existing, result);
+            verify(gameResultRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should give tied scores the same rank and skip the next one")
+        void shouldUseCompetitionRankingForTies() {
+            Map<String, Integer> scores = new LinkedHashMap<>();
+            scores.put("a", 500);
+            scores.put("b", 500);
+            scores.put("c", 100);
+            setupBasicMocks("12345", createTestGame("12345", "host", false));
+            when(currentGame.getCurrentScore("12345")).thenReturn(scores);
+            ArgumentCaptor<GameResult> captor = ArgumentCaptor.forClass(GameResult.class);
+            when(gameResultRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+            resultService.saveGameResult("12345", "Quiz");
+
+            List<Integer> ranks = captor.getValue().getParticipantResults().stream()
+                    .map(ParticipantResult::getFinalRank).toList();
+            assertEquals(List.of(1, 1, 3), ranks);
+        }
+
+        @Test
         @DisplayName("Should skip moderator from participant results")
         void shouldSkipModeratorFromParticipantResults() {
             Game game = createTestGame("12345", "host", false);

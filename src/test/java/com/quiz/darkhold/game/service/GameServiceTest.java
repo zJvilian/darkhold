@@ -1,6 +1,8 @@
 package com.quiz.darkhold.game.service;
 
+import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.model.GameMode;
+import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.game.model.GameStatus;
 import com.quiz.darkhold.game.model.QuestionPointer;
 import com.quiz.darkhold.preview.repository.CurrentGame;
@@ -15,6 +17,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -22,9 +26,13 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,11 +48,14 @@ class GameServiceTest {
     @Mock
     private TeamService teamService;
 
+    @Mock
+    private GameRepository gameRepository;
+
     private GameService gameService;
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(currentGame, previewService, teamService);
+        gameService = new GameService(currentGame, previewService, teamService, gameRepository);
     }
 
     @AfterEach
@@ -177,11 +188,9 @@ class GameServiceTest {
         }
 
         @Test
-        @DisplayName("setGameStatus should use session pin")
-        void setGameStatusShouldUseSessionPin() {
-            setSessionPin("12345");
-
-            gameService.setGameStatus(GameStatus.ACTIVE);
+        @DisplayName("setGameStatus should use the given pin")
+        void setGameStatusShouldUseGivenPin() {
+            gameService.setGameStatus("12345", GameStatus.ACTIVE);
 
             verify(currentGame).setGameStatus("12345", GameStatus.ACTIVE);
         }
@@ -198,45 +207,41 @@ class GameServiceTest {
         }
 
         @Test
-        @DisplayName("pauseGame should use session pin")
-        void pauseGameShouldUseSessionPin() {
-            setSessionPin("12345");
+        @DisplayName("pauseGame should use the given pin")
+        void pauseGameShouldUseGivenPin() {
             when(currentGame.pauseGame("12345")).thenReturn(true);
 
-            boolean result = gameService.pauseGame();
+            boolean result = gameService.pauseGame("12345");
 
             assertTrue(result);
         }
 
         @Test
-        @DisplayName("resumeGame should use session pin")
-        void resumeGameShouldUseSessionPin() {
-            setSessionPin("12345");
+        @DisplayName("resumeGame should use the given pin")
+        void resumeGameShouldUseGivenPin() {
             when(currentGame.resumeGame("12345")).thenReturn(5000L);
 
-            long elapsed = gameService.resumeGame();
+            long elapsed = gameService.resumeGame("12345");
 
             assertEquals(5000L, elapsed);
         }
 
         @Test
-        @DisplayName("kickPlayer should use session pin")
-        void kickPlayerShouldUseSessionPin() {
-            setSessionPin("12345");
+        @DisplayName("kickPlayer should use the given pin")
+        void kickPlayerShouldUseGivenPin() {
             when(currentGame.removeUserFromGame("12345", "badPlayer")).thenReturn(true);
 
-            boolean result = gameService.kickPlayer("badPlayer");
+            boolean result = gameService.kickPlayer("12345", "badPlayer");
 
             assertTrue(result);
         }
 
         @Test
-        @DisplayName("getParticipantCount should use session pin")
-        void getParticipantCountShouldUseSessionPin() {
-            setSessionPin("12345");
+        @DisplayName("getParticipantCount should use the given pin")
+        void getParticipantCountShouldUseGivenPin() {
             when(currentGame.getParticipantCount("12345")).thenReturn(5);
 
-            int count = gameService.getParticipantCount();
+            int count = gameService.getParticipantCount("12345");
 
             assertEquals(5, count);
         }
@@ -250,6 +255,84 @@ class GameServiceTest {
             GameMode mode = gameService.getGameMode();
 
             assertEquals(GameMode.PRACTICE, mode);
+        }
+    }
+
+    @Nested
+    @DisplayName("calculateScoreWithStreak overflow")
+    class ScoreOverflowTests {
+
+        @Test
+        @DisplayName("Should clamp to int instead of overflowing for huge point values")
+        void shouldClampInsteadOfOverflowing() {
+            assertEquals(Integer.MAX_VALUE, gameService.calculateScoreWithStreak(Integer.MAX_VALUE, 1000, 6));
+        }
+    }
+
+    @Nested
+    @DisplayName("Answer tracking and host check tests")
+    class AnswerTrackingTests {
+
+        @Test
+        @DisplayName("Should never guess another game when the session has no pin")
+        void shouldNotFallBackWithoutSessionPin() {
+            RequestContextHolder.setRequestAttributes(
+                    new ServletRequestAttributes(new MockHttpServletRequest()));
+
+            assertThrows(IllegalStateException.class, () -> gameService.findModerator());
+            verifyNoInteractions(previewService);
+        }
+
+        @Test
+        @DisplayName("Should remember the question shown per HTTP session and keep the first start time")
+        void shouldRememberShownQuestion() {
+            setSessionPin("12345");
+
+            gameService.questionShown(2);
+            long first = gameService.elapsedMillis();
+            gameService.questionShown(2);
+
+            assertEquals(2, gameService.shownQuestionNo());
+            assertTrue(first >= 0 && gameService.elapsedMillis() >= first);
+            verify(currentGame, times(2)).startQuestion("12345", 2);
+        }
+
+        @Test
+        @DisplayName("Should report no question and unbounded elapsed time before any page load")
+        void shouldReportNoQuestionBeforePageLoad() {
+            setSessionPin("12345");
+
+            assertNull(gameService.shownQuestionNo());
+            assertEquals(Long.MAX_VALUE, gameService.elapsedMillis());
+        }
+
+        @Test
+        @DisplayName("Host check requires the moderator's name AND a role (guests pick any name)")
+        void hostCheckShouldRejectGuestWithModeratorName() {
+            when(currentGame.findModerator("12345")).thenReturn("host@x.com");
+            var host = new UsernamePasswordAuthenticationToken("host@x.com", "n/a",
+                    List.of(new SimpleGrantedAuthority("ROLE_MODERATOR")));
+            var guest = new UsernamePasswordAuthenticationToken("host@x.com", "n/a", List.of());
+            var other = new UsernamePasswordAuthenticationToken("other", "n/a",
+                    List.of(new SimpleGrantedAuthority("ROLE_MODERATOR")));
+
+            assertTrue(gameService.isModerator("12345", host));
+            assertFalse(gameService.isModerator("12345", guest));
+            assertFalse(gameService.isModerator("12345", other));
+            assertFalse(gameService.isModerator("12345", null));
+            assertFalse(gameService.isModerator(null, host));
+        }
+
+        @Test
+        @DisplayName("markGame should update the persisted game status")
+        void markGameShouldUpdateStatus() {
+            Game game = new Game();
+            when(gameRepository.findByPin("12345")).thenReturn(game);
+
+            gameService.markGame("12345", com.quiz.darkhold.game.entity.GameStatus.STARTED);
+
+            assertEquals("STARTED", game.getGameStatus());
+            verify(gameRepository).save(game);
         }
     }
 

@@ -264,5 +264,16 @@ class ScoreControllerTest {
 
     // Note: WebSocket @MessageMapping methods cannot be tested with MockMvc
     // They require WebSocket integration testing which would be implemented separately
-    // The scoresFetch() method would need @SpringBootTest with WebSocket client
+    @org.junit.jupiter.api.Test
+    void nextQuestionIsIgnoredForNonModerators() {
+        java.security.Principal player = () -> "player1";
+
+        scoreController.scoresFetch(testPin, player);
+        verify(messagingTemplate, org.mockito.Mockito.never())
+                .convertAndSend(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.<Object>any());
+
+        when(gameService.isModerator(testPin, player)).thenReturn(true);
+        scoreController.scoresFetch(testPin, player);
+        verify(messagingTemplate).convertAndSend("/topic/12345/ready_for_question", true);
+    }
 }

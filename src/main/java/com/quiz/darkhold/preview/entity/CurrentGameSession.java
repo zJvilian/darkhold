@@ -75,6 +75,15 @@ public class CurrentGameSession {
     @Column(name = "paused_at")
     private Long pausedAt;
 
+    @Column(name = "created_at")
+    private Long createdAt;
+
+    @Column(name = "answered_json", columnDefinition = "TEXT")
+    private String answeredJson;
+
+    @Column(name = "started_question_no")
+    private Integer startedQuestionNo;
+
     private static final Logger logger = LogManager.getLogger(CurrentGameSession.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -89,6 +98,7 @@ public class CurrentGameSession {
         this.pin = pin;
         this.moderator = moderator;
         this.currentQuestionNo = 0;
+        this.createdAt = System.currentTimeMillis();
     }
 
     // Getters and Setters
@@ -312,6 +322,47 @@ public class CurrentGameSession {
 
     public void setPausedAt(final Long pausedAt) {
         this.pausedAt = pausedAt;
+    }
+
+    public Long getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(final Long createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Integer getStartedQuestionNo() {
+        return startedQuestionNo;
+    }
+
+    public void setStartedQuestionNo(final Integer startedQuestionNo) {
+        this.startedQuestionNo = startedQuestionNo;
+    }
+
+    /**
+     * Username to the number of the last question that player answered.
+     *
+     * @return answered map, never null
+     */
+    public Map<String, Integer> getAnsweredMap() {
+        if (answeredJson == null || answeredJson.isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            return objectMapper.readValue(answeredJson, new TypeReference<Map<String, Integer>>() { });
+        } catch (JacksonException ex) {
+            logger.error("Error deserializing answered map", ex);
+            return new HashMap<>();
+        }
+    }
+
+    public void setAnsweredMap(final Map<String, Integer> answered) {
+        try {
+            this.answeredJson = objectMapper.writeValueAsString(answered);
+        } catch (JacksonException ex) {
+            logger.error("Error serializing answered map", ex);
+        }
     }
 
     // Team JSON helpers

@@ -1,9 +1,12 @@
 package com.quiz.darkhold.game.service;
 
+import com.quiz.darkhold.challenge.entity.QuestionSet;
+import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.model.GameMode;
 import com.quiz.darkhold.game.model.GameStatus;
 import com.quiz.darkhold.game.model.QuestionPointer;
 import com.quiz.darkhold.game.model.ScoreResult;
+import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.preview.service.PreviewService;
@@ -12,15 +15,21 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class GameService {
+    private static final String SESSION_QUESTION_NO = "shownQuestionNo";
+    private static final String SESSION_QUESTION_SHOWN_AT = "shownQuestionAt";
+    private static final int MAX_TIME_FACTOR = 1000;
+
     private final Logger logger = LogManager.getLogger(GameService.class);
 
     private final CurrentGame currentGame;
@@ -29,11 +38,14 @@ public class GameService {
 
     private final TeamService teamService;
 
+    private final GameRepository gameRepository;
+
     public GameService(final CurrentGame currentGame, final PreviewService previewService,
-                       final TeamService teamService) {
+                       final TeamService teamService, final GameRepository gameRepository) {
         this.currentGame = currentGame;
         this.previewService = previewService;
         this.teamService = teamService;
+        this.gameRepository = gameRepository;
     }
 
     public PublishInfo getActiveChallenge() {
@@ -88,6 +100,116 @@ public class GameService {
         return currentGame.findModerator(pin);
     }
 
+    /**
+     * Whether the principal is the logged-in host of the session's game. Guests may type any name when
+     * joining, so a matching name alone is not enough: the principal must also hold a role.
+     *
+     * @param principal caller
+     * @return true if the caller is the moderator of the session's game
+     */
+    public boolean isModerator(final Principal principal) {
+        return isModerator(currentPin(), principal);
+    }
+
+    /**
+     * Whether the principal is the logged-in host of the given game.
+     *
+     * @param pin       game PIN
+     * @param principal caller
+     * @return true if the caller is the moderator of that game
+     */
+    public boolean isModerator(final String pin, final Principal principal) {
+        String moderator = pin == null ? null : currentGame.findModerator(pin);
+        return moderator != null && principal instanceof Authentication auth
+                && !auth.getAuthorities().isEmpty() && moderator.equals(auth.getName());
+    }
+
+    /**
+     * Set the status of the persisted game (not the live session).
+     *
+     * @param pin    game PIN
+     * @param status new status
+     */
+    public void markGame(final String pin, final com.quiz.darkhold.game.entity.GameStatus status) {
+        Game game = gameRepository.findByPin(pin);
+        if (game != null) {
+            game.setGameStatus(status.name());
+            gameRepository.save(game);
+        }
+    }
+
+    /**
+     * Title of the challenge a game was created from.
+     *
+     * @param pin game PIN
+     * @return challenge title, or null if unknown
+     */
+    public String challengeTitle(final String pin) {
+        return gameRepository.findByPin(pin) == null
+                ? null : previewService.fetchQuestionsFromPin(pin).getChallengeName();
+    }
+
+    // ==================== Answer Tracking Methods ====================
+
+    /**
+     * Called when a player's game page loads: snapshots the baseline scores once per question and
+     * remembers, per HTTP session, which question this player was shown and when (a reload keeps the
+     * original start time).
+     *
+     * @param questionNo zero-based question number
+     */
+    public void questionShown(final int questionNo) {
+        currentGame.startQuestion(currentPin(), questionNo);
+        HttpSession session = httpSession();
+        if (session != null && !Integer.valueOf(questionNo).equals(session.getAttribute(SESSION_QUESTION_NO))) {
+            session.setAttribute(SESSION_QUESTION_NO, questionNo);
+            session.setAttribute(SESSION_QUESTION_SHOWN_AT, System.currentTimeMillis());
+        }
+    }
+
+    /**
+     * The question this HTTP session was last shown, or null if none.
+     *
+     * @return zero-based question number
+     */
+    public Integer shownQuestionNo() {
+        HttpSession session = httpSession();
+        return session != null ? (Integer) session.getAttribute(SESSION_QUESTION_NO) : null;
+    }
+
+    /**
+     * Server-side time since this HTTP session was shown its question.
+     *
+     * @return elapsed milliseconds
+     */
+    public long elapsedMillis() {
+        HttpSession session = httpSession();
+        Long shownAt = session != null ? (Long) session.getAttribute(SESSION_QUESTION_SHOWN_AT) : null;
+        return shownAt != null ? Math.max(0, System.currentTimeMillis() - shownAt) : Long.MAX_VALUE;
+    }
+
+    /**
+     * Atomically record that the player answered a question.
+     *
+     * @param user       player
+     * @param questionNo zero-based question number
+     * @return false if the player already answered that question
+     */
+    public boolean markAnswered(final String user, final int questionNo) {
+        return currentGame.markAnswered(currentPin(), user, questionNo);
+    }
+
+    /**
+     * Question by number in the current game.
+     *
+     * @param questionNo zero-based question number
+     * @return the question, or null if out of range
+     */
+    public QuestionSet questionAt(final int questionNo) {
+        List<QuestionSet> questions = currentGame.getQuestionsOnAPin(currentPin());
+        return questionNo >= 0 && questionNo < questions.size() ? questions.get(questionNo) : null;
+    }
+
     public Map<String, Integer> getCurrentScore() {
         String pin = currentPin();
         logger.info("current pin is {}", pin);
@@ -98,19 +220,15 @@ public class GameService {
      * Get current game PIN from HTTP session.
      * This enables support for multiple concurrent games.
      *
-     * @return game PIN from session, or fallback to legacy single-game lookup
+     * @return game PIN from session
+     * @throws IllegalStateException if there is no game in the session; never guess another game
      */
     private String currentPin() {
-        // Try to get PIN from HTTP session first (supports concurrent games)
         String sessionPin = getSessionPin();
-        if (sessionPin != null) {
-            logger.debug("Using PIN from session: {}", sessionPin);
-            return sessionPin;
+        if (sessionPin == null) {
+            throw new IllegalStateException("No game PIN in session");
         }
-        // Fallback to legacy single-game behavior for backwards compatibility
-        logger.warn("No PIN in session, falling back to getActiveChallenge()");
-        PublishInfo publishInfo = previewService.getActiveChallenge();
-        return publishInfo.getPin();
+        return sessionPin;
     }
 
     /**
@@ -119,14 +237,18 @@ public class GameService {
      * @return PIN from session, or null if not in HTTP context
      */
     private String getSessionPin() {
+        HttpSession session = httpSession();
+        return session != null ? (String) session.getAttribute("gamePin") : null;
+    }
+
+    private HttpSession httpSession() {
         ServletRequestAttributes attrs =
                 (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attrs == null) {
             return null;
         }
         HttpServletRequest request = attrs.getRequest();
-        HttpSession session = request.getSession(false);
-        return session != null ? (String) session.getAttribute("gamePin") : null;
+        return request.getSession(false);
     }
 
     public void cleanUpCurrentGame() {
@@ -163,14 +285,6 @@ public class GameService {
     }
 
     /**
-     * Save current scores before starting a new question.
-     */
-    public void savePreviousScores() {
-        String pin = currentPin();
-        currentGame.savePreviousScores(pin);
-    }
-
-    /**
      * Get previous scores for delta calculation.
      *
      * @return previous scores map
@@ -185,10 +299,10 @@ public class GameService {
     /**
      * Set game status.
      *
+     * @param pin    game PIN
      * @param status new status
      */
-    public void setGameStatus(final GameStatus status) {
-        String pin = currentPin();
+    public void setGameStatus(final String pin, final GameStatus status) {
         currentGame.setGameStatus(pin, status);
     }
 
@@ -203,30 +317,31 @@ public class GameService {
     }
 
     /**
-     * Pause the current game.
+     * Pause a game.
      *
+     * @param pin game PIN
      * @return true if paused
      */
-    public boolean pauseGame() {
-        String pin = currentPin();
+    public boolean pauseGame(final String pin) {
         return currentGame.pauseGame(pin);
     }
 
     /**
-     * Resume the current game.
+     * Resume a game.
      *
+     * @param pin game PIN
      * @return elapsed pause time in milliseconds
      */
-    public long resumeGame() {
-        String pin = currentPin();
+    public long resumeGame(final String pin) {
         return currentGame.resumeGame(pin);
     }
 
     /**
      * Skip to the next question.
+     *
+     * @param pin game PIN
      */
-    public void skipQuestion() {
-        String pin = currentPin();
+    public void skipQuestion(final String pin) {
         currentGame.incrementQuestionCount(pin);
     }
 
@@ -235,21 +350,21 @@ public class GameService {
     /**
      * Remove a player from the game (kick).
      *
+     * @param pin      game PIN
      * @param username player to remove
      * @return true if removed
      */
-    public boolean kickPlayer(final String username) {
-        String pin = currentPin();
+    public boolean kickPlayer(final String pin, final String username) {
         return currentGame.removeUserFromGame(pin, username);
     }
 
     /**
      * Get participant count (excluding moderator).
      *
+     * @param pin game PIN
      * @return participant count
      */
-    public int getParticipantCount() {
-        String pin = currentPin();
+    public int getParticipantCount(final String pin) {
         return currentGame.getParticipantCount(pin);
     }
 
@@ -263,7 +378,9 @@ public class GameService {
      */
     public int calculateScoreWithStreak(final int basePoints, final int timeFactor, final int streak) {
         int multiplier = ScoreResult.calculateStreakMultiplier(streak);
-        int finalScore = (basePoints * timeFactor * multiplier) / 1000;
+        // long: basePoints * timeFactor * multiplier overflows int for large point values
+        int finalScore = (int) Math.min(Integer.MAX_VALUE,
+                Math.max(0L, (long) basePoints * timeFactor * multiplier / MAX_TIME_FACTOR));
         logger.info("Score: base={}, time={}, streak={}, mult={}, final={}",
                 basePoints, timeFactor, streak, multiplier, finalScore);
         return finalScore;

@@ -490,13 +490,26 @@ class ChallengeServiceTest {
         }
 
         @Test
-        @DisplayName("ADMIN still cannot delete another user's challenge")
-        void adminCannotDelete() {
-            signInWithRole("ADMIN");
-            othersChallenge();
-
+        @DisplayName("ADMIN can delete another user's challenge; plain user cannot")
+        void adminCanDeleteButUserCannot() {
+            final Challenge challenge = othersChallenge();
+            signInWithRole("USER");
             assertEquals(false, challengeService.deleteChallenge(7L));
             verify(challengeRepository, never()).delete(any());
+
+            signInWithRole("ADMIN");
+            assertEquals(true, challengeService.deleteChallenge(7L));
+            verify(challengeRepository).delete(challenge);
+        }
+
+        @Test
+        @DisplayName("Challenge without an owner does not cause an NPE")
+        void nullOwnerIsNotEditableByPlainUser() {
+            signInWithRole("USER");
+            Challenge challenge = othersChallenge();
+            challenge.setChallengeOwner(null);
+
+            assertEquals(false, challengeService.deleteChallenge(7L));
         }
     }
 
@@ -709,5 +722,76 @@ class ChallengeServiceTest {
         assertNull(challengeService.updateCoverImage(9L, image));
         assertNull(foreign.getCoverImageUrl());
         verify(challengeRepository, never()).save(any(Challenge.class));
+    }
+
+    private ChallengeException importRows(final String question, final Object correct, final Object points)
+            throws IOException {
+        byte[] data;
+        try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
+            var row = workbook.createSheet().createRow(0);
+            if (question != null) {
+                row.createCell(0).setCellValue(question);
+            }
+            row.createCell(1).setCellValue("One");
+            row.createCell(5).setCellValue(String.valueOf(correct));
+            row.createCell(8).setCellValue(String.valueOf(points));
+            workbook.write(output);
+            data = output.toByteArray();
+        }
+        return assertThrows(ChallengeException.class, () -> challengeService.readProcessAndSaveChallenge(
+                new MockMultipartFile("upload", "q.xlsx", "application/octet-stream", data), "T", ""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"E5", "a1", "Z"})
+    void excelImportRejectsInvalidCorrectOptionWithRowNumber(final String bad) throws IOException {
+        assertTrue(importRows("Q", bad, 1000).getErrorMessage().startsWith("Row 1: Invalid correct option"));
+    }
+
+    @Test
+    void excelImportRejectsOutOfRangePoints() throws IOException {
+        assertTrue(importRows("Q", "A", 2_000_000_000).getErrorMessage().contains("Points must be between"));
+    }
+
+    @Test
+    void excelImportHandlesNumericQuestionsLowercaseOptionsAndBlankRows() throws Exception {
+        byte[] data;
+        try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
+            var sheet = workbook.createSheet();
+            var row = sheet.createRow(0);
+            row.createCell(0).setCellValue(42); // numeric question cell
+            row.createCell(5).setCellValue(" a, b ");
+            sheet.createRow(1).createCell(1).setCellValue("orphan answer, no question");
+            workbook.write(output);
+            data = output.toByteArray();
+        }
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        challengeService.readProcessAndSaveChallenge(
+                new MockMultipartFile("upload", "q.xlsx", "application/octet-stream", data), "T", "");
+        var captured = ArgumentCaptor.forClass(Challenge.class);
+        verify(challengeRepository).save(captured.capture());
+        assertEquals(1, captured.getValue().getQuestionSets().size());
+        assertEquals("42", captured.getValue().getQuestionSets().getFirst().getQuestion());
+        assertEquals("A,B", captured.getValue().getQuestionSets().getFirst().getCorrectOptions());
+    }
+
+    @Test
+    void excelImportWithoutSheetsIsAFriendlyError() throws Exception {
+        byte[] data;
+        try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
+            workbook.write(output);
+            data = output.toByteArray();
+        }
+        var error = assertThrows(ChallengeException.class, () -> challengeService.readProcessAndSaveChallenge(
+                new MockMultipartFile("upload", "q.xlsx", "application/octet-stream", data), "T", ""));
+        assertTrue(error.getErrorMessage().contains("no sheets"));
+    }
+
+    @Test
+    void duplicateTitleIsRejectedBeforeAnythingIsSaved() throws Exception {
+        when(challengeRepository.existsByTitle("T")).thenReturn(true);
+        assertThrows(ChallengeException.class, () -> challengeService.readProcessAndSaveChallenge(
+                createValidExcelFile(), "T", ""));
+        verify(challengeRepository, never()).save(any());
     }
 }

@@ -99,4 +99,20 @@ class QuestionRequestTest {
         assertEquals("img.jpg", req.getImageUrl());
         assertEquals("vid.mp4", req.getVideoUrl());
     }
+
+    @Test
+    void pointsMustBeWithinRange() {
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var request = new QuestionRequest();
+            request.setChallengeId(1L);
+            request.setQuestion("Q");
+            request.setPoints(10_000);
+            var validator = factory.getValidator();
+            assertTrue(validator.validate(request).isEmpty());
+            request.setPoints(2_000_000_000);
+            assertEquals(1, validator.validate(request).size());
+            request.setPoints(-1);
+            assertEquals(1, validator.validate(request).size());
+        }
+    }
 }

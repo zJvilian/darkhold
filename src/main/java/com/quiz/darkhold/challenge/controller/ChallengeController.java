@@ -288,10 +288,10 @@ public class ChallengeController {
             com.quiz.darkhold.challenge.entity.Challenge challenge = challengeService.importFromJson(dto);
             return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                     "Successfully imported " + challenge.getTitle() + " !!!"));
-        } catch (java.io.IOException ioException) {
-            logger.error("Error importing challenge: {}", ioException.getMessage());
+        } catch (java.io.IOException | tools.jackson.core.JacksonException ioException) {
+            logger.error("Error importing challenge", ioException);
             return ResponseEntity.badRequest()
-                    .body(new ChallengeWithResponse(0L, "Failed to import: " + ioException.getMessage()));
+                    .body(new ChallengeWithResponse(0L, "Failed to import: the file is not a valid quiz export."));
         }
     }
 }

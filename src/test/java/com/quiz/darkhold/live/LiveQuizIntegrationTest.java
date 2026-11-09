@@ -224,7 +224,7 @@ class LiveQuizIntegrationTest {
                 .andExpect(content().string(containsString("Answer5,Answer6,Answer7,Answer8,Answer9,Answer10")))
                 .andExpect(content().string(containsString(
                         "Answer 5,Answer 6,Answer 7,Answer 8,Answer 9,Updated tenth answer")));
-        payload.put("answer10", "x".repeat(226));
+        payload.put("answer10", "x".repeat(256));
         mvc.perform(post("/api/question").with(owner).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(payload)))
                 .andExpect(status().isBadRequest());

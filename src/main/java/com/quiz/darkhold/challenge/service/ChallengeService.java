@@ -12,29 +12,31 @@ import com.quiz.darkhold.challenge.repository.QuestionSetRepository;
 import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.poi.openxml4j.exceptions.NotOfficeXmlFileException;
+import org.apache.poi.ooxml.POIXMLException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.Locale;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.Objects;
 
 @Service
 public class ChallengeService {
+    private static final int MAX_POINTS = 10_000;
     private final Logger logger = LogManager.getLogger(ChallengeService.class);
     private final ChallengeRepository challengeRepository;
     private final QuestionSetRepository questionSetRepository;
     private final ImageProcessingService imageProcessingService;
+    private final DataFormatter cellFormatter = new DataFormatter();
 
     public ChallengeService(final ChallengeRepository challengeRepository,
                             final QuestionSetRepository questionSetRepository,
@@ -52,10 +54,14 @@ public class ChallengeService {
      * @param description challenge desc
      * @throws ChallengeException on error
      */
+    @Transactional
     public Long readProcessAndSaveChallenge(final MultipartFile upload,
                                             final String title,
                                             final String description)
             throws ChallengeException {
+        if (challengeRepository.existsByTitle(title)) {
+            throw new ChallengeException("A quiz with this title already exists. Please choose a different title.");
+        }
         Deque<QuestionSet> questionSets = readAndProcessChallenge(upload);
         Challenge challenge = new Challenge();
         challenge.setTitle(title);
@@ -68,11 +74,12 @@ public class ChallengeService {
         return savedChallenge.getId();
     }
 
+    @Transactional
     public Boolean deleteChallenge(final Long challengeId) {
         Boolean response = Boolean.FALSE;
         java.util.Optional<Challenge> challenge = challengeRepository.findById(challengeId);
         if (challenge.isPresent()) {
-            if (!challenge.get().getChallengeOwner().equals(currentUserId())) {
+            if (!canEdit(challenge.get())) {
                 logger.warn("User {} attempted to delete challenge {} owned by {}",
                         currentUserId(), challengeId, challenge.get().getChallengeOwner());
                 return Boolean.FALSE;
@@ -138,7 +145,7 @@ public class ChallengeService {
             return null;
         }
         Challenge original = challengeOpt.get();
-        if (!original.getChallengeOwner().equals(currentUserId())) {
+        if (!Objects.equals(original.getChallengeOwner(), currentUserId())) {
             logger.warn("User {} attempted to duplicate challenge {} owned by {}",
                     currentUserId(), challengeId, original.getChallengeOwner());
             return null;
@@ -299,20 +306,31 @@ public class ChallengeService {
     }
 
     private boolean canEdit(final Challenge challenge) {
-        return challenge.getChallengeOwner().equals(currentUserId()) || currentUser().canManageAllChallenges();
+        return Objects.equals(challenge.getChallengeOwner(), currentUserId()) || currentUser().canManageAllChallenges();
     }
 
     //replace LinkedList with ArrayDeque as the return type
     private Deque<QuestionSet> readAndProcessChallenge(final MultipartFile upload) throws ChallengeException {
         Deque<QuestionSet> questionSets = new ArrayDeque<>();
         try (XSSFWorkbook workbook = new XSSFWorkbook(upload.getInputStream());) {
-            org.apache.poi.ss.usermodel.Sheet datatypeSheet = workbook.getSheetAt(0);
-            for (Row currentRow : datatypeSheet) {
-                questionSets.add(populateQuestionSet(currentRow));
+            if (workbook.getNumberOfSheets() == 0) {
+                throw new ChallengeException("The Excel file has no sheets.");
             }
-        } catch (IOException | NotOfficeXmlFileException exception) {
-            logger.error(exception);
-            throw new ChallengeException("Unable to process the file..");
+            for (Row currentRow : workbook.getSheetAt(0)) {
+                if (fetchCellValue(currentRow.getCell(0)) == null) {
+                    continue; // blank or trailing row
+                }
+                try {
+                    questionSets.add(populateQuestionSet(currentRow));
+                } catch (ChallengeException rowError) {
+                    throw new ChallengeException("Row " + (currentRow.getRowNum() + 1) + ": "
+                            + rowError.getErrorMessage());
+                }
+            }
+        } catch (IOException | IllegalArgumentException | POIXMLException exception) {
+            // POI throws unchecked exceptions on corrupt files
+            logger.error("Unable to read the uploaded Excel file", exception);
+            throw new ChallengeException("Unable to read the file. Please upload a valid .xlsx file.");
         }
         return questionSets;
     }
@@ -324,24 +342,24 @@ public class ChallengeService {
         while (cellIterator.hasNext()) {
             Cell currentCell = cellIterator.next();
             switch (currentCell.getColumnIndex()) {
-                case 0 -> questionSet.setQuestion(currentCell.getStringCellValue());
-                case 1 -> questionSet.setAnswer1(fetchCurrentCellValue(currentCell));
-                case 2 -> questionSet.setAnswer2(fetchCurrentCellValue(currentCell));
-                case 3 -> questionSet.setAnswer3(fetchCurrentCellValue(currentCell));
-                case 4 -> questionSet.setAnswer4(fetchCurrentCellValue(currentCell));
+                case 0 -> questionSet.setQuestion(fetchCellValue(currentCell));
+                case 1 -> questionSet.setAnswer1(fetchCellValue(currentCell));
+                case 2 -> questionSet.setAnswer2(fetchCellValue(currentCell));
+                case 3 -> questionSet.setAnswer3(fetchCellValue(currentCell));
+                case 4 -> questionSet.setAnswer4(fetchCellValue(currentCell));
                 case 5 -> questionSet.setCorrectOptions(parseCorrectOptions(currentCell));
                 case 6 -> questionSet.setQuestionType(parseQuestionType(currentCell));
                 case 7 -> questionSet.setTimeLimit(parseTimeLimit(currentCell));
                 case 8 -> questionSet.setPoints(parsePoints(currentCell));
-                case 9 -> questionSet.setAcceptableAnswers(fetchCurrentCellValue(currentCell));
-                case 10 -> questionSet.setImageUrl(fetchCurrentCellValue(currentCell));
-                case 11 -> questionSet.setVideoUrl(fetchCurrentCellValue(currentCell));
-                case 12 -> questionSet.setAnswer5(fetchCurrentCellValue(currentCell));
-                case 13 -> questionSet.setAnswer6(fetchCurrentCellValue(currentCell));
-                case 14 -> questionSet.setAnswer7(fetchCurrentCellValue(currentCell));
-                case 15 -> questionSet.setAnswer8(fetchCurrentCellValue(currentCell));
-                case 16 -> questionSet.setAnswer9(fetchCurrentCellValue(currentCell));
-                case 17 -> questionSet.setAnswer10(fetchCurrentCellValue(currentCell));
+                case 9 -> questionSet.setAcceptableAnswers(fetchCellValue(currentCell));
+                case 10 -> questionSet.setImageUrl(fetchCellValue(currentCell));
+                case 11 -> questionSet.setVideoUrl(fetchCellValue(currentCell));
+                case 12 -> questionSet.setAnswer5(fetchCellValue(currentCell));
+                case 13 -> questionSet.setAnswer6(fetchCellValue(currentCell));
+                case 14 -> questionSet.setAnswer7(fetchCellValue(currentCell));
+                case 15 -> questionSet.setAnswer8(fetchCellValue(currentCell));
+                case 16 -> questionSet.setAnswer9(fetchCellValue(currentCell));
+                case 17 -> questionSet.setAnswer10(fetchCellValue(currentCell));
                 default -> logger.debug("Extra column at {}", currentCell.getColumnIndex());
             }
         }
@@ -358,16 +376,13 @@ public class ChallengeService {
         return questionSet;
     }
 
-    private String parseCorrectOptions(final Cell cell) {
-        String options = fetchCurrentCellValue(cell);
-        if (options == null || options.isBlank()) {
-            return null;
-        }
-        return populateOptionsFromString(options.trim());
+    private String parseCorrectOptions(final Cell cell) throws ChallengeException {
+        String options = fetchCellValue(cell);
+        return options == null ? null : populateOptionsFromString(options);
     }
 
     private QuestionType parseQuestionType(final Cell cell) {
-        String value = fetchCurrentCellValue(cell);
+        String value = fetchCellValue(cell);
         if (value == null || value.isBlank()) {
             return QuestionType.MULTIPLE_CHOICE;
         }
@@ -383,7 +398,7 @@ public class ChallengeService {
         if (cell.getCellType() == CellType.NUMERIC) {
             return (int) cell.getNumericCellValue();
         }
-        String value = fetchCurrentCellValue(cell);
+        String value = fetchCellValue(cell);
         if (value == null || value.isBlank()) {
             return null;
         }
@@ -395,45 +410,43 @@ public class ChallengeService {
         }
     }
 
-    private Integer parsePoints(final Cell cell) {
-        if (cell.getCellType() == CellType.NUMERIC) {
-            return (int) cell.getNumericCellValue();
-        }
-        String value = fetchCurrentCellValue(cell);
-        if (value == null || value.isBlank()) {
+    private Integer parsePoints(final Cell cell) throws ChallengeException {
+        String value = fetchCellValue(cell);
+        if (value == null) {
             return 1000; // Default points
         }
         try {
-            return Integer.parseInt(value.trim());
+            int points = Integer.parseInt(value.trim());
+            if (points < 0 || points > MAX_POINTS) {
+                throw new ChallengeException("Points must be between 0 and " + MAX_POINTS);
+            }
+            return points;
         } catch (NumberFormatException ex) {
             logger.warn("Invalid points: {}, defaulting to 1000", value);
             return 1000;
         }
     }
 
-    private String fetchCurrentCellValue(final Cell currentCell) {
-        String result = null;
-        if (currentCell.getCellType() == CellType.STRING) {
-            result = currentCell.getStringCellValue();
-        } else if (currentCell.getCellType() == CellType.NUMERIC) {
-            result = String.valueOf(currentCell.getNumericCellValue());
-        } else if (currentCell.getCellType() == CellType.BOOLEAN) {
-            result = String.valueOf(currentCell.getBooleanCellValue());
-        } else {
-            String cellName = currentCell.getCellType().name();
-            logger.error("Invalid cell type on  {}  is {}", currentCell.getColumnIndex(),
-                    cellName);
+    /** Cell text as displayed in Excel (numbers without ".0"), or null when blank/missing. */
+    private String fetchCellValue(final Cell cell) {
+        if (cell == null) {
+            return null;
         }
-        return result;
+        String value = cellFormatter.formatCellValue(cell).trim();
+        return value.isEmpty() ? null : value;
     }
 
-    private String populateOptionsFromString(final String options) {
-        if (!options.contains(",")) {
-            return Options.valueOf(options).name();
-        } else {
-            Stream<String> option = Arrays.stream(options.split(","));
-            return option.map(Options::valueOf).map(Enum::name).collect(Collectors.joining(","));
+    private String populateOptionsFromString(final String options) throws ChallengeException {
+        java.util.List<String> parsed = new java.util.ArrayList<>();
+        for (String raw : options.split(",")) {
+            try {
+                parsed.add(Options.valueOf(raw.trim().toUpperCase(Locale.ROOT)).name());
+            } catch (IllegalArgumentException ex) {
+                throw new ChallengeException("Invalid correct option '" + raw.trim()
+                        + "'. Use letters A-J separated by commas.");
+            }
         }
+        return String.join(",", parsed);
     }
 
 }

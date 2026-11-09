@@ -4,6 +4,8 @@ import com.quiz.darkhold.challenge.entity.QuestionType;
 import com.quiz.darkhold.challenge.entity.SortingAnswer;
 import com.quiz.darkhold.challenge.service.ImageProcessingService;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,43 +22,46 @@ public class QuestionRequest {
     @Size(max = 425, message = "Question must be at most 425 characters")
     private String question;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer1;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer2;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer3;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer4;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer5;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer6;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer7;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer8;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer9;
 
-    @Size(max = 225, message = "Answer must be at most 225 characters")
+    @Size(max = 255, message = "Answer must be at most 255 characters")
     private String answer10;
 
 
+    @Size(max = 255, message = "Correct options must be at most 255 characters")
     private String correctOptions;
 
     private QuestionType questionType = QuestionType.MULTIPLE_CHOICE;
 
     private Integer timeLimit;
 
+    @Min(value = 0, message = "Points must be between 0 and 10000")
+    @Max(value = 10000, message = "Points must be between 0 and 10000")
     private Integer points = 1000;
 
     @Size(max = 500, message = "Acceptable answers must be at most 500 characters")

@@ -25,40 +25,40 @@ public class QuestionSet implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 425)
     private String question;
 
-    @Column
+    @Column(length = 255)
     private String answer1;
 
-    @Column
+    @Column(length = 255)
     private String answer2;
 
-    @Column
+    @Column(length = 255)
     private String answer3;
 
-    @Column
+    @Column(length = 255)
     private String answer4;
 
-    @Column(length = 225)
+    @Column(length = 255)
     private String answer5;
 
-    @Column(length = 225)
+    @Column(length = 255)
     private String answer6;
 
-    @Column(length = 225)
+    @Column(length = 255)
     private String answer7;
 
-    @Column(length = 225)
+    @Column(length = 255)
     private String answer8;
 
-    @Column(length = 225)
+    @Column(length = 255)
     private String answer9;
 
-    @Column(length = 225)
+    @Column(length = 255)
     private String answer10;
 
-    @Column
+    @Column(length = 255)
     private String correctOptions;
 
     @Column(name = "display_order")

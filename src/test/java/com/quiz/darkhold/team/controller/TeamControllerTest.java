@@ -1,6 +1,7 @@
 package com.quiz.darkhold.team.controller;
 
 import tools.jackson.databind.ObjectMapper;
+import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.team.model.TeamConfig;
 import com.quiz.darkhold.team.model.TeamInfo;
 import com.quiz.darkhold.team.service.TeamService;
@@ -39,6 +40,7 @@ class TeamControllerTest {
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
     private TeamService teamService;
+    private CurrentGame currentGame;
     private TeamController teamController;
 
     private final String testPin = "12345";
@@ -50,7 +52,9 @@ class TeamControllerTest {
         objectMapper = new ObjectMapper();
 
         // Create controller with mocked dependencies
-        teamController = new TeamController(teamService);
+        currentGame = mock(CurrentGame.class);
+        when(currentGame.findModerator(testPin)).thenReturn("mod");
+        teamController = new TeamController(teamService, currentGame);
 
         // Build standalone MockMvc
         mockMvc = MockMvcBuilders.standaloneSetup(teamController).build();
@@ -68,6 +72,7 @@ class TeamControllerTest {
         doNothing().when(teamService).createTeams(eq(testPin), any(TeamConfig.class));
 
         mockMvc.perform(post("/team/create")
+                        .principal(() -> "mod")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -86,6 +91,7 @@ class TeamControllerTest {
                 "assignmentMethod", "MANUAL", "teamNames", teamNames);
         doNothing().when(teamService).createTeams(eq(testPin), any(TeamConfig.class));
         mockMvc.perform(post("/team/create")
+                        .principal(() -> "mod")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$", is("Teams created successfully")));
@@ -102,10 +108,11 @@ class TeamControllerTest {
                 .when(teamService).createTeams(eq(testPin), any(TeamConfig.class));
 
         mockMvc.perform(post("/team/create")
+                        .principal(() -> "mod")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$", is("Error creating teams: Database error")));
+                .andExpect(jsonPath("$", is("Error creating teams")));
     }
 
     @Test
@@ -116,6 +123,7 @@ class TeamControllerTest {
         request.put("assignmentMethod", "INVALID");
 
         mockMvc.perform(post("/team/create")
+                        .principal(() -> "mod")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
@@ -133,6 +141,7 @@ class TeamControllerTest {
         doNothing().when(teamService).assignPlayerToTeam(testPin, "player1", "Team Red");
 
         mockMvc.perform(post("/team/assign")
+                        .principal(() -> "mod")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -152,10 +161,11 @@ class TeamControllerTest {
                 .when(teamService).assignPlayerToTeam(anyString(), anyString(), anyString());
 
         mockMvc.perform(post("/team/assign")
+                        .principal(() -> "mod")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$", is("Error assigning player: Team not found")));
+                .andExpect(jsonPath("$", is("Error assigning player")));
     }
 
     // ==================== GET /team/list/{pin} Tests ====================
@@ -286,6 +296,21 @@ class TeamControllerTest {
         mockMvc.perform(post("/team/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testMutatingRoutesRejectNonModerators() throws Exception {
+        Map<String, String> assign = Map.of("pin", testPin, "username", "p", "teamName", "Team Red");
+        Map<String, Object> create = Map.of("pin", testPin, "teamCount", 2, "assignmentMethod", "RANDOM");
+
+        for (var req : List.of(post("/team/assign").content(objectMapper.writeValueAsString(assign)),
+                post("/team/create").content(objectMapper.writeValueAsString(create)))) {
+            mockMvc.perform(req.contentType(MediaType.APPLICATION_JSON).principal(() -> "someoneElse"))
+                    .andExpect(status().isForbidden());
+        }
+
+        verify(teamService, org.mockito.Mockito.never()).createTeams(anyString(), any(TeamConfig.class));
+        verify(teamService, org.mockito.Mockito.never()).assignPlayerToTeam(anyString(), anyString(), anyString());
     }
 }

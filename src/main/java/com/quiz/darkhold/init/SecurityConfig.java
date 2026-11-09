@@ -17,6 +17,14 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.security.core.context.SecurityContext;
@@ -25,6 +33,7 @@ import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.config.SessionRepositoryCustomizer;
 import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
 
@@ -67,7 +76,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(final HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(final HttpSecurity http, final RateLimitingService rateLimiter)
+            throws Exception {
         // Enable CSRF protection with cookie-based token repository
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         // Set the name of the attribute the CsrfToken will be populated on
@@ -76,8 +86,6 @@ public class SecurityConfig {
         http.csrf((csrf) -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(requestHandler)
-                // Ignore CSRF for H2 console (development only)
-                .ignoringRequestMatchers("/h2-console/**")
         );
 
         http.authorizeHttpRequests(auth -> auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll());
@@ -92,7 +100,7 @@ public class SecurityConfig {
                 .hasAuthority("ADMIN")
                 .requestMatchers("/gameManagement").hasAnyAuthority("ADMIN", "GAME_MANAGER")
                 .anyRequest().authenticated());
-        http.formLogin((formLogin) -> formLogin.loginPage("/login").defaultSuccessUrl("/", true).permitAll());
+        configureLogin(http, rateLimiter);
         var login = new LoginUrlAuthenticationEntryPoint("/login");
         http.exceptionHandling(errors -> errors.authenticationEntryPoint((req, res, ex) -> {
             if (ErrorRendering.wantsHtml(req)) {
@@ -112,6 +120,40 @@ public class SecurityConfig {
         return http.build();
     }
 
+    private void configureLogin(final HttpSecurity http, final RateLimitingService rateLimiter) throws Exception {
+        // Throttle password guessing per client IP, in a key space separate from the game PIN limiter
+        var loginSuccess = new SavedRequestAwareAuthenticationSuccessHandler();
+        loginSuccess.setDefaultTargetUrl("/");
+        loginSuccess.setAlwaysUseDefaultTargetUrl(true);
+        http.addFilterBefore(new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(final HttpServletRequest req, final HttpServletResponse res,
+                                            final FilterChain chain) throws ServletException, IOException {
+                if ("POST".equals(req.getMethod()) && (req.getContextPath() + "/login").equals(req.getRequestURI())
+                        && !rateLimiter.isAllowed(loginKey(req))) {
+                    res.sendRedirect("/login?error");
+                    return;
+                }
+                chain.doFilter(req, res);
+            }
+        }, UsernamePasswordAuthenticationFilter.class);
+        var loginFailure = new SimpleUrlAuthenticationFailureHandler("/login?error");
+        http.formLogin((formLogin) -> formLogin.loginPage("/login")
+                .failureHandler((req, res, ex) -> {
+                    rateLimiter.recordFailedAttempt(loginKey(req));
+                    loginFailure.onAuthenticationFailure(req, res, ex);
+                })
+                .successHandler((req, res, auth) -> {
+                    rateLimiter.recordSuccessfulAttempt(loginKey(req));
+                    loginSuccess.onAuthenticationSuccess(req, res, auth);
+                })
+                .permitAll());
+    }
+
+    private static String loginKey(final HttpServletRequest request) {
+        return "login:" + request.getRemoteAddr();
+    }
+
     private String[] matchingPaths() {
         return new String[]{"/", "/logmein", "/error",
                 "/home", "/resources/**", "/actuator/health",
@@ -119,7 +161,7 @@ public class SecurityConfig {
                 "/scripts/**", "/styles/**",
                 "/scripts/core/**", "/styles/core/*", "/styles/webfonts/**",
                 "/fonts/**", "/favicon.ico",
-                "/logme", "/h2-console/**",
+                "/logme",
                 "/enterGame", "/joinGame", "/join", "/play/**", "/api/live/**",
                 "/impressum", "/datenschutz"
         };

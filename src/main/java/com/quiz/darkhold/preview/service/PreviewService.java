@@ -138,7 +138,7 @@ public class PreviewService {
     private String generateUniquePin() {
         int maxAttempts = 10;
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
-            String pin = RandomStringUtils.random(gameConfig.getPinLength(), false, true);
+            String pin = RandomStringUtils.secure().nextNumeric(gameConfig.getPinLength());
             if (!gameRepository.existsByPin(pin)) {
                 return pin;
             }

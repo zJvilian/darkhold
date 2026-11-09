@@ -40,7 +40,10 @@ open http://localhost:8181
 
 Default admin credentials:
 - **Email**: admin@admin.com
-- **Password**: admin
+- **Password**: admin (H2 development only)
+
+With the `postgres` profile, the first start replaces that password with `DARKHOLD_ADMIN_PASSWORD`,
+or with a random one logged once at WARN if the variable is unset.
 
 ---
 
@@ -105,10 +108,7 @@ open build/reports/jacoco/test/html/index.html
 
 - Uses in-memory H2 database
 - Data is reset on restart
-- H2 Console available at: http://localhost:8181/h2-console
-  - JDBC URL: `jdbc:h2:mem:darkhold`
-  - Username: `sa`
-  - Password: (empty)
+- The H2 web console is disabled (it would expose the database)
 
 ### Option 2: Production Mode (PostgreSQL)
 
@@ -118,6 +118,7 @@ export SPRING_PROFILES_ACTIVE=postgres
 export DATABASE_URL=jdbc:postgresql://localhost:5432/darkhold
 export DATABASE_USER=darkhold
 export DATABASE_PASSWORD=your_secure_password
+export DARKHOLD_ADMIN_PASSWORD=your_admin_password   # optional
 
 # Run
 ./gradlew bootRun
@@ -206,8 +207,8 @@ darkhold.game.pin-length=5
 # Server port
 server.port=8181
 
-# Enable/disable H2 console
-spring.h2.console.enabled=true
+# H2 console (disabled by default; not reachable through the security rules)
+spring.h2.console.enabled=false
 ```
 
 ### All Configuration Options
@@ -217,7 +218,7 @@ spring.h2.console.enabled=true
 | `server.port` | 8181 | HTTP server port |
 | `darkhold.game.timer-seconds` | 20 | Question answer time |
 | `darkhold.game.pin-length` | 5 | Game PIN digit count |
-| `spring.h2.console.enabled` | true | H2 web console |
+| `spring.h2.console.enabled` | false | H2 web console |
 | `spring.profiles.active` | (none) | Active profile (postgres) |
 
 ---

@@ -25,7 +25,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // WebSocket endpoint with SockJS fallback
         // CSRF token will be automatically validated by Spring Security
         registry.addEndpoint("/darkhold-websocket")
-                .setAllowedOriginPatterns("*")  // Configure properly in production
+                // no allowed origins set: Spring then accepts same-origin requests only
                 .withSockJS();
     }
 

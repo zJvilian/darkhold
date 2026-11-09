@@ -55,8 +55,8 @@ class WebSocketConfigTest {
     }
 
     @Test
-    @DisplayName("Should set allowed origin patterns to wildcard")
-    void shouldSetAllowedOriginPatterns() {
+    @DisplayName("Should not open the endpoint to every origin")
+    void shouldNotAllowAnyOrigin() {
         var registry = mock(StompEndpointRegistry.class);
         var registration = mock(StompWebSocketEndpointRegistration.class);
         var sockJs = mock(SockJsServiceRegistration.class);
@@ -66,7 +66,9 @@ class WebSocketConfigTest {
 
         config.registerStompEndpoints(registry);
 
-        verify(registration).setAllowedOriginPatterns("*");
+        // unset origins mean same-origin only
+        verify(registration, org.mockito.Mockito.never()).setAllowedOriginPatterns(anyString());
+        verify(registration, org.mockito.Mockito.never()).setAllowedOrigins(anyString());
     }
 
     @Test

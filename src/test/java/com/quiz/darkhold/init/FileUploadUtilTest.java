@@ -110,4 +110,23 @@ class FileUploadUtilTest {
         return new MockMultipartFile(
                 "file", name, "text/plain", content.getBytes());
     }
+
+    @Test
+    @DisplayName("Should reduce uploaded names to an allowed image base name")
+    void imageFileNameKeepsBaseNameAndChecksExtension() {
+        assertEquals("evil.PNG", FileUploadUtil.imageFileName("../../etc/evil.PNG"));
+        assertEquals("a.webp", FileUploadUtil.imageFileName("C:/x/a.webp"));
+        assertThrows(IllegalArgumentException.class, () -> FileUploadUtil.imageFileName("shell.jsp"));
+        assertThrows(IllegalArgumentException.class, () -> FileUploadUtil.imageFileName("noextension"));
+        assertThrows(IllegalArgumentException.class, () -> FileUploadUtil.imageFileName(null));
+    }
+
+    @Test
+    @DisplayName("Should refuse to write outside the upload directory")
+    void saveFileRejectsTraversal() {
+        var file = createMockFile("x.png", "content");
+        var dir = tempDir.resolve("photos").toString();
+        assertThrows(IOException.class, () -> FileUploadUtil.saveFile(dir, "../escaped.png", file));
+        assertFalse(Files.exists(tempDir.resolve("escaped.png")));
+    }
 }

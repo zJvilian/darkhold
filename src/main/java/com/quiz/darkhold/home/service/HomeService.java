@@ -26,8 +26,7 @@ public class HomeService {
      */
     public Boolean validateGamePin(final String pin) {
         com.quiz.darkhold.game.entity.Game game = gameRepository.findByPin(pin);
-        if (game != null && (game.getGameStatus().equalsIgnoreCase(GameStatus.WAITING.name())
-                || game.getGameStatus().equalsIgnoreCase(GameStatus.STARTED.name()))) {
+        if (game != null && GameStatus.WAITING.name().equalsIgnoreCase(game.getGameStatus())) {
             return Boolean.TRUE;
         }
         return Boolean.FALSE;

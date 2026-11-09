@@ -15,7 +15,8 @@ services:
       - SPRING_PROFILES_ACTIVE=postgres
       - DATABASE_URL=jdbc:postgresql://db:5432/darkhold
       - DATABASE_USER=darkhold
-      - DATABASE_PASSWORD=darkhold
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      - DARKHOLD_ADMIN_PASSWORD=${DARKHOLD_ADMIN_PASSWORD:-}
       - JAVA_OPTS=-Xmx512m
       - DARKHOLD_PUBLIC_BASE_URL=${DARKHOLD_PUBLIC_BASE_URL:-}
     restart: unless-stopped
@@ -32,11 +33,9 @@ services:
     environment:
       - POSTGRES_DB=darkhold
       - POSTGRES_USER=darkhold
-      - POSTGRES_PASSWORD=darkhold
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U darkhold -d darkhold"]

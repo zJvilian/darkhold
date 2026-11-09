@@ -15,7 +15,9 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +27,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 
 @Controller
 public class UserController {
@@ -79,21 +80,32 @@ public class UserController {
         return "user/user_form";
     }
 
+    /** Only the fields of user_form.html may be bound; the rest of the entity must not be settable. */
+    @InitBinder("user")
+    public void allowOnlyFormFields(final WebDataBinder binder) {
+        binder.setAllowedFields("id", "firstName", "lastName", "email", "password", "roles", "enabled", "photo");
+    }
+
     @PostMapping("/users/save")
     public String saveUser(final User user, final RedirectAttributes redirectAttributes,
                            @RequestParam("image") final MultipartFile multipartFile) throws IOException {
         logger.info("Into the saveUser method, user id is {}", user.getId());
         if (multipartFile != null && !multipartFile.isEmpty()) {
-            String fileName = StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename()));
+            String fileName;
+            try {
+                fileName = FileUploadUtil.imageFileName(multipartFile.getOriginalFilename());
+            } catch (IllegalArgumentException ex) {
+                redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+                return "redirect:/userManagement";
+            }
             user.setPhoto(fileName);
             com.quiz.darkhold.user.entity.User savedUser = userService.save(user);
             String uploadDir = "user-photos/" + savedUser.getId();
             FileUploadUtil.cleanDir(uploadDir);
             FileUploadUtil.saveFile(uploadDir, fileName, multipartFile);
         } else {
-            if (!StringUtils.hasText(user.getPhoto())) {
-                user.setPhoto(null);
-            }
+            // the hidden photo field is client-controlled: keep it to a plain file name
+            user.setPhoto(StringUtils.hasText(user.getPhoto()) ? FileUploadUtil.baseName(user.getPhoto()) : null);
             userService.save(user);
         }
         redirectAttributes.addFlashAttribute("message", "The user has been saved successfully");

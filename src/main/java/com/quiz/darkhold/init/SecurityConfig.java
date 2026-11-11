@@ -2,9 +2,11 @@ package com.quiz.darkhold.init;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -41,6 +43,9 @@ import java.util.Map;
 @EnableWebSecurity
 @EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
+    private static final String[] GUEST_GAME_PATHS = {"/interstitial", "/question", "/game", "/answer/",
+        "/validate_answer/", "/scoreboard", "/final", "/team/list/**", "/darkhold-websocket/**", "/logout"};
+
 
     private final UserDetailsService userDetailsService;
 
@@ -99,7 +104,12 @@ public class SecurityConfig {
                 .requestMatchers("/admin", "/admin/**", "/userManagement", "/user/**", "/users/**")
                 .hasAuthority("ADMIN")
                 .requestMatchers("/gameManagement").hasAnyAuthority("ADMIN", "GAME_MANAGER")
-                .anyRequest().authenticated());
+                .requestMatchers(GUEST_GAME_PATHS).authenticated()
+                // PIN guests are signed in without a role: they may play, everything else needs an account
+                .anyRequest().access((authentication, context) -> new AuthorizationDecision(
+                        !(authentication.get() instanceof AnonymousAuthenticationToken)
+                                && authentication.get().isAuthenticated()
+                                && !authentication.get().getAuthorities().isEmpty())));
         configureLogin(http, rateLimiter);
         var login = new LoginUrlAuthenticationEntryPoint("/login");
         http.exceptionHandling(errors -> errors.authenticationEntryPoint((req, res, ex) -> {
@@ -158,10 +168,10 @@ public class SecurityConfig {
         return new String[]{"/", "/logmein", "/error",
                 "/home", "/resources/**", "/actuator/health",
                 "/registration", "/images/**", "/question-images/**",
-                "/scripts/**", "/styles/**",
+                "/scripts/**", "/styles/**", "/sounds/**",
+                "/manifest.json", "/service-worker.js", "/offline.html",
                 "/scripts/core/**", "/styles/core/*", "/styles/webfonts/**",
                 "/fonts/**", "/favicon.ico",
-                "/logme",
                 "/enterGame", "/joinGame", "/join", "/play/**", "/api/live/**",
                 "/impressum", "/datenschutz"
         };

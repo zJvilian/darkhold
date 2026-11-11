@@ -36,10 +36,6 @@
                 <div class="settings-section-body">
                     <div class="profile-info-grid">
                         <div class="profile-info-item">
-                            <span class="profile-info-label" th:text="#{account.username}">Username</span>
-                            <span class="profile-info-value" th:text="${#authentication.getPrincipal().getUsername()}">user@example.com</span>
-                        </div>
-                        <div class="profile-info-item">
                             <span class="profile-info-label" th:text="#{account.type}">Account Type</span>
                             <span class="profile-info-value">
                                 <span class="badge badge-primary" th:each="role : ${#authentication.getPrincipal().getAuthorities()}"

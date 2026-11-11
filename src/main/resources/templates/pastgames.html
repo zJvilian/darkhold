@@ -114,7 +114,7 @@
                         </div>
                         <span class="game-mode-badge"
                               th:classappend="${game.gameMode == 'PRACTICE' ? 'game-mode-badge--practice' : 'game-mode-badge--multiplayer'}"
-                              th:text="${game.gameMode == 'PRACTICE' ? #{pastgames.practice} : #{pastgames.multiplayer}}">
+                              th:text="${game.gameMode == 'PRACTICE'} ? #{pastgames.practice} : #{pastgames.multiplayer}">
                             Multiplayer
                         </span>
                     </div>

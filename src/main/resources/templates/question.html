@@ -11,6 +11,7 @@
     <script type="text/javascript" src="/scripts/theme-manager.js"></script>
     <script type="text/javascript" src="/scripts/language-manager.js"></script>
     <script type="text/javascript" src="/scripts/common-scripts.js"></script>
+    <script type="text/javascript" src="/scripts/csrf-manager.js"></script>
     <script type="text/javascript" src="/scripts/audio-manager.js"></script>
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script type="text/javascript" src="/scripts/core/sockjs.min.js"></script>
@@ -96,7 +97,6 @@
     <script type="text/javascript" src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Override the updateTextOrEndGame function to provide better UI updates
         // Texts arrive from the network, so build the nodes with textContent
         function showWaitingMessage(title, subtext) {
             const heading = document.createElement('h1');
@@ -108,7 +108,14 @@
             document.getElementById('div_body').replaceChildren(heading, sub);
         }
 
-        window.updateTextOrEndGame = function(message) {
+        let questionHandled = false;
+
+        function updateTextOrEndGame(message) {
+            // Every client's fetch is broadcast to the whole room: act on the first copy only
+            if (questionHandled) {
+                return;
+            }
+            questionHandled = true;
             if (message === "END_GAME") {
                 showWaitingMessage(LanguageManager.text('client.questionWait.gameComplete'),
                     LanguageManager.text('client.questionWait.calculating'));
@@ -117,7 +124,7 @@
             }
             showWaitingMessage(message, LanguageManager.text('client.questionWait.prepare'));
             setTimeout(startGame, 3000);
-        };
+        }
     </script>
 </body>
 </html>

@@ -69,6 +69,16 @@ class SecurityConfigTest {
     }
 
     @Test
+    @DisplayName("PIN guests (signed in, no role) may play but cannot open account pages")
+    void shouldKeepGuestsOutOfAccountPages() throws Exception {
+        var guest = user("Alice").authorities(java.util.List.of());
+        mockMvc.perform(get("/viewchallenges").with(guest)).andExpect(status().isForbidden());
+        mockMvc.perform(get("/account").with(guest)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/interstitial").with(guest).with(csrf()).param("quiz_pin", "12345"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("Should redirect active-games to login")
     void shouldRedirectActiveGamesToLogin() throws Exception {
         mockMvc.perform(get("/active-games"))

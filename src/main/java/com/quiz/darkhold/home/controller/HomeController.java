@@ -57,6 +57,16 @@ public class HomeController {
     }
 
     /**
+     * The page the service worker stores and shows when the network is gone.
+     *
+     * @return offline page
+     */
+    @GetMapping("/offline.html")
+    public String offline() {
+        return "offline";
+    }
+
+    /**
      * same home redirect from various pages on post.
      *
      * @param model model

@@ -1,6 +1,7 @@
 package com.quiz.darkhold.user.service;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -8,6 +9,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,6 +21,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 import java.util.Set;
@@ -88,6 +94,29 @@ class SecurityServiceImplTest {
     @Nested
     @DisplayName("autoLogin tests")
     class AutoLoginTests {
+        private final MockHttpServletRequest request = new MockHttpServletRequest();
+
+        @BeforeEach
+        void bindRequest() {
+            RequestContextHolder.setRequestAttributes(
+                    new ServletRequestAttributes(request, new MockHttpServletResponse()));
+        }
+
+        @AfterEach
+        void unbindRequest() {
+            RequestContextHolder.resetRequestAttributes();
+        }
+
+        @Test
+        @DisplayName("Should keep a PIN guest signed in for the following requests")
+        void shouldStoreGuestLoginInSession() {
+            securityService.autoLogin("player1", "UNREGISTERED_USER");
+
+            SecurityContext stored = (SecurityContext) request.getSession().getAttribute(
+                    HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+            assertEquals("player1", stored.getAuthentication().getName());
+            assertTrue(stored.getAuthentication().getAuthorities().isEmpty());
+        }
 
         @Test
         @DisplayName("Should authenticate registered user via AuthenticationManager")

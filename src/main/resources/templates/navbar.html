@@ -10,7 +10,7 @@
         <div class="dh-navbar-inner">
 
             <!-- ======== LEFT: Brand + Nav Links (Authenticated) ======== -->
-            <div class="dh-navbar-left" sec:authorize="isAuthenticated()">
+            <div class="dh-navbar-left" sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()">
                 <a class="dh-navbar-brand" href="#" onclick="toHome(); return false;">
                     <img src="/images/favicon.png" alt="" class="dh-navbar-logo" width="28" height="28" />
                     <span class="dh-navbar-brand-text">Kahvoid</span>
@@ -37,7 +37,7 @@
             </div>
 
             <!-- ======== LEFT: Brand only (Anonymous) ======== -->
-            <div class="dh-navbar-left" sec:authorize="isAnonymous()">
+            <div class="dh-navbar-left" sec:authorize="isAnonymous() or authentication.authorities.isEmpty()">
                 <a class="dh-navbar-brand" href="/">
                     <img src="/images/favicon.png" alt="" class="dh-navbar-logo" width="28" height="28" />
                     <span class="dh-navbar-brand-text">Kahvoid</span>
@@ -53,7 +53,7 @@
             </button>
 
             <!-- ======== RIGHT: Toolbar + User (Authenticated) ======== -->
-            <div class="dh-navbar-right" sec:authorize="isAuthenticated()">
+            <div class="dh-navbar-right" sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()">
                 <div class="dh-navbar-toolbar">
                     <button class="dh-toolbar-btn" onclick="toggleTheme();"
                             id="theme-toggle-btn" th:title="#{nav.toggleTheme}" th:aria-label="#{nav.toggleTheme}">
@@ -102,7 +102,7 @@
                         <div class="dh-user-avatar">
                             <i class="fas fa-user"></i>
                         </div>
-                        <span class="dh-user-name" th:text="${#authentication.getPrincipal().getUsername()}"></span>
+                        <span class="dh-user-name" th:text="${#strings.substringBefore(#authentication.name + '#', '#')}"></span>
                         <i class="fas fa-chevron-down dh-user-chevron"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end dh-user-dropdown" aria-labelledby="userMenuDropdown">
@@ -130,7 +130,7 @@
             </div>
 
             <!-- ======== RIGHT: Toolbar + Login (Anonymous) ======== -->
-            <div class="dh-navbar-right" sec:authorize="isAnonymous()">
+            <div class="dh-navbar-right" sec:authorize="isAnonymous() or authentication.authorities.isEmpty()">
                 <div class="dh-navbar-toolbar">
                     <button class="dh-toolbar-btn" onclick="toggleTheme();"
                             id="theme-toggle-btn-anon" th:title="#{nav.toggleTheme}" th:aria-label="#{nav.toggleTheme}">
@@ -179,7 +179,7 @@
 
         <!-- ======== Mobile Menu Overlay ======== -->
         <div class="dh-mobile-menu" id="navMobileMenu">
-            <div class="dh-mobile-menu-body" sec:authorize="isAuthenticated()">
+            <div class="dh-mobile-menu-body" sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()">
                 <a class="dh-mobile-link" href="#" onclick="toActiveGames(); return false;">
                     <i class="fas fa-gamepad"></i>
                     <span th:text="#{nav.activeGames}">Active Games</span>
@@ -207,7 +207,7 @@
                     <span th:text="#{nav.logout}">Logout</span>
                 </a>
             </div>
-            <div class="dh-mobile-menu-body" sec:authorize="isAnonymous()">
+            <div class="dh-mobile-menu-body" sec:authorize="isAnonymous() or authentication.authorities.isEmpty()">
                 <a class="dh-mobile-link" href="#" onclick="logMeIn(); return false;">
                     <i class="fas fa-user"></i>
                     <span th:text="#{nav.login}">Login / SignUp</span>

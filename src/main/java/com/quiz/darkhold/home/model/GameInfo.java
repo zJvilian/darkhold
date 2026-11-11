@@ -14,8 +14,10 @@ public class GameInfo {
     @Size(min = 4, max = 10, message = "Game PIN must be between 4 and 10 digits")
     private String gamePin;
 
+    // Letters, digits and a few separators only: "#" and "@" mark registered accounts and must stay out of nicknames
     @NotBlank(message = "Name is required")
-    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
+    @Pattern(regexp = "^[\\p{L}\\p{N} ._'-]{2,20}$",
+            message = "Name must be 2-20 letters, numbers, spaces or . _ ' -")
     private String name;
 
     private String message;

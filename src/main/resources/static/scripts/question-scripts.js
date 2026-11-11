@@ -3,23 +3,6 @@ function startGame() {
     document.forms[0].submit();
 }
 
-function updateTextOrEndGame(message) {
-    console.log(message);
-    if (message === "END_GAME") {
-        // lets end the game
-        endGame();
-    }
-    let div_body = document.getElementById('div_body');
-    div_body.innerHTML = "";
-    let para = document.createElement("p");
-    let node = document.createTextNode(message);
-    para.appendChild(node);
-    div_body.appendChild(para);
-    setTimeout(function () {
-        startGame();
-    }, 3000);
-}
-
 function connect() {
     let name = document.getElementById('name').value;
     let pin = document.getElementById('quizPin').value;
@@ -34,12 +17,11 @@ function connect() {
 
     stompClient.connect(headers, function (frame) {
         console.log('Connected: ' + frame);
-        // Send PIN:name format for PIN-scoped topic
-        stompClient.send("/app/question_fetch", {}, pin + ":" + name);
-        // Subscribe to PIN-scoped topic for concurrent game support
+        // Listen before asking, or the reply can arrive while nobody is subscribed
         stompClient.subscribe('/topic/' + pin + '/question_read', function (greeting) {
             updateTextOrEndGame(JSON.parse(greeting.body).startGame);
         });
+        stompClient.send("/app/question_fetch", {}, pin + ":" + name);
     });
 }
 

@@ -16,12 +16,11 @@ function startGame() {
 
     stompClient.connect(headers, function (frame) {
         console.log('Connected: ' + frame);
-        // Send PIN directly for PIN-scoped topic
-        stompClient.send("/app/start", {}, pin);
-        // Subscribe to PIN-scoped topic for concurrent game support
+        // Listen before asking, or the reply can arrive while nobody is subscribed
         stompClient.subscribe('/topic/' + pin + '/start', function (greeting) {
             gotoMyGame();
         });
+        stompClient.send("/app/start", {}, pin);
     });
 }
 

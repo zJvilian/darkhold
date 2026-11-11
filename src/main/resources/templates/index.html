@@ -63,7 +63,7 @@
                     </p>
 
                     <!-- Quick Actions for Authenticated Users -->
-                    <div sec:authorize="isAuthenticated()" class="hero-actions">
+                    <div sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()" class="hero-actions">
                         <a th:href="@{/challenge/create}" class="btn-hero-primary">
                             <i class="fas fa-plus-circle"></i>
                             <span th:text="#{home.createQuiz}">Create Quiz</span>
@@ -171,14 +171,14 @@
         <!-- ============================
              DASHBOARD PREVIEW (Auth Users)
              ============================ -->
-        <div sec:authorize="isAuthenticated()">
+        <div sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()">
             <section class="section-dashboard">
                 <div class="container">
                     <div class="section-header">
                         <span class="section-eyebrow">Dashboard</span>
                         <h2 class="section-heading">
                             <span th:text="#{home.welcome}">Welcome back</span>,
-                            <span class="text-gradient" th:text="${#authentication.getPrincipal().getUsername()}">User</span>
+                            <span class="text-gradient" th:text="${#strings.substringBefore(#authentication.name + '#', '#')}">User</span>
                         </h2>
                         <p class="section-subheading" th:text="#{home.quickDescription}">Jump right back in. Here are your quick actions.</p>
                     </div>
@@ -248,9 +248,9 @@
                         <h4 class="footer-heading" th:text="#{home.platform}">Platform</h4>
                         <ul>
                             <li><a href="#" onclick="toHome(); return false;" th:text="#{nav.home}">Home</a></li>
-                            <li sec:authorize="isAuthenticated()"><a th:href="@{/challenge/view}" th:text="#{home.viewChallenges}">My Quizzes</a></li>
-                            <li sec:authorize="isAuthenticated()"><a th:href="@{/activegames}" th:text="#{nav.activeGames}">Active Games</a></li>
-                            <li sec:authorize="isAnonymous()"><a href="#" onclick="logMeIn(); return false;" th:text="#{nav.login}">Login / Sign Up</a></li>
+                            <li sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()"><a th:href="@{/challenge/view}" th:text="#{home.viewChallenges}">My Quizzes</a></li>
+                            <li sec:authorize="isAuthenticated() and !authentication.authorities.isEmpty()"><a th:href="@{/activegames}" th:text="#{nav.activeGames}">Active Games</a></li>
+                            <li sec:authorize="isAnonymous() or authentication.authorities.isEmpty()"><a href="#" onclick="logMeIn(); return false;" th:text="#{nav.login}">Login / Sign Up</a></li>
                         </ul>
                     </div>
                     <div class="footer-links">

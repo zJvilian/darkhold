@@ -28,6 +28,8 @@
         <input type="hidden" th:name="quiz_pin" id="quiz_pin"/>
         <input type="hidden" th:value="${teamMode}" id="teamMode"/>
         <input type="hidden" th:value="${assignmentMethod}" id="assignmentMethod"/>
+        <!-- The host's own name, so the scripts can leave the host out of the player lists -->
+        <span id="user" hidden th:text="${user}"></span>
 
         <!-- Active Quiz PIN View -->
         <div th:if="${quizPin != null}" class="game-lobby-container">
@@ -106,7 +108,7 @@
                             <div class="player-avatar">
                                 <i class="fas fa-user"></i>
                             </div>
-                            <span class="player-name">[[${user}]]</span>
+                            <span class="player-name" th:text="${#strings.substringBefore(user + '#', '#')}"></span>
                         </div>
                     </div>
 

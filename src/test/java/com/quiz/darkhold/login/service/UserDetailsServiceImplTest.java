@@ -33,12 +33,14 @@ class UserDetailsServiceImplTest {
         var userName = "admin";
         when(userRepository.findByEmail(anyString())).thenReturn(mockUser(userName));
         var userDetails = userDetailsService.loadUserByUsername("admin");
-        Assertions.assertEquals(userName, userDetails.getUsername());
+        // the id makes the name unique: first names alone can clash
+        Assertions.assertEquals("admin#7", userDetails.getUsername());
     }
 
     private User mockUser(final String userName) {
         var user = new User();
         user.setFirstName(userName);
+        user.setId(7L);
         user.setRoles(mockRoles());
         user.setPassword("pass");
         return user;

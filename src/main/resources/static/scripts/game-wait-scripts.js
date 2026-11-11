@@ -36,7 +36,6 @@ function connect() {
 
     stompClient.connect(headers, function (frame) {
         console.log('Connected: ' + frame);
-        stompClient.send("/app/user", {}, JSON.stringify({'name': name_val, 'pin': pin_val}));
         // Subscribe to PIN-scoped topics for concurrent game support
         stompClient.subscribe('/topic/' + pin_val + '/user', function (greeting) {
             allUsers = JSON.parse(greeting.body).users;
@@ -70,6 +69,8 @@ function connect() {
             // Initial load of teams
             loadTeamsAndRender();
         }
+        // Announce ourselves last: listening first means we also receive our own join
+        stompClient.send("/app/user", {}, JSON.stringify({'name': name_val, 'pin': pin_val}));
     });
 }
 
@@ -273,7 +274,8 @@ function showGreeting(message) {
 }
 
 function buildParticipantRow(username, isModerator, moderator) {
-    let html = '<span>' + escapeHtml(username) + '</span>';
+    // accounts are named "<first name>#<id>"; players only need the name
+    let html = '<span>' + escapeHtml(username.replace(/#\d+$/, '')) + '</span>';
     if (username === moderator) {
         html += ' <span class="badge bg-primary">' + LanguageManager.text('client.lobby.moderator') + '</span>';
     }

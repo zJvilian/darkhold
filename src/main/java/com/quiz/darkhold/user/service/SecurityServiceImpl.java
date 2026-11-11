@@ -9,11 +9,15 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -49,10 +53,21 @@ public class SecurityServiceImpl implements SecurityService {
             authenticationManager.authenticate(token);
         }
         if (token.isAuthenticated()) {
-            SecurityContextHolder.getContext().setAuthentication(token);
+            storeInSession(token);
             String sanitizedUserName = CommonUtils.sanitizedString(username);
             logger.info("Auto login {} successfully! : ", sanitizedUserName);
         }
+    }
+
+    // Spring Security no longer stores the context by itself: without this the login ends with this request
+    private void storeInSession(final UsernamePasswordAuthenticationToken token) {
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(token);
+        SecurityContextHolder.setContext(context);
+        ServletRequestAttributes web = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+        web.getRequest().getSession();
+        web.getRequest().changeSessionId();
+        new HttpSessionSecurityContextRepository().saveContext(context, web.getRequest(), web.getResponse());
     }
 
     @Override

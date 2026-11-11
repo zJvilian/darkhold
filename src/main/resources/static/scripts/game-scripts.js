@@ -375,6 +375,7 @@ function validateTypeAnswerOnServer(userAnswer) {
     let xhr = new XMLHttpRequest();
     xhr.open('POST', "/validate_answer/");
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    CsrfManager.addTokenToXHR(xhr);
     xhr.onload = function () {
         if (xhr.status === 200) {
             let result = xhr.responseText; // 'correct' or 'incorrect'
@@ -444,6 +445,7 @@ function saveAnswerOnAjax() {
     xhr = new XMLHttpRequest();
     xhr.open('POST', "/answer/");
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    CsrfManager.addTokenToXHR(xhr);
     xhr.onload = function () {
         if (xhr.status === 200) {
             console.log('Response is ' + xhr.responseText);

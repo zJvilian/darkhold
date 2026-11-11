@@ -14,6 +14,7 @@ import com.quiz.darkhold.analytics.service.ResultService;
 import com.quiz.darkhold.game.service.AnswerValidationService;
 import com.quiz.darkhold.game.service.GameService;
 import com.quiz.darkhold.init.GameConfig;
+import com.quiz.darkhold.game.model.ScoreResult;
 import com.quiz.darkhold.team.model.TeamAssignmentMethod;
 import com.quiz.darkhold.team.model.TeamInfo;
 import com.quiz.darkhold.team.service.TeamService;
@@ -124,13 +125,18 @@ public class GameController {
         logger.info("On to the finalScore for PIN: {}", quizPin);
         CurrentScore score = new CurrentScore();
         Map<String, Integer> scores = gameService.getCurrentScore();
-        score.setScore(scores);
+        // Accounts are keyed "<first name>#<id>"; the podium shows the name only
+        Map<String, Integer> shown = new java.util.LinkedHashMap<>();
+        scores.forEach((name, points) -> shown.merge(name.replaceFirst("#\\d+$", ""), points, Integer::sum));
+        score.setScore(shown);
         model.addAttribute("score", score);
 
         // Check if team mode and add team scores
         if (quizPin != null && gameService.isTeamMode(quizPin)) {
-            Map<String, Integer> teamScores = gameService.getTeamScores(quizPin);
-            model.addAttribute("teamScores", teamScores);
+            // The podium reads team name, colour, total and member count, so it needs the ranked results
+            List<ScoreResult> players = scores.entrySet().stream()
+                    .map(e -> new ScoreResult(e.getKey(), e.getValue(), 0, 0, 0, 0)).toList();
+            model.addAttribute("teamScores", teamService.getTeamScoreResults(quizPin, players));
             model.addAttribute("isTeamMode", true);
             List<TeamInfo> teams = teamService.getTeams(quizPin);
             model.addAttribute("teams", teams);

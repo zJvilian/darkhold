@@ -252,6 +252,16 @@ class HomeControllerTest {
     }
 
     @Test
+    void testJoinGame_RejectsNamesThatCouldPassForAnAccount() throws Exception {
+        for (String name : new String[] {"admin@admin.com", "Administrator#1", "<b>x</b>"}) {
+            mockMvc.perform(post("/joinGame").param("gamePin", testPin).param("name", name))
+                    .andExpect(view().name("index"))
+                    .andExpect(model().attributeHasFieldErrors("gameInfo", "name"));
+        }
+        verify(securityService, never()).autoLogin(anyString(), anyString());
+    }
+
+    @Test
     void testJoinGame_ValidationError_EmptyPin() throws Exception {
         mockMvc.perform(post("/joinGame")
                                                 .param("gamePin", "")

@@ -80,11 +80,11 @@ public class ResultService {
         addParticipantResults(gameResult, pin, teamMode);
         addQuestionResults(gameResult, pin);
 
+        GameResult saved = gameResultRepository.save(gameResult);
         if (teamMode) {
+            // team rows point at the game result, so it has to be stored first
             addTeamResults(gameResult, pin);
         }
-
-        GameResult saved = gameResultRepository.save(gameResult);
         logger.info("Game result saved with ID: {}", saved.getId());
         return saved;
     }

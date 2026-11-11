@@ -28,9 +28,15 @@ public class DarkholdUserDetails implements UserDetails {
         return user.getPassword();
     }
 
+    /**
+     * The name games, results and host checks are keyed by. First names are not unique, so the id is part of it;
+     * "#" can never appear in a guest nickname, so a guest cannot take a registered user's identity.
+     * shortcut: renaming an account changes this, so its older games drop out of its lists; key by id alone
+     * once those lists matter after a rename.
+     */
     @Override
     public String getUsername() {
-        return user.getFirstName();
+        return user.getFirstName() + "#" + user.getId();
     }
 
     public String getEmail() {

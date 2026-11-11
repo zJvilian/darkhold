@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<!-- One sidebar for every management page; "active" names the current entry -->
+<aside class="admin-sidebar" id="adminSidebar" th:fragment="sidebar(active)">
+    <div class="admin-sidebar-header">
+        <h2 class="admin-sidebar-title">
+            <i class="fas fa-shield-alt"></i>
+            <span sec:authorize="hasAuthority('ADMIN')" th:text="#{admin.title}">Admin Panel</span>
+            <span sec:authorize="!hasAuthority('ADMIN')" th:text="#{nav.dashboard}">Dashboard</span>
+        </h2>
+    </div>
+    <nav class="admin-sidebar-nav">
+        <div class="admin-nav-section" sec:authorize="hasAuthority('ADMIN')">
+            <div class="admin-nav-section-label" th:text="#{admin.main}">Main</div>
+            <a href="/admin" class="admin-nav-item" th:classappend="${active == 'dashboard'} ? 'active'">
+                <i class="fas fa-th-large"></i>
+                <span th:text="#{admin.dashboard}">Admin Dashboard</span>
+            </a>
+        </div>
+        <div class="admin-nav-section">
+            <div class="admin-nav-section-label" th:text="#{admin.management}">Management</div>
+            <a href="/userManagement" class="admin-nav-item" sec:authorize="hasAuthority('ADMIN')"
+               th:classappend="${active == 'users'} ? 'active'">
+                <i class="fas fa-users"></i>
+                <span th:text="#{admin.users}">Users</span>
+            </a>
+            <a href="/view_challenges" class="admin-nav-item">
+                <i class="fas fa-clipboard-list"></i>
+                <span th:text="#{admin.challenges}">Quizzes</span>
+            </a>
+            <a href="/activegames" class="admin-nav-item" th:classappend="${active == 'active'} ? 'active'">
+                <i class="fas fa-gamepad"></i>
+                <span th:text="#{admin.activeGames}">Active Games</span>
+            </a>
+            <a href="/pastgames" class="admin-nav-item" th:classappend="${active == 'past'} ? 'active'">
+                <i class="fas fa-history"></i>
+                <span th:text="#{admin.pastGames}">Past Games</span>
+            </a>
+        </div>
+        <div class="admin-nav-section">
+            <div class="admin-nav-section-label" th:text="#{admin.system}">System</div>
+            <a href="/gameManagement" class="admin-nav-item" sec:authorize="hasAnyAuthority('ADMIN', 'GAME_MANAGER')"
+               th:classappend="${active == 'gameSettings'} ? 'active'">
+                <i class="fas fa-sliders-h"></i>
+                <span th:text="#{admin.gameSettings}">Game Settings</span>
+            </a>
+            <a href="/options" class="admin-nav-item">
+                <i class="fas fa-cog"></i>
+                <span th:text="#{admin.settings}">Settings</span>
+            </a>
+        </div>
+    </nav>
+</aside>
+</body>
+</html>

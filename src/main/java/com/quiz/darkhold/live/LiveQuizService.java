@@ -1,5 +1,8 @@
 package com.quiz.darkhold.live;
 
+import com.quiz.darkhold.analytics.entity.GameResult;
+import com.quiz.darkhold.analytics.entity.ParticipantResult;
+import com.quiz.darkhold.analytics.repository.GameResultRepository;
 import com.quiz.darkhold.challenge.entity.Challenge;
 import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.challenge.entity.QuestionType;
@@ -21,6 +24,9 @@ import tools.jackson.databind.ObjectMapper;
 import java.security.SecureRandom;
 import java.security.Principal;
 import org.springframework.security.core.Authentication;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -40,6 +46,7 @@ public class LiveQuizService {
             Map.entry("lion", "🦁"), Map.entry("unicorn", "🦄"), Map.entry("robot", "🤖"),
             Map.entry("alien", "👽"), Map.entry("octopus", "🐙"), Map.entry("butterfly", "🦋"));
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Duration ROOM_LIFETIME = Duration.ofHours(24);
     private final LiveRoomRepository rooms;
     private final ChallengeRepository challenges;
     private final UserRepository users;
@@ -48,11 +55,14 @@ public class LiveQuizService {
     private final GameConfig config;
     private final ObjectMapper mapper;
     private final org.springframework.context.MessageSource messageSource;
+    private final GameResultRepository results;
 
     public LiveQuizService(final LiveRoomRepository rooms, final ChallengeRepository challenges,
                            final UserRepository users, final GameRepository games,
                            final AnswerValidationService answers, final GameConfig config,
-                           final ObjectMapper mapper, final org.springframework.context.MessageSource messageSource) {
+                           final ObjectMapper mapper, final org.springframework.context.MessageSource messageSource,
+                           final GameResultRepository results) {
+        this.results = results;
         this.rooms = rooms;
         this.challenges = challenges;
         this.users = users;
@@ -80,12 +90,13 @@ public class LiveQuizService {
         require(challenge.getQuestionSets() != null && !challenge.getQuestionSets().isEmpty(),
                 HttpStatus.BAD_REQUEST, "live.error.noQuestions");
         LiveState state = new LiveState();
+        state.challengeId = challengeId;
         state.title = challenge.getTitle();
         state.questions = new ArrayList<>(challenge.getQuestionSets());
         LiveRoom room = new LiveRoom();
         room.setPin(newPin());
         room.setHostName(host);
-        room.setExpiresAt(System.currentTimeMillis() + 24 * 60 * 60 * 1000L);
+        room.setExpiresAt(System.currentTimeMillis() + ROOM_LIFETIME.toMillis());
         save(room, state);
         return room.getPin();
     }
@@ -185,7 +196,65 @@ public class LiveQuizService {
         require(questionIndex == state.questionIndex, HttpStatus.CONFLICT, "live.error.movedOn");
         applyControl(state, action, playerName);
         save(room, state);
+        if ("FINISHED".equals(state.phase)) {
+            // applyControl refuses a finished room, so this is the one moment the quiz ends
+            results.save(result(room, state));
+        }
         return view(room, state, true, null);
+    }
+
+    /** A finished live quiz is stored like any other game, so it shows up under Past Games. */
+    private GameResult result(final LiveRoom room, final LiveState state) {
+        GameResult result = new GameResult();
+        result.setPin(room.getPin());
+        result.setChallengeId(String.valueOf(state.challengeId));
+        result.setChallengeName(state.title);
+        result.setModerator(new DarkholdUserDetails(users.findByEmail(room.getHostName())).getUsername());
+        result.setGameMode("MULTIPLAYER");
+        result.setTotalQuestions(state.questions.size());
+        LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
+        // a room expires a fixed time after it opens, which tells us when it opened
+        Duration played = Duration.ofMillis(
+                ROOM_LIFETIME.toMillis() - (room.getExpiresAt() - System.currentTimeMillis()));
+        result.setStartedAt(now.minus(played));
+        result.setCompletedAt(now);
+        result.setDurationMinutes((int) played.toMinutes());
+        addParticipants(result, state);
+        return result;
+    }
+
+    private void addParticipants(final GameResult result, final LiveState state) {
+        List<LiveState.Player> ranked = state.players.values().stream().filter(player -> !player.removed)
+                .sorted(Comparator.comparingInt((LiveState.Player player) -> player.score).reversed()).toList();
+        result.setParticipantCount(ranked.size());
+        for (int i = 0; i < ranked.size(); i++) {
+            LiveState.Player player = ranked.get(i);
+            // equal scores share a rank
+            int rank = i > 0 && ranked.get(i - 1).score == player.score
+                    ? result.getParticipantResults().get(i - 1).getFinalRank() : i + 1;
+            result.getParticipantResults().add(participant(result, player, rank));
+        }
+        if (!ranked.isEmpty()) {
+            result.setWinnerUsername(ranked.get(0).name);
+            result.setWinnerScore(ranked.get(0).score);
+        }
+    }
+
+    private ParticipantResult participant(final GameResult result, final LiveState.Player player, final int rank) {
+        ParticipantResult participant = new ParticipantResult();
+        participant.setGameResult(result);
+        participant.setUsername(player.name);
+        participant.setFinalScore(player.score);
+        participant.setFinalRank(rank);
+        // live rooms keep totals only, not a per-question history
+        participant.setCorrectAnswers(0);
+        participant.setIncorrectAnswers(0);
+        participant.setMaxStreak(0);
+        return participant;
+    }
+
+    public long activeRoomCount() {
+        return rooms.findAll().stream().filter(room -> !"FINISHED".equals(read(room).phase)).count();
     }
 
     private void applyControl(final LiveState state, final String action, final String playerName) {

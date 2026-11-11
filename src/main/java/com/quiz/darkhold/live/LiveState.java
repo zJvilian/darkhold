@@ -9,6 +9,7 @@ import java.util.Map;
 
 // Stored privately in the room; never serialize this object into a client response.
 public class LiveState {
+    public long challengeId;
     public String title;
     public List<QuestionSet> questions = new ArrayList<>();
     public Map<String, Player> players = new LinkedHashMap<>();

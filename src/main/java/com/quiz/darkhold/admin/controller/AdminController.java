@@ -17,12 +17,22 @@ public class AdminController {
     private final com.quiz.darkhold.challenge.repository.ChallengeRepository challenges;
     private final com.quiz.darkhold.options.service.OptionsService optionsService;
 
+    private final com.quiz.darkhold.game.repository.GameRepository games;
+    private final com.quiz.darkhold.live.LiveQuizService liveQuizzes;
+    private final com.quiz.darkhold.analytics.repository.GameResultRepository results;
+
     public AdminController(final com.quiz.darkhold.user.repository.UserRepository users,
                            final com.quiz.darkhold.challenge.repository.ChallengeRepository challenges,
-                           final com.quiz.darkhold.options.service.OptionsService optionsService) {
+                           final com.quiz.darkhold.options.service.OptionsService optionsService,
+                           final com.quiz.darkhold.game.repository.GameRepository games,
+                           final com.quiz.darkhold.live.LiveQuizService liveQuizzes,
+                           final com.quiz.darkhold.analytics.repository.GameResultRepository results) {
         this.users = users;
         this.challenges = challenges;
         this.optionsService = optionsService;
+        this.games = games;
+        this.liveQuizzes = liveQuizzes;
+        this.results = results;
     }
 
     @GetMapping("/users/{id}/quizzes")
@@ -44,12 +54,11 @@ public class AdminController {
      */
     @GetMapping({"", "/"})
     public String showAdminDashboard(final Model model) {
-        // Statistics will be added later via service layer
-        // For now, showing the dashboard structure
-        model.addAttribute("totalUsers", 0);
-        model.addAttribute("activeGames", 0);
-        model.addAttribute("totalChallenges", 0);
-        model.addAttribute("gamesPlayed", 0);
+        model.addAttribute("totalUsers", users.count());
+        model.addAttribute("activeGames", liveQuizzes.activeRoomCount() + games.findByGameStatusNot(
+                com.quiz.darkhold.game.entity.GameStatus.FINISHED.name()).size());
+        model.addAttribute("totalChallenges", challenges.count());
+        model.addAttribute("gamesPlayed", results.count());
 
         return "admin/dashboard";
     }

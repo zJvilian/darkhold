@@ -55,24 +55,6 @@
     outline: none;
 }
 
-/* Legacy support for .form-control on game pages */
-.bg-game .form-control {
-    background: var(--color-input-bg) none repeat scroll 0 0;
-    border: 3px solid var(--color-input-border);
-    border-radius: 4px;
-    font-family: var(--font-display);
-    font-size: 30px;
-    height: 80px;
-    line-height: 50px;
-    width: 180px;
-    color: var(--color-input-text);
-}
-
-.bg-game .form-control:focus,
-.bg-game input[type=number]:focus {
-    border: 3px solid var(--color-input-focus-border);
-}
-
 /* ============================================
    GAME MESSAGE DISPLAY
    ============================================ */
@@ -83,8 +65,7 @@
 /* ============================================
    ANSWER CARDS
    ============================================ */
-.answer-card,
-.bg-game .card {
+.answer-card {
     background: var(--color-card-bg);
     border: 1px solid var(--color-card-border);
     border-radius: 0;
@@ -95,8 +76,7 @@
     transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
-.answer-card:hover,
-.bg-game .card:hover {
+.answer-card:hover {
     box-shadow: var(--shadow-hover);
     transform: translateY(-2px);
 }
@@ -295,24 +275,3 @@ ul.flip {
     animation-delay: .6s;
 }
 
-/* ============================================
-   GAME TEXT STYLES
-   ============================================ */
-.bg-game span {
-    font-size: 15px;
-}
-
-.bg-game a:not([class*="btn"]) {
-    text-decoration: none;
-    color: var(--color-primary);
-    border-bottom: 2px solid var(--color-primary);
-}
-
-.bg-game .text {
-    margin: 20px 0px;
-    color: var(--color-text-primary);
-}
-
-.bg-game .fa {
-    color: var(--color-primary-light);
-}

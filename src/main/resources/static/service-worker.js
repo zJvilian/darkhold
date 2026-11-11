@@ -5,7 +5,7 @@
  * Provides offline support and caching for better performance
  */
 
-const CACHE_NAME = 'darkhold-quiz-v4';
+const CACHE_NAME = 'darkhold-quiz-v5';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
@@ -18,8 +18,7 @@ const STATIC_ASSETS = [
     '/scripts/common-scripts.js',
     '/scripts/core/jquery-3.7.0.min.js',
     '/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js',
-    '/images/favicon.png',
-    '/images/funky-lines.png'
+    '/images/favicon.png'
 ];
 
 /**

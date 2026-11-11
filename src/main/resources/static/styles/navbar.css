@@ -229,6 +229,11 @@
     white-space: nowrap;
 }
 
+/* The chevron icon is the arrow; hide Bootstrap's own caret so there is only one */
+.dh-navbar-user.dropdown-toggle::after {
+    display: none;
+}
+
 .dh-user-chevron {
     font-size: 0.7rem;
     color: var(--color-text-tertiary);

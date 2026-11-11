@@ -51,6 +51,75 @@
     opacity: 0.7;
 }
 
+/* Bootstrap's own buttons, links and file pickers follow the app palette instead of Bootstrap blue. */
+.btn {
+    --bs-btn-border-radius: var(--radius-md);
+    --bs-btn-font-weight: 600;
+    --bs-btn-focus-shadow-rgb: 113, 113, 113;
+}
+
+.btn-primary,
+.btn-success {
+    --bs-btn-color: var(--color-btn-primary-text);
+    --bs-btn-bg: var(--color-btn-primary-bg);
+    --bs-btn-border-color: var(--color-btn-primary-bg);
+    --bs-btn-hover-color: var(--color-btn-primary-text);
+    --bs-btn-hover-bg: var(--color-btn-primary-hover);
+    --bs-btn-hover-border-color: var(--color-btn-primary-hover);
+    --bs-btn-active-color: var(--color-btn-primary-text);
+    --bs-btn-active-bg: var(--color-btn-primary-hover);
+    --bs-btn-active-border-color: var(--color-btn-primary-hover);
+    --bs-btn-disabled-color: var(--color-btn-primary-text);
+    --bs-btn-disabled-bg: var(--color-btn-primary-bg);
+    --bs-btn-disabled-border-color: var(--color-btn-primary-bg);
+}
+
+.btn-secondary,
+.btn-outline-primary,
+.btn-outline-secondary {
+    --bs-btn-color: var(--color-text-primary);
+    --bs-btn-bg: var(--color-bg-primary);
+    --bs-btn-border-color: var(--color-border-medium);
+    --bs-btn-hover-color: var(--color-btn-primary-text);
+    --bs-btn-hover-bg: var(--color-btn-primary-bg);
+    --bs-btn-hover-border-color: var(--color-btn-primary-bg);
+    --bs-btn-active-color: var(--color-btn-primary-text);
+    --bs-btn-active-bg: var(--color-btn-primary-bg);
+    --bs-btn-active-border-color: var(--color-btn-primary-bg);
+    --bs-btn-disabled-color: var(--color-text-muted);
+    --bs-btn-disabled-bg: var(--color-bg-primary);
+    --bs-btn-disabled-border-color: var(--color-border-light);
+}
+
+.btn-danger {
+    --bs-btn-bg: var(--color-btn-danger-bg);
+    --bs-btn-border-color: var(--color-btn-danger-bg);
+    --bs-btn-hover-bg: var(--color-btn-danger-hover);
+    --bs-btn-hover-border-color: var(--color-btn-danger-hover);
+    --bs-btn-active-bg: var(--color-btn-danger-hover);
+    --bs-btn-active-border-color: var(--color-btn-danger-hover);
+}
+
+a {
+    color: var(--color-text-primary);
+    text-underline-offset: 3px;
+}
+
+a:hover {
+    color: var(--color-primary-light);
+}
+
+input[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--color-border-medium);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-weight: 600;
+    cursor: pointer;
+}
+
 body {
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);
@@ -97,24 +166,6 @@ h1.display-4,
    CONTEXTUAL BACKGROUNDS
    ============================================ */
 
-/* Game/Player-facing pages - Playful pattern background */
-.bg-game::after {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url("../images/funky-lines.png");
-    opacity: 1;
-    z-index: -1;
-    pointer-events: none;
-}
-
-[data-theme="dark"] .bg-game::after {
-    opacity: 0.1;
-}
-
 /* Admin/Management pages - Clean, professional background */
 .bg-admin {
     background-color: var(--color-bg-secondary);
@@ -147,179 +198,60 @@ h1.display-4,
     transition: all 0.3s ease;
     font-size: 24px;
 }
-body::before {
-  content: "";
-  position: fixed;
-  top: -10px;
-  left: 0;
-  width: 100%;
-  height: 10px;
-  box-shadow: 0px 0 10px rgba(0, 0, 0, 0.8);
-  z-index: 100;
-}
+
 
 /* ============================================
-   ANIMATED LOGIN/SIGNUP BUTTON
+   LOGIN/SIGNUP BUTTON (sized to sit inside the 56px navbar)
    ============================================ */
 .btn-auth {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    font-size: 1rem;
+    gap: 8px;
+    padding: 5px 16px 5px 6px;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--color-btn-primary-text);
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background: var(--color-btn-primary-bg);
     border: none;
     border-radius: var(--radius-full);
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 15px rgba(var(--color-primary-rgb, 0, 98, 204), 0.3);
-}
-
-.btn-auth::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-accent) 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.btn-auth:hover::before {
-    opacity: 1;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .btn-auth:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow:
-        0 8px 25px rgba(var(--color-primary-rgb, 0, 98, 204), 0.4),
-        0 0 40px rgba(var(--color-secondary-rgb, 96, 199, 193), 0.2);
-}
-
-.btn-auth:active {
-    transform: translateY(-1px) scale(1);
+    background: var(--color-btn-primary-hover);
+    transform: translateY(-1px);
 }
 
 .btn-auth-icon {
-    position: relative;
-    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.2);
+    width: 26px;
+    height: 26px;
+    background: rgba(128, 128, 128, 0.3);
     border-radius: 50%;
-    transition: all 0.3s ease;
-}
-
-.btn-auth:hover .btn-auth-icon {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(360deg);
-}
-
-.btn-auth-icon i {
-    font-size: 14px;
-    transition: transform 0.3s ease;
-}
-
-.btn-auth-text {
-    position: relative;
-    z-index: 1;
-    letter-spacing: 0.02em;
+    font-size: 12px;
 }
 
 .btn-auth-arrow {
-    position: relative;
-    z-index: 1;
-    font-size: 12px;
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: all 0.3s ease;
+    font-size: 11px;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
 }
 
 .btn-auth:hover .btn-auth-arrow {
-    opacity: 1;
-    transform: translateX(0);
+    transform: translateX(3px);
 }
 
-/* Sparkle effect on hover */
-.btn-auth::after {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(
-        45deg,
-        transparent 40%,
-        rgba(255, 255, 255, 0.1) 50%,
-        transparent 60%
-    );
-    transform: translateX(-100%) rotate(45deg);
-    transition: none;
-}
-
-.btn-auth:hover::after {
-    animation: btn-sparkle 0.6s ease-out;
-}
-
-@keyframes btn-sparkle {
-    0% {
-        transform: translateX(-100%) rotate(45deg);
-    }
-    100% {
-        transform: translateX(100%) rotate(45deg);
-    }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .btn-auth {
-        padding: 10px 18px;
-        font-size: 0.9rem;
-        gap: 8px;
-    }
-
-    .btn-auth-icon {
-        width: 24px;
-        height: 24px;
-    }
-
-    .btn-auth-icon i {
-        font-size: 12px;
-    }
-
-    .btn-auth-arrow {
-        display: none;
-    }
-}
-
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .btn-auth,
-    .btn-auth::before,
-    .btn-auth::after,
-    .btn-auth-icon,
     .btn-auth-arrow {
         transition: none;
-        animation: none;
     }
 
-    .btn-auth:hover {
-        transform: none;
-    }
-
-    .btn-auth:hover .btn-auth-icon {
-        transform: none;
-    }
-
+    .btn-auth:hover,
     .btn-auth:hover .btn-auth-arrow {
-        opacity: 1;
-        transform: translateX(0);
+        transform: none;
     }
 }

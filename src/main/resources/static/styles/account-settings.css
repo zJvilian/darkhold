@@ -10,7 +10,6 @@
     min-height: calc(100vh - 56px);
     background: var(--color-bg-secondary);
     padding: 3rem 1.5rem;
-    margin-top: 56px;
 }
 
 .account-container {

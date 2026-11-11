@@ -21,80 +21,117 @@
     <script type="text/javascript" src="/scripts/accessibility.js"></script>
     <script th:replace="~{fragments/i18n :: messages}"></script>
 </head>
-<body class="login-page">
-    <div class="login-container">
-        <div class="login-card">
-            <!-- Logo/Brand -->
-            <div class="login-brand">
-                <img src="/images/favicon.png" alt="Kahvoid" class="login-logo">
-                <h1 class="login-title" th:text="#{registration.title}">Create Account</h1>
-                <p class="login-subtitle" th:text="#{registration.subtitle}">Join Kahvoid to create and play quizzes</p>
-            </div>
-            <!-- Registration Form -->
-            <form th:action="@{/registration}" method="post" th:object="${user}" class="login-form">
-                <div class="login-error" role="alert" th:if="${#fields.hasAnyErrors()}">
-                    <p th:each="error : ${#fields.allErrors()}" th:text="${error}">Please check your details.</p>
-                </div>
-
-                <!-- First Name -->
-                <div class="form-group">
-                    <label for="name" class="form-label" th:text="#{registration.firstName}">First Name</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-user input-icon"></i>
-                        <input id="name" class="form-input" type="text" th:field="*{firstName}"
-                               th:placeholder="#{registration.firstName}" placeholder="First Name"
-                               required minlength="2" maxlength="90" autofocus="autofocus" />
-                    </div>
-                </div>
-
-                <!-- Last Name -->
-                <div class="form-group">
-                    <label for="name2" class="form-label" th:text="#{registration.lastName}">Last Name</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-user input-icon"></i>
-                        <input id="name2" class="form-input" type="text" th:field="*{lastName}"
-                               th:placeholder="#{registration.lastName}" placeholder="Last Name"
-                               required minlength="2" maxlength="90" />
-                    </div>
-                </div>
-
-                <!-- Email -->
-                <div class="form-group">
-                    <label for="email" class="form-label" th:text="#{registration.email}">Email</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-envelope input-icon"></i>
-                        <input id="email" class="form-input" type="email" th:field="*{email}"
-                               th:placeholder="#{registration.email}" placeholder="example@email.com"
-                               required minlength="6" maxlength="90" />
-                    </div>
-                </div>
-
-                <!-- Password -->
-                <div class="form-group">
-                    <label for="password" class="form-label" th:text="#{registration.password}">Password</label>
-                    <div class="input-with-icon">
-                        <i class="fas fa-lock input-icon"></i>
-                        <input id="password" class="form-input" type="password" name="password" autocomplete="new-password"
-                               th:placeholder="#{registration.password}" placeholder="Enter password"
-                               required minlength="8" maxlength="90" />
-                    </div>
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit" class="btn-login">
-                    <span th:text="#{registration.submit}">Create Account</span>
-                    <i class="fas fa-arrow-right"></i>
+<body>
+    <!-- Same markup as the sign-in page, so both share login.css -->
+    <main class="login-page">
+        <div class="login-panel-right">
+            <div class="login-card">
+                <button type="button" class="theme-toggle" onclick="ThemeManager.toggle(); updateIcon();" th:aria-label="#{nav.toggleTheme}">
+                    <i class="fas fa-moon" id="login-theme-icon"></i>
                 </button>
 
-                <!-- Login Link -->
-                <div class="login-footer">
-                    <span th:text="#{registration.alreadyRegistered}">Already registered?</span>
-                    <a href="/login" th:href="@{/login}" class="login-link" th:text="#{registration.loginHere}">Login here</a>
+                <div class="login-brand-mobile">
+                    <svg class="login-logo-mobile" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M32 4L58 18V46L32 60L6 46V18L32 4Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M32 20L42 26V38L32 44L22 38V26L32 20Z" fill="currentColor"/>
+                    </svg>
+                    <span class="login-brand-mobile-name font-display" th:text="#{app.name}">Kahvoid</span>
                 </div>
-            </form>
+
+                <div class="login-header">
+                    <h1 class="login-title" th:text="#{registration.title}">Create Account</h1>
+                    <p class="login-subtitle" th:text="#{registration.subtitle}">Join Kahvoid to create and play quizzes</p>
+                </div>
+
+                <form th:action="@{/registration}" method="post" th:object="${user}" class="login-form">
+                    <div class="login-error" role="alert" th:if="${#fields.hasAnyErrors()}">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>
+                            <span th:each="error : ${#fields.allErrors()}" th:text="${error}" style="display:block">Please check your details.</span>
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name" class="form-group-label" th:text="#{registration.firstName}">name</label>
+                        <div class="input-wrapper">
+                            <input id="name" class="login-input" type="text" th:field="*{firstName}"
+                                   th:placeholder="#{registration.firstName}" required minlength="2" maxlength="90" autocomplete="given-name" autofocus />
+                            <div class="input-icon-right">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name2" class="form-group-label" th:text="#{registration.lastName}">name2</label>
+                        <div class="input-wrapper">
+                            <input id="name2" class="login-input" type="text" th:field="*{lastName}"
+                                   th:placeholder="#{registration.lastName}" required minlength="2" maxlength="90" autocomplete="family-name" />
+                            <div class="input-icon-right">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email" class="form-group-label" th:text="#{registration.email}">email</label>
+                        <div class="input-wrapper">
+                            <input id="email" class="login-input" type="email" th:field="*{email}"
+                                   th:placeholder="#{registration.email}" required minlength="6" maxlength="90" autocomplete="email" />
+                            <div class="input-icon-right">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password" class="form-group-label" th:text="#{registration.password}">password</label>
+                        <div class="input-wrapper">
+                            <input id="password" class="login-input" type="password" name="password"
+                                   th:placeholder="#{registration.password}" required minlength="8" maxlength="90" autocomplete="new-password" />
+                            <div class="input-icon-right">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="login-btn">
+                        <span th:text="#{registration.submit}">Create Account</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <div class="login-divider">
+                    <span th:text="#{login.or}">or</span>
+                </div>
+
+                <div class="login-footer">
+                    <p>
+                        <span th:text="#{registration.alreadyRegistered}">Already registered?</span>
+                        <a th:href="@{/login}" class="signup-link" th:text="#{registration.loginHere}">Login here</a>
+                    </p>
+                </div>
+
+                <div class="login-back">
+                    <a href="/" class="back-link">
+                        <i class="fas fa-arrow-left"></i>
+                        <span th:text="#{login.backHome}">Back to Home</span>
+                    </a>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script type="text/javascript" src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateIcon() {
+            var icon = document.getElementById('login-theme-icon');
+            if (icon) {
+                icon.className = ThemeManager.isDark() ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', updateIcon);
+        window.addEventListener('themechange', updateIcon);
+    </script>
 </body>
 </html>

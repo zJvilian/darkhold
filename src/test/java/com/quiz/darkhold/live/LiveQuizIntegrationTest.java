@@ -60,6 +60,8 @@ class LiveQuizIntegrationTest {
     private UserRepository users;
     @Autowired
     private ObjectMapper mapper;
+    @Autowired
+    private com.quiz.darkhold.analytics.repository.GameResultRepository gameResults;
     private Long challengeId;
     private String pin;
 
@@ -310,6 +312,11 @@ class LiveQuizIntegrationTest {
         assertEquals("FINISHED", snapshot(first).path("phase").asText());
         assertEquals("FINISHED", snapshot(second).path("phase").asText());
         assertTrue(snapshot(first).path("me").path("score").asInt() > score);
+        // the finished quiz is filed under the host's past games, winner first
+        var saved = gameResults.findFirstByPinOrderByIdAsc(pin).orElseThrow();
+        assertEquals(new DarkholdUserDetails(users.findByEmail(HOST)).getUsername(), saved.getModerator());
+        assertEquals(2, saved.getParticipantCount());
+        assertEquals("First", saved.getWinnerUsername());
     }
 
     @Test

@@ -188,6 +188,8 @@
     font-weight: 600;
     border-radius: var(--radius-full);
     margin-right: 0.25rem;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
 }
 
 .role-badge--admin {
@@ -297,6 +299,11 @@
 .admin-pagination-controls {
     display: flex;
     gap: 0.5rem;
+}
+
+.pagination-btn,
+.admin-action-btn {
+    text-decoration: none;
 }
 
 .pagination-btn {

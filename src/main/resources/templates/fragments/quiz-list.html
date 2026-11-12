@@ -37,7 +37,7 @@
 
     <div class="quiz-list" id="quizRows">
         <div th:each="ch : ${quizzes}" th:id="${ch.challengeId}" class="quiz-row"
-             th:attr="data-title=${ch.challengeName},data-description=${ch.description},data-owner=${ch.ownerName},data-created=${ch.createdOn},data-questions=${ch.questionCount}">
+             th:attr="data-title=${ch.challengeName},data-description=${ch.description},data-owner=${ch.ownerName},data-owned=${ch.owned},data-created=${ch.createdOn},data-questions=${ch.questionCount}">
             <div class="quiz-row-main" th:attr="data-selectable=${manage} ? 'true'">
                 <img th:if="${ch.coverImageUrl}" th:src="${ch.coverImageUrl}" class="quiz-row-thumb"
                      alt="" loading="lazy"/>

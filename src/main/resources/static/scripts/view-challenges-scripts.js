@@ -41,6 +41,7 @@ const QuizList = (() => {
             title: el.dataset.title || '',
             text: ((el.dataset.title || '') + ' ' + (el.dataset.description || '')).toLowerCase(),
             owner: el.dataset.owner || '',
+            owned: el.dataset.owned === 'true',
             created: el.dataset.created || '',
             questions: Number(el.dataset.questions) || 0
         }));
@@ -72,6 +73,9 @@ const QuizList = (() => {
         if (owners.length < 2) return;
         const select = document.getElementById('quizOwner');
         owners.forEach(name => select.add(new Option(name, name)));
+        // Managers see everyone's quizzes; start on their own and let them widen it
+        const mine = rows.find(r => r.owned);
+        if (mine) select.value = mine.owner;
         document.getElementById('quizOwnerField').hidden = false;
     }
 

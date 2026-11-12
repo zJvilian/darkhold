@@ -227,8 +227,15 @@ public class ResultService {
      * @param id game result ID
      * @return game result with all details
      */
+    @Transactional(readOnly = true)
     public GameResult getGameResultById(final Long id) {
-        return gameResultRepository.findById(id).orElse(null);
+        GameResult result = gameResultRepository.findById(id).orElse(null);
+        if (result != null) {
+            // the result page and the CSV export read both lists after this transaction has ended
+            org.hibernate.Hibernate.initialize(result.getParticipantResults());
+            org.hibernate.Hibernate.initialize(result.getQuestionResults());
+        }
+        return result;
     }
 
     /**

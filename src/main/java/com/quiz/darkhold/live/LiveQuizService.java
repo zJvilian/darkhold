@@ -246,10 +246,9 @@ public class LiveQuizService {
         participant.setUsername(player.name);
         participant.setFinalScore(player.score);
         participant.setFinalRank(rank);
-        // live rooms keep totals only, not a per-question history
-        participant.setCorrectAnswers(0);
-        participant.setIncorrectAnswers(0);
-        participant.setMaxStreak(0);
+        participant.setCorrectAnswers(player.rightAnswers);
+        participant.setIncorrectAnswers(player.wrongAnswers);
+        participant.setMaxStreak(player.bestStreak);
         return participant;
     }
 
@@ -336,6 +335,7 @@ public class LiveQuizService {
                 ? (int) Math.round(answers.getPoints(question) * factor) : 0;
         player.score += player.earned;
         player.answeredQuestion = state.questionIndex;
+        player.tally(answers.shouldScore(question));
     }
 
     private String normalizeAnswer(final QuestionSet question, final String answer) {

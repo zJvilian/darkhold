@@ -133,6 +133,15 @@ public class ChallengeService {
         return null;
     }
 
+    // Titles are unique, so a second copy of the same quiz needs its own name
+    private String copyTitle(final String title) {
+        String copy = title + " (Copy)";
+        for (int n = 2; challengeRepository.existsByTitle(copy); n++) {
+            copy = title + " (Copy " + n + ")";
+        }
+        return copy;
+    }
+
     /**
      * Duplicate a challenge with all its questions.
      *
@@ -153,7 +162,7 @@ public class ChallengeService {
 
         // Create new challenge with copied title
         Challenge newChallenge = new Challenge();
-        newChallenge.setTitle(original.getTitle() + " (Copy)");
+        newChallenge.setTitle(copyTitle(original.getTitle()));
         newChallenge.setDescription(original.getDescription());
         newChallenge.setWordCloudFuzzy(original.isWordCloudFuzzy());
         newChallenge.setChallengeOwner(currentUserId());

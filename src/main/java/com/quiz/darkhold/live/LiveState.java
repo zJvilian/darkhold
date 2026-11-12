@@ -29,5 +29,18 @@ public class LiveState {
         public boolean correct;
         public int earned;
         public boolean removed;
+        public int rightAnswers;
+        public int wrongAnswers;
+        public int bestStreak;
+
+        /** Running totals for the stored result; questions without points (polls) count as neither. */
+        void tally(final boolean scored) {
+            if (scored && correct) {
+                rightAnswers++;
+            } else if (scored) {
+                wrongAnswers++;
+            }
+            bestStreak = Math.max(bestStreak, streak);
+        }
     }
 }

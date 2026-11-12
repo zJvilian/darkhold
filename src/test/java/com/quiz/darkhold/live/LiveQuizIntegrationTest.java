@@ -62,6 +62,8 @@ class LiveQuizIntegrationTest {
     private ObjectMapper mapper;
     @Autowired
     private com.quiz.darkhold.analytics.repository.GameResultRepository gameResults;
+    @Autowired
+    private com.quiz.darkhold.analytics.service.ResultService resultService;
     private Long challengeId;
     private String pin;
 
@@ -317,6 +319,9 @@ class LiveQuizIntegrationTest {
         assertEquals(new DarkholdUserDetails(users.findByEmail(HOST)).getUsername(), saved.getModerator());
         assertEquals(2, saved.getParticipantCount());
         assertEquals("First", saved.getWinnerUsername());
+        // read the way the result page does, after the transaction has ended
+        var winner = resultService.getGameResultById(saved.getId()).getParticipantResults().get(0);
+        assertTrue(winner.getCorrectAnswers() > 0);
     }
 
     @Test

@@ -92,6 +92,13 @@
                                     <span th:text="#{language.de}">Deutsch</span>
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item" href="?lang=fr" onclick="changeLanguage('fr'); return false;"
+                                   th:classappend="${#locale.language == 'fr'} ? 'active' : ''">
+                                    <span class="lang-check" th:if="${#locale.language == 'fr'}"><i class="fas fa-check"></i></span>
+                                    <span th:text="#{language.fr}">Français</span>
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -163,6 +170,13 @@
                                    th:classappend="${#locale.language == 'de'} ? 'active' : ''">
                                     <span class="lang-check" th:if="${#locale.language == 'de'}"><i class="fas fa-check"></i></span>
                                     <span th:text="#{language.de}">Deutsch</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="?lang=fr" onclick="changeLanguage('fr'); return false;"
+                                   th:classappend="${#locale.language == 'fr'} ? 'active' : ''">
+                                    <span class="lang-check" th:if="${#locale.language == 'fr'}"><i class="fas fa-check"></i></span>
+                                    <span th:text="#{language.fr}">Français</span>
                                 </a>
                             </li>
                         </ul>

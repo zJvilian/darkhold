@@ -4,7 +4,8 @@ const LanguageManager = (() => {
     const SUPPORTED_LANGUAGES = {
         en: { code: 'en', nativeName: 'English' },
         de: { code: 'de', nativeName: 'Deutsch' },
-        es: { code: 'es', nativeName: 'Español' }
+        es: { code: 'es', nativeName: 'Español' },
+        fr: { code: 'fr', nativeName: 'Français' }
     };
     let currentLanguage = 'en';
 

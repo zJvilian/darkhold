@@ -531,6 +531,18 @@ class ChallengeServiceTest {
         }
 
         @Test
+        @DisplayName("Should number further copies, because titles are unique")
+        void shouldNumberFurtherCopies() {
+            Challenge original = createChallengeWithQuestions(1L, testUserId);
+            when(challengeRepository.findById(1L)).thenReturn(Optional.of(original));
+            when(challengeRepository.existsByTitle("Test Challenge (Copy)")).thenReturn(true);
+            when(challengeRepository.existsByTitle("Test Challenge (Copy 2)")).thenReturn(true);
+            when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            assertEquals("Test Challenge (Copy 3)", challengeService.duplicateChallenge(1L).getTitle());
+        }
+
+        @Test
         @DisplayName("Should deep copy questions")
         void shouldDeepCopyQuestions() {
             Challenge original = createChallengeWithQuestions(1L, testUserId);

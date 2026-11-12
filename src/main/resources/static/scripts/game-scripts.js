@@ -1,11 +1,14 @@
+let clock2;
+let timer;
+let questionClosed = false;
+
 $(document).ready(function () {
-    let clock2;
     let time_to_flip = document.getElementById('time_to_flip').value;
     clock2 = new FlipClock($('.clock2'), time_to_flip, {
         clockFace: 'Counter'
     });
 
-    let timer = new FlipClock.Timer(clock2, {
+    timer = new FlipClock.Timer(clock2, {
         callbacks: {
             interval: function () {
                 let timeRemaining = clock2.getTime().time;
@@ -97,7 +100,11 @@ function playQuestionAudioManually() {
     startQuestionAudio(false);
 }
 
-function callTimeOut() {
+function callTimeOut(answerSaved = false) {
+    if (questionClosed) return;
+    questionClosed = true;
+    if (clock2) clock2.stop();
+    if (timer) timer.stop();
     if (questionAudioTimer) {
         clearTimeout(questionAudioTimer);
         questionAudioTimer = null;
@@ -117,7 +124,7 @@ function callTimeOut() {
         }
     }
 
-    if (questionType !== 'SORTING' || !sortingSubmitted) saveAnswerOnAjax();
+    if (!answerSaved && (questionType !== 'SORTING' || !sortingSubmitted)) saveAnswerOnAjax();
     if (questionType === 'SORTING') {
         sortingClosed = true;
         document.querySelectorAll('#sortingAnswers button').forEach(button => button.disabled = true);
@@ -145,6 +152,13 @@ function callTimeOut() {
         highlightGreen();
         highlightRedOnIncorrectSelection();
     }
+    const spinner = document.getElementById('spinner');
+    if (spinner) spinner.remove();
+}
+
+function finishPracticeAnswer() {
+    const gameMode = document.getElementById('gameMode');
+    if (gameMode && gameMode.value === 'PRACTICE') callTimeOut(true);
 }
 
 function highlightGreen() {
@@ -389,6 +403,7 @@ function validateTypeAnswerOnServer(userAnswer) {
             } else {
                 inputElem.classList.add('bg-danger', 'text-white');
             }
+            finishPracticeAnswer();
         } else {
             console.log('Validation request failed: ' + xhr.status);
             document.getElementById('selectedOptions').value = "incorrect";
@@ -442,13 +457,14 @@ function hideOptions() {
 // Sent on click, and again on timeout (which the server ignores if the player already answered).
 function saveAnswerOnAjax() {
     let selectedAnswer = document.getElementById("selectedAnswer").value;
-    xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     xhr.open('POST', "/answer/");
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     CsrfManager.addTokenToXHR(xhr);
     xhr.onload = function () {
         if (xhr.status === 200) {
             console.log('Response is ' + xhr.responseText);
+            finishPracticeAnswer();
             // Show "Waiting for others" message for non-moderators in multiplayer mode
             let roles = document.getElementById("roles").value;
             let gameMode = document.getElementById('gameMode') ? document.getElementById('gameMode').value : 'MULTIPLAYER';
@@ -629,6 +645,7 @@ async function submitSortingAnswer() {
         });
         if (!response.ok) throw new Error(LanguageManager.text('live.requestFailed'));
         document.getElementById('selectedOptions').value = await response.text();
+        finishPracticeAnswer();
     } catch (error) {
         document.getElementById('sortingFeedback').textContent = error.message;
         if (!sortingClosed) {

@@ -9,9 +9,14 @@
 .scoreboard-page {
     min-height: 100vh;
     background: #121212;
-    padding: 2rem 1rem;
+    padding: 0 1rem 2rem;
     position: relative;
     overflow: hidden;
+}
+
+/* The first child is the navbar: it spans the full width, the page padding starts below it */
+.scoreboard-page > div:first-child {
+    margin: 0 -1rem 2rem;
 }
 
 /* Animated background particles */
@@ -387,7 +392,11 @@
    ============================================ */
 @media (max-width: 768px) {
     .scoreboard-page {
-        padding: 1.5rem 0.75rem;
+        padding: 0 0.75rem 1.5rem;
+    }
+
+    .scoreboard-page > div:first-child {
+        margin: 0 -0.75rem 1.5rem;
     }
 
     .scoreboard-header {

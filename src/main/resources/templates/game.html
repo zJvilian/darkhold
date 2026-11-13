@@ -195,7 +195,8 @@
                         <input type="text" id="typeAnswerInput" class="type-answer-input"
                                th:placeholder="#{game.enterAnswerPlaceholder}"
                                placeholder="Enter your answer here..."
-                               maxlength="225" autocomplete="off"/>
+                               maxlength="225" autocomplete="off"
+                               onkeydown="if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); submitTypeAnswer(); }"/>
                         <button type="button" class="type-answer-submit" onclick="submitTypeAnswer()">
                             <i class="fas fa-check"></i>
                             <span th:text="#{game.submitAnswer}">Submit Answer</span>

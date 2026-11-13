@@ -45,6 +45,9 @@ class AnswerValidationServiceTest {
         assertTrue(service.validateSelection(multiple, "c"));
         assertFalse(service.validateSelection(multiple, "B"));
         assertFalse(service.validateSelection(multiple, ""));
+        assertTrue(service.validateSelection(multiple, "C,A"));
+        assertFalse(service.validateSelection(multiple, "A,B"));
+        assertFalse(service.validateSelection(multiple, "A,B,C"));
         var trueFalse = makeQuestion(QuestionType.TRUE_FALSE, null, null);
         trueFalse.setCorrectOptions("TRUE");
         assertTrue(service.validateSelection(trueFalse, "TRUE"));

@@ -72,7 +72,7 @@ public class AnswerValidationService {
                 ? QuestionType.MULTIPLE_CHOICE : question.getQuestionType();
         return switch (questionType) {
             case MULTIPLE_CHOICE -> question.getCorrectOptions() != null
-                    && optionSet(question.getCorrectOptions()).contains(selected.strip().toUpperCase(Locale.ROOT));
+                    && validateChoices(question.getCorrectOptions(), selected);
             case TRUE_FALSE -> validateTrueFalse(question, selected);
             default -> false;
         };
@@ -175,6 +175,13 @@ public class AnswerValidationService {
             return false;
         }
         return optionSet(correctOptions).equals(optionSet(userAnswer));
+    }
+
+    // One option counts if it is right (live games take a single click); several must be exactly all right ones
+    private boolean validateChoices(final String correctOptions, final String selected) {
+        java.util.Set<String> correct = optionSet(correctOptions);
+        java.util.Set<String> chosen = optionSet(selected);
+        return chosen.size() == 1 ? correct.containsAll(chosen) : chosen.equals(correct);
     }
 
     private java.util.Set<String> optionSet(final String options) {

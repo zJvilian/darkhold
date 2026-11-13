@@ -177,14 +177,14 @@ function highlightGreen() {
         // For TYPE_ANSWER, feedback is shown inline via input styling
         return;
     } else {
-        // MULTIPLE_CHOICE
-        let correctDiv = "option" + correctAnswer;
-        let toGreenChild = document.getElementById(correctDiv);
-        if (toGreenChild) {
-            toGreenChild.children[0].setAttribute('class', 'card text-white bg-success');
-            // Add animation class
-            toGreenChild.classList.add('answer-correct');
-        }
+        // MULTIPLE_CHOICE: a question can have several right options
+        correctAnswer.split(',').forEach(option => {
+            let toGreenChild = document.getElementById("option" + option.trim());
+            if (toGreenChild) {
+                toGreenChild.children[0].setAttribute('class', 'card text-white bg-success');
+                toGreenChild.classList.add('answer-correct');
+            }
+        });
     }
 
     // Play correct sound only if user selected the correct answer
@@ -254,10 +254,31 @@ function getQuestionType() {
     return typeElem ? typeElem.value : 'MULTIPLE_CHOICE';
 }
 
+// Practice: when a question has several right options, the question stays open until all are found.
+// Returns true while right options are still missing (nothing is submitted yet).
+let practicePicks = [];
+
+function keepQuestionOpen(elem) {
+    if (document.getElementById('gameMode').value !== 'PRACTICE' || getQuestionType() !== 'MULTIPLE_CHOICE') {
+        return false;
+    }
+    let answers = document.getElementById('correctOptions').value.split(',').map(a => a.trim());
+    let picked = elem.id.charAt(elem.id.length - 1);
+    if (answers.length < 2 || !answers.includes(picked)) return false;
+    if (!practicePicks.includes(picked)) practicePicks.push(picked);
+    if (practicePicks.length === answers.length) return false;
+    elem.children[0].setAttribute('class', 'card text-white bg-success');
+    if (typeof A11y !== 'undefined') {
+        A11y.announce((answers.length - practicePicks.length) + ' more correct answers to find');
+    }
+    return true;
+}
+
 function waitAndShowAnswer(elem) {
     let roles = document.getElementById("roles").value;
     console.log("roles is " + roles);
     if (!roles.includes("ROLE_MODERATOR")) {
+        if (!isAnswerSelected && keepQuestionOpen(elem)) return;
         if (!isAnswerSelected) {
             realWaitAndShowAnswer(elem);
             if (!isAnswerSelected) {
@@ -299,6 +320,7 @@ function realWaitAndShowAnswer(elem) {
         }
     }
     if (correct) {
+        if (practicePicks.length > 1) document.getElementById('selectedAnswer').value = practicePicks.join(',');
         document.getElementById('selectedOptions').value = "correct";
         hideOptions();
 

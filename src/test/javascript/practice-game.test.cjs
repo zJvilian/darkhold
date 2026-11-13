@@ -46,7 +46,7 @@ function game(questionType, mode = 'PRACTICE') {
         XMLHttpRequest: function () {
             this.open = (_, url) => { this.url = url; };
             this.setRequestHeader = () => {};
-            this.send = () => requests.push(this);
+            this.send = body => { this.body = body; requests.push(this); };
         },
         fetch: async () => ({ok: true, text: async () => 'correct'})
     });
@@ -119,4 +119,27 @@ test('multiplayer answers keep waiting for the host and the timer', () => {
     assert.equal(g.node('practiceNextContainer').style.display, 'none');
     assert.equal(g.node('waitingMessage').style.display, 'block');
     assert.equal(g.stopped(), false);
+});
+
+test('practice keeps a multi-answer question open until every right option is picked', () => {
+    const g = game('MULTIPLE_CHOICE');
+    g.node('correctOptions').value = 'A,C';
+    g.context.waitAndShowAnswer(g.node('optionA'));
+    g.context.waitAndShowAnswer(g.node('optionA'));
+    assert.equal(g.requests.length, 0, 'one of two right options must not end the question');
+    g.context.waitAndShowAnswer(g.node('optionC'));
+    assert.equal(g.requests.length, 1);
+    assert.equal(g.requests[0].body, 'selectedAnswer=' + encodeURIComponent('A,C'));
+    g.respond();
+    assert.equal(g.node('practiceNextContainer').style.display, 'block');
+});
+
+test('practice ends a multi-answer question on the first wrong option', () => {
+    const g = game('MULTIPLE_CHOICE');
+    g.node('correctOptions').value = 'A,C';
+    g.context.waitAndShowAnswer(g.node('optionA'));
+    g.context.waitAndShowAnswer(g.node('optionB'));
+    assert.equal(g.requests.length, 1);
+    assert.equal(g.requests[0].body, 'selectedAnswer=B');
+    assert.equal(g.node('selectedOptions').value, 'incorrect');
 });

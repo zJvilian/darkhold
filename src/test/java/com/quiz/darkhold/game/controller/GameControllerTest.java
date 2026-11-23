@@ -518,6 +518,95 @@ class GameControllerTest {
             verify(gameService).saveCurrentScore("player1", 750);
             verify(gameService).incrementQuestionNo();
         }
+
+        @Test
+        @DisplayName("a poll keeps the streak and counts as an answer, not a right or wrong one")
+        void testEnterGame_Poll_KeepsStreak() {
+            when(answerValidationService.shouldScore(question)).thenReturn(false);
+            when(gameService.getStreak("player1")).thenReturn(3);
+
+            gameController.enterGame("B", principal);
+
+            verify(gameService, never()).updateStreak(anyString(), ArgumentMatchers.anyBoolean());
+            verify(gameService).recordAnswer("player1", 0, false, true, 3, 5000L);
+        }
+
+        @Test
+        @DisplayName("answers are counted for the statistics, timeouts are not")
+        void testEnterGame_RecordsAnswersButNotTimeouts() {
+            when(answerValidationService.validateSelection(question, "A")).thenReturn(true);
+            gameController.enterGame("A", principal);
+            verify(gameService).recordAnswer("player1", 0, true, true, 1, 5000L);
+
+            when(gameService.markAnswered("player1", 0)).thenReturn(true);
+            gameController.enterGame("", principal);
+            verify(gameService, times(1)).recordAnswer(anyString(), anyInt(), ArgumentMatchers.anyBoolean(),
+                    ArgumentMatchers.anyBoolean(), anyInt(), ArgumentMatchers.anyLong());
+        }
+
+        @Test
+        @DisplayName("the right answer is only revealed once the caller's answer is in")
+        void testRevealAnswer_OnlyAfterAnswering() {
+            question.setCorrectOptions("A,C");
+            when(gameService.hasAnswered("player1", 0)).thenReturn(false, true);
+
+            assertEquals("", gameController.revealAnswer(principal));
+            assertEquals("A,C", gameController.revealAnswer(principal));
+        }
+    }
+
+    @Nested
+    @DisplayName("helper tests")
+    class HelperTests {
+
+        @Test
+        @DisplayName("players who share a first name keep separate podium scores")
+        void testDisplayNames_KeepsNamesapart() {
+            var scores = new java.util.LinkedHashMap<String, Integer>();
+            scores.put("Anna#3", 100);
+            scores.put("Anna#5", 50);
+            scores.put("Ben#7", 10);
+
+            var shown = GameController.displayNames(scores);
+
+            assertEquals(java.util.Map.of("Anna", 100, "Anna#5", 50, "Ben", 10), shown);
+        }
+
+        @Test
+        @DisplayName("YouTube links of every common form become privacy-enhanced embeds")
+        void testYoutubeEmbed() {
+            String embed = "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ";
+            assertEquals(embed, GameController.youtubeEmbed("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s"));
+            assertEquals(embed, GameController.youtubeEmbed("https://youtu.be/dQw4w9WgXcQ?si=abc"));
+            assertEquals(embed, GameController.youtubeEmbed("https://m.youtube.com/shorts/dQw4w9WgXcQ/"));
+            assertEquals(null, GameController.youtubeEmbed("https://evil.example/watch?v=dQw4w9WgXcQ"));
+            assertEquals(null, GameController.youtubeEmbed("javascript:alert(1)"));
+        }
+
+        @Test
+        @DisplayName("the host returning from the dashboard is pointed at that game")
+        void testStartGame_RejoinsHostedGame() {
+            when(gameService.isSessionGame("12345")).thenReturn(false);
+            when(gameService.isModerator("12345", principal)).thenReturn(true);
+            when(gameService.getCurrentQuestionPointer("12345")).thenReturn(new QuestionPointer());
+
+            gameController.startGame(model, "12345", principal);
+
+            verify(gameService).useGame("12345");
+        }
+
+        @Test
+        @DisplayName("kicking a player sends everyone the new player list")
+        void testKickPlayer_BroadcastsPlayers() {
+            when(gameService.isModerator("12345", principal)).thenReturn(true);
+            when(gameService.kickPlayer("12345", "Bob")).thenReturn(true);
+            when(gameService.getAllParticipants("12345")).thenReturn(List.of("host"));
+
+            gameController.kickPlayer("12345:Bob", principal);
+
+            verify(messagingTemplate).convertAndSend(ArgumentMatchers.eq("/topic/12345/user"),
+                    ArgumentMatchers.any(UserResponse.class));
+        }
     }
 
     @Nested

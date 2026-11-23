@@ -38,6 +38,9 @@ class PreviewPageRenderTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Paris")))
                 .andExpect(content().string(containsString("Last question")))
+                .andExpect(content().string(containsString("Second step")))
+                .andExpect(content().string(containsString("fa-volume-up")))
+                .andExpect(content().string(containsString("fa-video")))
                 .andExpect(content().string(containsString("</html>")));
     }
 
@@ -47,11 +50,21 @@ class PreviewPageRenderTest {
         var multipleChoice = question(QuestionType.MULTIPLE_CHOICE, "Last question");
         multipleChoice.setAnswer1("one");
         multipleChoice.setCorrectOptions("A");
+        multipleChoice.setImageUrl("/question-images/1/1/clip.mp3");
+        multipleChoice.setVideoUrl("https://youtu.be/dQw4w9WgXcQ");
         var info = new PreviewInfo();
         info.setChallengeId("1");
         info.setChallengeName("Mixed");
-        info.setQuestionSets(new ArrayDeque<>(java.util.List.of(typeAnswer, multipleChoice)));
+        info.setQuestionSets(new ArrayDeque<>(java.util.List.of(typeAnswer, multipleChoice, sorting())));
         return info;
+    }
+
+    private QuestionSet sorting() {
+        var sorting = question(QuestionType.SORTING, "Order these");
+        sorting.setAnswer1("First step");
+        sorting.setAnswer2("Second step");
+        sorting.setCorrectOptions("B,A");
+        return sorting;
     }
 
     private QuestionSet question(final QuestionType type, final String text) {

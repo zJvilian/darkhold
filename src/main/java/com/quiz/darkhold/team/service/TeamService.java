@@ -29,6 +29,7 @@ public class TeamService {
 
     private static final String[] TEAM_COLORS = {"red", "blue", "green", "yellow", "purple", "orange"};
     private static final String TEAM_NAME_PREFIX = "Team ";
+    private static final int MIN_TEAMS = 2;
 
     public TeamService(final CurrentGameSessionRepository currentGameRepository) {
         this.currentGameRepository = currentGameRepository;
@@ -40,7 +41,9 @@ public class TeamService {
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
         List<TeamInfo> teams = new ArrayList<>();
-        int teamCount = Math.min(config.getTeamCount(), TEAM_COLORS.length);
+        // a team game needs at least two teams, and there are only so many colours
+        int requested = config.getTeamCount() != null ? config.getTeamCount() : MIN_TEAMS;
+        int teamCount = Math.max(MIN_TEAMS, Math.min(requested, TEAM_COLORS.length));
 
         for (int i = 0; i < teamCount; i++) {
             String color = TEAM_COLORS[i];
@@ -75,6 +78,9 @@ public class TeamService {
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
         List<TeamInfo> teams = getTeamsFromSession(session);
+        if (teams.stream().noneMatch(t -> t.getName().equals(teamName))) {
+            throw new IllegalArgumentException("Unknown team: " + teamName);
+        }
         Map<String, String> playerTeams = session.getPlayerTeamsMap();
 
         String oldTeam = playerTeams.get(username);
@@ -165,6 +171,7 @@ public class TeamService {
                     .collect(Collectors.toList());
 
             result.setIndividualScores(teamPlayers);
+            result.setMemberCount(team.getMemberCount());
             teamResults.add(result);
         }
 

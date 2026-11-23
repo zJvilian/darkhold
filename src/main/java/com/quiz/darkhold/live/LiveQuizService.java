@@ -2,6 +2,7 @@ package com.quiz.darkhold.live;
 
 import com.quiz.darkhold.analytics.entity.GameResult;
 import com.quiz.darkhold.analytics.entity.ParticipantResult;
+import com.quiz.darkhold.analytics.entity.QuestionResult;
 import com.quiz.darkhold.analytics.repository.GameResultRepository;
 import com.quiz.darkhold.challenge.entity.Challenge;
 import com.quiz.darkhold.challenge.entity.QuestionSet;
@@ -9,6 +10,7 @@ import com.quiz.darkhold.challenge.entity.QuestionType;
 import com.quiz.darkhold.challenge.entity.SortingAnswer;
 import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.challenge.service.ImageProcessingService;
+import com.quiz.darkhold.game.model.ScoreResult;
 import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.game.service.AnswerValidationService;
 import com.quiz.darkhold.init.GameConfig;
@@ -111,13 +113,28 @@ public class LiveQuizService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> roomsForHost(final String host) {
-        return rooms.findByHostNameAndExpiresAtGreaterThanOrderByExpiresAtDesc(host, System.currentTimeMillis())
-                .stream().map(room -> {
-                    LiveState state = read(room);
-                    return Map.<String, Object>of("pin", room.getPin(), "title", state.title,
-                            "phase", state.phase, "players", state.players.values().stream()
-                                    .filter(player -> !player.removed).count());
-                }).toList();
+        return summaries(rooms.findByHostNameAndExpiresAtGreaterThanOrderByExpiresAtDesc(
+                host, System.currentTimeMillis()));
+    }
+
+    /** Every open room of every host, for admins. */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> allActiveRooms() {
+        long now = System.currentTimeMillis();
+        return summaries(rooms.findAll().stream().filter(room -> room.getExpiresAt() > now).toList());
+    }
+
+    // Finished rooms only show a podium, so they are not active games
+    private List<Map<String, Object>> summaries(final List<LiveRoom> list) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (LiveRoom room : list) {
+            LiveState state = read(room);
+            if (!"FINISHED".equals(state.phase)) {
+                result.add(Map.of("pin", room.getPin(), "title", state.title, "phase", state.phase,
+                        "players", state.players.values().stream().filter(player -> !player.removed).count()));
+            }
+        }
+        return result;
     }
 
     @Scheduled(fixedDelay = 3600000, initialDelay = 3600000)
@@ -169,9 +186,11 @@ public class LiveQuizService {
         require(name != null && name.strip().matches("[\\p{L}\\p{N}][\\p{L}\\p{N} _.'-]{1,19}"),
                 HttpStatus.BAD_REQUEST, "live.error.nickname");
         require(avatar != null && AVATARS.containsKey(avatar), HttpStatus.BAD_REQUEST, "live.error.avatar");
-        require(state.players.values().stream().noneMatch(player -> player.name.equalsIgnoreCase(name.strip())),
+        // removed players free their nickname and their place
+        List<LiveState.Player> present = state.players.values().stream().filter(player -> !player.removed).toList();
+        require(present.stream().noneMatch(player -> player.name.equalsIgnoreCase(name.strip())),
                 HttpStatus.CONFLICT, "live.error.duplicateName");
-        require(state.players.size() < 200, HttpStatus.CONFLICT, "live.error.full");
+        require(present.size() < 200, HttpStatus.CONFLICT, "live.error.full");
     }
 
     public Map<String, Object> state(final String pin, final String username, final String token) {
@@ -196,8 +215,9 @@ public class LiveQuizService {
         require(questionIndex == state.questionIndex, HttpStatus.CONFLICT, "live.error.movedOn");
         applyControl(state, action, playerName);
         save(room, state);
-        if ("FINISHED".equals(state.phase)) {
-            // applyControl refuses a finished room, so this is the one moment the quiz ends
+        if ("FINISHED".equals(state.phase) && state.questionIndex >= 0) {
+            // applyControl refuses a finished room, so this is the one moment the quiz ends;
+            // a quiz ended from the lobby was never played and leaves no result
             results.save(result(room, state));
         }
         return view(room, state, true, null);
@@ -209,7 +229,8 @@ public class LiveQuizService {
         result.setPin(room.getPin());
         result.setChallengeId(String.valueOf(state.challengeId));
         result.setChallengeName(state.title);
-        result.setModerator(new DarkholdUserDetails(users.findByEmail(room.getHostName())).getUsername());
+        var host = users.findByEmail(room.getHostName());
+        result.setModerator(host != null ? new DarkholdUserDetails(host).getUsername() : room.getHostName());
         result.setGameMode("MULTIPLAYER");
         result.setTotalQuestions(state.questions.size());
         LocalDateTime now = LocalDateTime.now(ZoneId.systemDefault());
@@ -220,7 +241,32 @@ public class LiveQuizService {
         result.setCompletedAt(now);
         result.setDurationMinutes((int) played.toMinutes());
         addParticipants(result, state);
+        addQuestionResults(result, state);
         return result;
+    }
+
+    private void addQuestionResults(final GameResult result, final LiveState state) {
+        int players = result.getParticipantCount();
+        for (int index = 0; index <= state.questionIndex && index < state.questions.size(); index++) {
+            QuestionSet question = state.questions.get(index);
+            LiveState.Round round = index < state.rounds.size() ? state.rounds.get(index) : new LiveState.Round();
+            int answered = round.correct + round.incorrect;
+            QuestionResult row = new QuestionResult();
+            row.setGameResult(result);
+            row.setQuestionNumber(index + 1);
+            row.setQuestionText(Objects.toString(question.getQuestion(), ""));
+            row.setQuestionType(Objects.toString(question.getQuestionType(), QuestionType.MULTIPLE_CHOICE.name()));
+            row.setCorrectCount(round.correct);
+            row.setIncorrectCount(round.incorrect);
+            row.setTimeoutCount(Math.max(0, players - answered));
+            row.setAverageAnswerTimeSeconds(answered > 0 ? seconds(round.totalMillis / answered) : null);
+            row.setFastestAnswerTimeSeconds(round.fastestMillis >= 0 ? seconds(round.fastestMillis) : null);
+            result.getQuestionResults().add(row);
+        }
+    }
+
+    private static int seconds(final long millis) {
+        return (int) Math.round(millis / 1000.0);
     }
 
     private void addParticipants(final GameResult result, final LiveState state) {
@@ -290,6 +336,11 @@ public class LiveQuizService {
     }
 
     private void openQuestion(final LiveState state) {
+        if (state.questionIndex >= 0 && answers.shouldScore(state.questions.get(state.questionIndex))) {
+            // missing a scored question breaks the streak
+            state.players.values().stream().filter(player -> player.answeredQuestion != state.questionIndex)
+                    .forEach(player -> player.streak = 0);
+        }
         state.questionIndex++;
         state.phase = "QUESTION";
         // Everyone receives the same short countdown, even when polling on slower phones.
@@ -327,15 +378,24 @@ public class LiveQuizService {
         String normalized = normalizeAnswer(question, answer);
         player.answer = normalized;
         player.correct = answers.validateAnswer(question, normalized);
-        player.streak = player.correct && player.answeredQuestion == state.questionIndex - 1 ? player.streak + 1
-                : (player.correct ? 1 : 0);
-        double remaining = Math.max(0, state.endsAt - System.currentTimeMillis());
+        boolean scored = answers.shouldScore(question);
+        if (scored) {
+            // polls and word clouds neither build nor break a streak
+            player.streak = player.correct ? player.streak + 1 : 0;
+        }
+        long now = System.currentTimeMillis();
+        double remaining = Math.max(0, state.endsAt - now);
         double factor = 0.5 + 0.5 * remaining / (state.endsAt - state.startedAt);
-        player.earned = player.correct && answers.shouldScore(question)
-                ? (int) Math.round(answers.getPoints(question) * factor) : 0;
+        // same streak bonus as classic games
+        player.earned = player.correct && scored ? (int) Math.round(answers.getPoints(question) * factor
+                * ScoreResult.calculateStreakMultiplier(player.streak)) : 0;
         player.score += player.earned;
         player.answeredQuestion = state.questionIndex;
-        player.tally(answers.shouldScore(question));
+        player.tally(scored);
+        while (state.rounds.size() <= state.questionIndex) {
+            state.rounds.add(new LiveState.Round());
+        }
+        state.rounds.get(state.questionIndex).record(player.correct, Math.max(0, now - state.startedAt));
     }
 
     private String normalizeAnswer(final QuestionSet question, final String answer) {

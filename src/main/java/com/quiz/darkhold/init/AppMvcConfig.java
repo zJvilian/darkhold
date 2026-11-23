@@ -1,6 +1,7 @@
 package com.quiz.darkhold.init;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -16,6 +17,9 @@ public class AppMvcConfig implements WebMvcConfigurer {
 
     @Autowired
     private LocaleChangeInterceptor localeChangeInterceptor;
+
+    @Value("${darkhold.media.question-images-dir:question-images}")
+    private String questionImagesDir;
 
     @Override
     public void addInterceptors(final InterceptorRegistry registry) {
@@ -33,7 +37,7 @@ public class AppMvcConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:" + userPhotosPath + "/");
 
         // Question images
-        java.nio.file.Path questionImagesDirName = Paths.get("question-images");
+        java.nio.file.Path questionImagesDirName = Paths.get(questionImagesDir);
         String questionImagesPath = questionImagesDirName.toFile().getAbsolutePath();
         registry.addResourceHandler("/question-images/**")
                 .addResourceLocations("file:" + questionImagesPath + "/");

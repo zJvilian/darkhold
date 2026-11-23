@@ -77,11 +77,6 @@ function enterGame() {
     // Clear previous errors
     clearError();
 
-    if (/^\d{6}$/.test(gamePin)) {
-        window.location.href = '/join?pin=' + encodeURIComponent(gamePin);
-        return;
-    }
-
     // Validate PIN
     if (gamePin.length === 0) {
         showError(LanguageManager.text('client.home.enterPin'));
@@ -131,7 +126,10 @@ function enterGame() {
             try {
                 const response = JSON.parse(xhr.responseText);
 
-                if (response.valid) {
+                if (response.valid && response.liveRoom) {
+                    // Live quiz rooms have their own join page with nickname and avatar
+                    window.location.href = '/join?pin=' + encodeURIComponent(gamePin);
+                } else if (response.valid) {
                     // PIN is valid, show name entry
                     showNameStep();
                 } else {

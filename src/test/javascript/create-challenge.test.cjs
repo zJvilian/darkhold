@@ -85,3 +85,48 @@ test('Excel upload sends CSRF and handles success and invalid responses', () => 
     xhr.onload();
     assert.equal(button.style.display, 'none');
 });
+
+function jsonImportPage(file, response) {
+    const {context} = setup();
+    const result = {children: [], appendChild(child) { this.children.push(child); },
+        replaceChildren(...children) { this.children = children; }};
+    const button = {style: {}};
+    const nodes = {jsonUpload: {files: file ? [file] : []}, btnImportJson: button, jsonResultMessage: result};
+    context.document.getElementById = id => nodes[id];
+    context.fetch = async (url, options) => {
+        context.request = {url, options};
+        return response;
+    };
+    return {context, button, result};
+}
+
+test('JSON import needs a file before it sends anything', async () => {
+    const {context, result} = jsonImportPage(null);
+    await context.importJson();
+    assert.equal(context.request, undefined);
+    assert.ok(result.children[0].textContent);
+});
+
+test('JSON import posts the file with CSRF and shows the server rejection', async () => {
+    const file = Object.assign(new Blob(['{}']), {name: 'quiz.json'});
+    const rejected = {status: 400, headers: new Headers({'content-type': 'application/json'}),
+        json: async () => ({challengeId: 0, message: 'Question 1: The question text is missing'})};
+    const {context, button, result} = jsonImportPage(file, rejected);
+    await context.importJson();
+    assert.equal(context.request.url, '/import_challenge/json');
+    assert.equal(context.request.options.method, 'POST');
+    assert.equal(context.request.options.headers['X-XSRF-TOKEN'], 'test-token');
+    assert.equal(context.request.options.body.get('file').size, 2);
+    assert.equal(result.children[0].textContent, 'Question 1: The question text is missing');
+    assert.equal(button.disabled, false);
+});
+
+test('JSON import links to the editor after success', async () => {
+    const file = Object.assign(new Blob(['{}']), {name: 'quiz.json'});
+    const created = {status: 200, headers: new Headers({'content-type': 'application/json'}),
+        json: async () => ({challengeId: 9, message: 'ok'})};
+    const {context, button, result} = jsonImportPage(file, created);
+    await context.importJson();
+    assert.equal(button.style.display, 'none');
+    assert.equal(result.children[1].href, '/edit_challenge/9');
+});

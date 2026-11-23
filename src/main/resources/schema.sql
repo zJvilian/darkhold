@@ -14,7 +14,7 @@ create table member (
     lastname    varchar(225),
     email       varchar(225) unique,
     password    varchar(255),
-    photo       varchar(45),
+    photo       varchar(64),
     enabled     boolean default false not null,
     createdOn   timestamp,
     modifiedOn  timestamp,

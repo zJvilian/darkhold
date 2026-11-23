@@ -100,12 +100,19 @@ class QuestionRequestTest {
         assertEquals("vid.mp4", req.getVideoUrl());
     }
 
+    private static QuestionRequest validChoiceRequest() {
+        var request = new QuestionRequest();
+        request.setChallengeId(1L);
+        request.setQuestion("Q");
+        request.setAnswer1("A");
+        request.setAnswer2("B");
+        return request;
+    }
+
     @Test
     void pointsMustBeWithinRange() {
         try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
-            var request = new QuestionRequest();
-            request.setChallengeId(1L);
-            request.setQuestion("Q");
+            var request = validChoiceRequest();
             request.setPoints(10_000);
             var validator = factory.getValidator();
             assertTrue(validator.validate(request).isEmpty());
@@ -113,6 +120,20 @@ class QuestionRequestTest {
             assertEquals(1, validator.validate(request).size());
             request.setPoints(-1);
             assertEquals(1, validator.validate(request).size());
+        }
+    }
+
+    @Test
+    void multipleChoiceAndPollNeedAnswersAAndB() {
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var request = validChoiceRequest();
+            var validator = factory.getValidator();
+            request.setAnswer2("  ");
+            assertEquals(1, validator.validate(request).size());
+            request.setQuestionType(QuestionType.POLL);
+            assertEquals(1, validator.validate(request).size());
+            request.setQuestionType(QuestionType.WORD_CLOUD);
+            assertTrue(validator.validate(request).isEmpty());
         }
     }
 }

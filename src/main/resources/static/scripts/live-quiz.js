@@ -5,7 +5,8 @@
     const pin = document.body.dataset.pin;
     const host = document.body.dataset.host === 'true';
     const $ = id => document.getElementById(id);
-    const symbols = ['▲', '◆', '●', '■'];
+    // sorting questions have up to ten answers
+    const symbols = ['▲', '◆', '●', '■', '★', '✚', '⬟', '⬢', '♥', '✦'];
     const audioPattern = /\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)(?:$|[?#])/i;
     let state;
     let clockOffset = 0;
@@ -21,6 +22,15 @@
     let submitting = false;
     let fatal = false;
     let requestInFlight = false;
+    let lastPlayerCount = -1;
+    let countdownSoundFor = -1;
+    let resultSoundFor = -1;
+    let victoryPlayed = false;
+
+    // Sound effects follow the player's sound settings (AudioManager)
+    function sound(name) {
+        if (typeof AudioManager !== 'undefined' && typeof AudioManager[name] === 'function') AudioManager[name]();
+    }
 
     function element(tag, className, text) {
         const node = document.createElement(tag);
@@ -95,17 +105,23 @@
         show('round', ['QUESTION', 'RESULTS'].includes(data.phase));
         show('leaderboard-section', ['RESULTS', 'FINISHED'].includes(data.phase));
         show('end-game', data.phase !== 'FINISHED');
-        document.title = `${data.title} · Darkhold`;
+        document.title = `${data.title} · Kahvoid`;
         $('quiz-title').textContent = data.title;
         if (data.me) $('my-score').textContent = `${data.me.emoji} ${data.me.name} · ${t('live.points', number(data.me.score))}`;
         renderLobby();
         renderRound();
         renderScores();
+        if (data.phase === 'FINISHED' && !victoryPlayed) {
+            victoryPlayed = true;
+            sound('playVictory');
+        }
         tick();
     }
 
     function renderLobby() {
         $('player-count').textContent = state.players.length;
+        if (state.phase === 'LOBBY' && lastPlayerCount >= 0 && state.players.length > lastPlayerCount) sound('playJoin');
+        lastPlayerCount = state.players.length;
         show('empty-lobby', !state.players.length);
         if (host) {
             $('start-game').disabled = !state.players.length || submitting;
@@ -169,6 +185,10 @@
         show('next-question', host && results);
         if (host) $('next-question').textContent = state.questionIndex + 1 === state.totalQuestions ? t('live.showPodium') : t('live.next');
         if (results) renderFeedback();
+        if (results && resultSoundFor !== state.questionIndex) {
+            resultSoundFor = state.questionIndex;
+            if (state.feedback?.answered && !state.feedback.poll) sound(state.feedback.correct ? 'playCorrect' : 'playIncorrect');
+        }
     }
 
     function wordColor(text, index) {
@@ -281,9 +301,10 @@
         if (validImage) $('question-image').src = image;
         else $('question-image')?.removeAttribute('src');
         const audioAllowed = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'TYPE_ANSWER'].includes(state.question.type);
-        const validAudio = Boolean(audioAllowed && rawAudio && /^\/(?:images|question-images|media|sounds)\//.test(rawAudio) && audioPattern.test(rawAudio));
-        show('question-audio', validAudio && host);
-        show('play-audio', validAudio && host);
+        // only the host screen plays question audio; player phones stay silent
+        const validAudio = host && Boolean(audioAllowed && rawAudio && /^\/(?:images|question-images|media|sounds)\//.test(rawAudio) && audioPattern.test(rawAudio));
+        show('question-audio', validAudio);
+        show('play-audio', validAudio);
         if (validAudio) {
             $('question-audio').src = rawAudio;
             $('question-audio').setAttribute('src', rawAudio);
@@ -303,17 +324,25 @@
             audioQuestionIndex = -1;
             $('question-audio')?.removeAttribute('src');
         }
-        let videoId = '';
-        try {
-            const url = new URL(state.question.video);
-            if (['www.youtube.com', 'youtube.com', 'youtu.be'].includes(url.hostname)) {
-                videoId = url.hostname === 'youtu.be' ? url.pathname.slice(1) : url.searchParams.get('v') || url.pathname.split('/').pop();
-            }
-        } catch (_) { /* Questions without video need no player. */ }
+        const videoId = youtubeId(state.question.video);
         const validVideo = host && /^[\w-]{11}$/.test(videoId);
         show('question-video', validVideo);
         if (validVideo) $('question-video').src = `https://www.youtube-nocookie.com/embed/${videoId}`;
         else $('question-video').removeAttribute('src');
+    }
+
+    // watch, youtu.be, shorts, embed and live links, on www., m. and youtube-nocookie.com
+    function youtubeId(link) {
+        try {
+            const url = new URL(link);
+            const site = url.hostname.toLowerCase().replace(/^(?:www\.|m\.)/, '');
+            const parts = url.pathname.split('/').filter(Boolean);
+            if (site === 'youtu.be') return parts[0] || '';
+            if (site !== 'youtube.com' && site !== 'youtube-nocookie.com') return '';
+            return url.searchParams.get('v') || (['embed', 'shorts', 'live', 'v'].includes(parts[0]) ? parts[1] || '' : '');
+        } catch (_) {
+            return ''; // Questions without video need no player.
+        }
     }
 
     function optionLabel(value, label) {
@@ -374,6 +403,11 @@
         show('question-content', !countdown && (!answered || isWordCloud));
         show('answer-sent', answered && !countdown && !isWordCloud);
         const remaining = state.phase === 'QUESTION' ? Math.max(0, Math.ceil((state.endsAt - now) / 1000)) : 0;
+        if (active && remaining === 5 && countdownSoundFor !== state.questionIndex) {
+            countdownSoundFor = state.questionIndex;
+            sound('playCountdown');
+        }
+        const solution = state.phase !== 'QUESTION' && state.correctAnswer ? state.correctAnswer.split(',') : null;
         $('timer').textContent = Math.min(state.question.timeLimit, remaining);
         $('timer-bar').style.width = `${Math.min(100, remaining / state.question.timeLimit * 100)}%`;
         document.querySelectorAll('.answer-tile').forEach(button => {
@@ -381,7 +415,8 @@
             button.classList.toggle('selected', selected.has(button.dataset.value));
             button.setAttribute('aria-pressed', String(selected.has(button.dataset.value)));
             if (state.question.type === 'SORTING') {
-                const rank = [...selected].indexOf(button.dataset.value);
+                // after the question everyone sees the right order
+                const rank = (solution || [...selected]).indexOf(button.dataset.value);
                 button.querySelector('.answer-symbol').textContent = rank < 0 ? '–' : rank + 1;
             }
         });

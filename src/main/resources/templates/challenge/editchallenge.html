@@ -76,15 +76,23 @@
             <span th:text="#{challenge.edit.questions}">Questions</span>
             (<span class="question-count" id="questionCount" th:text="${challenge.questionSets?.size() ?: 0}">0</span>)
         </h2>
-        <button type="button" class="btn btn-primary" onclick="showQuestionModal()">
-            <i class="bi bi-plus"></i>
-            <span th:text="#{challenge.edit.addQuestion}">Add Question</span>
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-danger" id="bulkDeleteBtn" onclick="bulkDeleteQuestions()" hidden>
+                <i class="bi bi-trash"></i>
+                <span id="bulkDeleteLabel">Delete selected</span>
+            </button>
+            <button type="button" class="btn btn-primary" onclick="showQuestionModal()">
+                <i class="bi bi-plus"></i>
+                <span th:text="#{challenge.edit.addQuestion}">Add Question</span>
+            </button>
+        </div>
     </div>
 
     <div id="questionList" class="question-list">
         <div th:each="q, stat : ${challenge.questionSets}" class="question-card" th:data-id="${q.id}">
             <div class="question-card-content">
+                <input type="checkbox" class="form-check-input question-select" autocomplete="off" th:data-id="${q.id}"
+                       th:aria-label="#{challenge.edit.selectQuestion}" onchange="updateBulkDelete()"/>
                 <span class="question-number-badge" th:text="${stat.index + 1}">1</span>
                 <div class="question-details">
                     <div class="question-header">
@@ -93,12 +101,22 @@
                               class="question-type-badge"
                               th:text="${#messages.msg('client.questionType.' + q.questionType.name())}"></span>
                         <span th:if="${q.timeLimit != null}" class="question-time-badge" th:text="${q.timeLimit} + 's'"></span>
+                        <span th:if="${q.points != null and q.questionType != null and q.questionType.name() != 'POLL' and q.questionType.name() != 'WORD_CLOUD'}"
+                              class="question-time-badge" th:text="${q.points} + ' ' + #{challenge.edit.points}"></span>
+                        <span th:if="${q.imageUrl != null and !q.imageUrl.isEmpty()}" class="question-time-badge">
+                            <i th:class="${#strings.toLowerCase(q.imageUrl).matches('.*[.](mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)$')} ? 'bi bi-music-note-beamed' : 'bi bi-image'"
+                               th:title="${#strings.toLowerCase(q.imageUrl).matches('.*[.](mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)$')} ? #{challenge.edit.audio} : #{challenge.edit.questionImage}"></i>
+                        </span>
+                        <span th:if="${q.videoUrl != null and !q.videoUrl.isEmpty()}" class="question-time-badge">
+                            <i class="bi bi-play-btn" th:title="#{challenge.edit.youtubeUrl}"></i>
+                        </span>
                     </div>
-                    <div class="question-answers" th:if="${q.questionType == null or q.questionType.name() == 'MULTIPLE_CHOICE' or q.questionType.name() == 'POLL' or q.questionType.name() == 'SORTING'}">
-                        <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'A')} ? 'correct-answer' : ''" th:text="'A: ' + ${q.answer1}"></span> |
-                        <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'B')} ? 'correct-answer' : ''" th:text="'B: ' + ${q.answer2}"></span>
-                        <span th:if="${q.answer3}"> | <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'C')} ? 'correct-answer' : ''" th:text="'C: ' + ${q.answer3}"></span></span>
-                        <span th:if="${q.answer4}"> | <span th:class="${q.questionType == null or q.questionType.name() != 'POLL'} and ${#strings.contains(q.correctOptions, 'D')} ? 'correct-answer' : ''" th:text="'D: ' + ${q.answer4}"></span></span>
+                    <div class="question-answers" th:if="${q.questionType == null or q.questionType.name() == 'MULTIPLE_CHOICE' or q.questionType.name() == 'POLL' or q.questionType.name() == 'SORTING'}"
+                         th:with="markCorrect=${q.questionType == null or q.questionType.name() == 'MULTIPLE_CHOICE'}">
+                        <span th:class="${markCorrect} and ${#strings.contains(q.correctOptions, 'A')} ? 'correct-answer' : ''" th:text="'A: ' + ${q.answer1}"></span> |
+                        <span th:class="${markCorrect} and ${#strings.contains(q.correctOptions, 'B')} ? 'correct-answer' : ''" th:text="'B: ' + ${q.answer2}"></span>
+                        <span th:if="${q.answer3}"> | <span th:class="${markCorrect} and ${#strings.contains(q.correctOptions, 'C')} ? 'correct-answer' : ''" th:text="'C: ' + ${q.answer3}"></span></span>
+                        <span th:if="${q.answer4}"> | <span th:class="${markCorrect} and ${#strings.contains(q.correctOptions, 'D')} ? 'correct-answer' : ''" th:text="'D: ' + ${q.answer4}"></span></span>
                         <span th:if="${q.answer5}"> | <span th:text="'E: ' + ${q.answer5}"></span></span>
                         <span th:if="${q.answer6}"> | <span th:text="'F: ' + ${q.answer6}"></span></span>
                         <span th:if="${q.answer7}"> | <span th:text="'G: ' + ${q.answer7}"></span></span>
@@ -138,6 +156,8 @@
         <p th:text="#{challenge.edit.noQuestions}">No questions yet. Click "Add Question" to get started.</p>
     </div>
 </div>
+
+</form>
 
 <!-- Question Modal -->
 <div class="modal fade" id="questionModal" tabindex="-1">
@@ -298,9 +318,9 @@
                 <hr>
                 <h6 class="mb-3" th:text="#{challenge.edit.mediaOptional}">Media (Optional)</h6>
                 <div class="mb-3">
-                    <label class="form-label" for="questionImageInput" th:text="#{challenge.edit.questionImage}">Question Image</label>
-                    <input type="file" id="questionImageInput" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm">
-                    <small class="text-muted" th:text="#{challenge.edit.imageHint}">Max 2MB. JPEG, PNG, or GIF. Will be auto-resized to 1200x800.</small>
+                    <label class="form-label" for="questionImageInput" th:text="#{challenge.edit.questionMedia}">Question image or audio</label>
+                    <input type="file" id="questionImageInput" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm,.opus,.oga">
+                    <small class="text-muted" th:text="#{challenge.edit.mediaHint}">Max 2MB. Images: JPEG, PNG or GIF (large ones are resized to 1200x800). Audio: MP3, WAV, OGG, M4A, AAC, FLAC, WEBM or OPUS, for Multiple Choice, True/False and Type Answer questions.</small>
                     <div id="imagePreviewContainer" style="margin-top: 10px; display: none;">
                         <img id="imagePreview" th:alt="#{challenge.edit.questionImage}" alt="Question Image" style="max-width: 200px; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;">
                         <audio id="audioPreview" controls style="display: none; vertical-align: middle; max-width: 250px;"></audio>
@@ -365,8 +385,10 @@ new Sortable(document.getElementById('questionList'), {
             method: 'POST',
             headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/json'}),
             body: JSON.stringify({challengeId: challengeId, questionIds: ids})
-        }).catch(error => alert(error.message));
-        updateNumbers();
+        }).then(updateNumbers).catch(error => {
+            alert(error.message);
+            location.reload(); // the saved order is what the page has to show
+        });
     }
 });
 
@@ -430,7 +452,7 @@ function onQuestionTypeChange() {
     const mediaInput = document.getElementById('questionImageInput');
     const audioRe = /\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)(?:$|[?#])/i;
     mediaInput.accept = supportsAudio
-        ? 'image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm'
+        ? 'image/jpeg,image/jpg,image/png,image/gif,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.webm,.opus,.oga'
         : 'image/jpeg,image/jpg,image/png,image/gif';
     const selectedFile = mediaInput.files && mediaInput.files[0];
     if (!supportsAudio && ((selectedFile && ((selectedFile.type && selectedFile.type.startsWith('audio/')) || audioRe.test(selectedFile.name || ''))) || audioRe.test(window.currentImageUrl || ''))) {
@@ -485,7 +507,7 @@ function editQuestion(id) {
             document.getElementById('questionText').value = q.question;
             document.getElementById('questionType').value = q.questionType || 'MULTIPLE_CHOICE';
             document.getElementById('timeLimit').value = q.timeLimit || '';
-            document.getElementById('points').value = q.points || 1000;
+            document.getElementById('points').value = q.points ?? 1000;
             for (let i = 1; i <= 10; i++) document.getElementById('answer' + i).value = q['answer' + i] || '';
             document.getElementById('acceptableAnswers').value = q.acceptableAnswers || '';
 
@@ -535,6 +557,12 @@ function saveQuestion() {
     let answer5 = '', answer6 = '', answer7 = '', answer8 = '', answer9 = '', answer10 = '';
     let acceptableAnswers = '';
 
+    if (!document.getElementById('questionText').value.trim()) { alert(LanguageManager.text('client.editor.enterQuestion')); return; }
+    if ((type === 'MULTIPLE_CHOICE' || type === 'POLL')
+            && (!document.getElementById('answer1').value.trim() || !document.getElementById('answer2').value.trim())) {
+        alert(LanguageManager.text('client.editor.enterAnswers')); return;
+    }
+
     if (type === 'MULTIPLE_CHOICE') {
         correct = ['A','B','C','D'].filter(x => document.getElementById('correct'+x).checked).join(',');
         if (!correct) { alert(LanguageManager.text('client.editor.chooseCorrect')); return; }
@@ -582,13 +610,14 @@ function saveQuestion() {
     }
 
     const timeLimitVal = document.getElementById('timeLimit').value;
+    const parsedPoints = parseInt(document.getElementById('points').value);
     const videoUrlVal = document.getElementById('videoUrl').value;
     const data = {
         challengeId: challengeId,
         question: document.getElementById('questionText').value,
         questionType: type,
         timeLimit: timeLimitVal ? parseInt(timeLimitVal) : null,
-        points: (type === 'POLL' || type === 'WORD_CLOUD') ? 0 : (parseInt(document.getElementById('points').value) || 1000),
+        points: (type === 'POLL' || type === 'WORD_CLOUD') ? 0 : (Number.isNaN(parsedPoints) ? 1000 : parsedPoints),
         answer1: answer1,
         answer2: answer2,
         answer3: answer3,
@@ -610,12 +639,14 @@ function saveQuestion() {
     const method = editId ? 'PUT' : 'POST';
 
     // First, save the question
-    RequestClient.json(url, {
+    return RequestClient.json(url, {
         method: method,
         headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/json'}),
         body: JSON.stringify(data)
     }).then(savedQuestion => {
         if (!savedQuestion) return;
+        // a retry after a failed upload must update this question, not create a second one
+        document.getElementById('editingQuestionId').value = savedQuestion.id;
 
         // If there's a new image selected, upload it
         const imageInput = document.getElementById('questionImageInput');
@@ -637,6 +668,26 @@ function deleteQuestion(id) {
     if (!confirm(LanguageManager.text('client.editor.deleteConfirm'))) return;
     RequestClient.json('/api/question/' + id, {method: 'DELETE', headers: CsrfManager.addTokenToFetch()})
         .then(() => location.reload()).catch(error => alert(error.message));
+}
+
+function selectedQuestionIds() {
+    return [...document.querySelectorAll('.question-select:checked')].map(box => parseInt(box.dataset.id));
+}
+
+function updateBulkDelete() {
+    const count = selectedQuestionIds().length;
+    document.getElementById('bulkDeleteBtn').hidden = count === 0;
+    document.getElementById('bulkDeleteLabel').textContent = LanguageManager.text('client.editor.deleteSelected', count);
+}
+
+function bulkDeleteQuestions() {
+    const ids = selectedQuestionIds();
+    if (ids.length === 0 || !confirm(LanguageManager.text('client.editor.deleteSelectedConfirm', ids.length))) return;
+    RequestClient.json('/api/question/bulk-delete', {
+        method: 'POST',
+        headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/json'}),
+        body: JSON.stringify(ids)
+    }).then(() => location.reload()).catch(error => alert(error.message));
 }
 
 function duplicateQuestion(id) {
@@ -754,6 +805,5 @@ function previewYouTubeVideo() {
     }
 }
 </script>
-</form>
 </body>
 </html>

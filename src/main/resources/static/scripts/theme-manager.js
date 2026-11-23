@@ -11,6 +11,8 @@ const ThemeManager = (function() {
 
     // Configuration
     const STORAGE_KEY = 'darkhold_theme';
+    const COLORBLIND_KEY = 'darkhold_colorblind';
+    const COLORBLIND_MODES = ['none', 'deuteranopia', 'protanopia', 'tritanopia'];
     const THEMES = {
         LIGHT: 'light',
         DARK: 'dark'
@@ -19,27 +21,55 @@ const ThemeManager = (function() {
 
     // Current theme state
     let currentTheme = DEFAULT_THEME;
+    let systemPreferenceWatched = false;
 
     /**
      * Initialize the theme system
      * - Loads saved theme from localStorage
-     * - Detects system preference if no saved theme
-     * - Applies theme to document
+     * - Detects system preference if no saved theme (without persisting it)
+     * - Restores saved colorblind preference
+     * - Watches system preference changes
      */
     function init() {
-        // Try to load saved theme
         const savedTheme = getSavedTheme();
+        currentTheme = savedTheme || getSystemPreference();
 
-        if (savedTheme) {
-            currentTheme = savedTheme;
-        } else {
-            // Check system preference
-            currentTheme = getSystemPreference();
-        }
-
-        applyTheme(currentTheme);
+        applyTheme(currentTheme, false);
+        applyColorblindMode(getColorblindMode(), false);
+        watchSystemPreference();
 
         console.log(`[ThemeManager] Initialized with theme: ${currentTheme}`);
+    }
+
+    function getColorblindMode() {
+        try {
+            const saved = localStorage.getItem(COLORBLIND_KEY);
+            return COLORBLIND_MODES.includes(saved) ? saved : 'none';
+        } catch (error) {
+            return 'none';
+        }
+    }
+
+    function applyColorblindMode(mode, persist = true) {
+        const normalized = COLORBLIND_MODES.includes(mode) ? mode : 'none';
+        const html = document.documentElement;
+        if (normalized === 'none') {
+            html.removeAttribute('data-colorblind');
+        } else {
+            html.setAttribute('data-colorblind', normalized);
+        }
+        if (persist) {
+            try {
+                localStorage.setItem(COLORBLIND_KEY, normalized);
+            } catch (error) {
+                console.warn('[ThemeManager] Failed to save colorblind mode:', error);
+            }
+        }
+        return normalized;
+    }
+
+    function setColorblindMode(mode) {
+        return applyColorblindMode(mode, true);
     }
 
     /**
@@ -81,8 +111,9 @@ const ThemeManager = (function() {
     /**
      * Apply theme to the document
      * @param {string} theme - The theme to apply
+     * @param {boolean} persist - Whether to save explicit choice to localStorage
      */
-    function applyTheme(theme) {
+    function applyTheme(theme, persist = true) {
         const html = document.documentElement;
 
         // Set data-theme attribute on html element
@@ -91,8 +122,10 @@ const ThemeManager = (function() {
         // Update current theme
         currentTheme = theme;
 
-        // Save to localStorage
-        saveTheme(theme);
+        // Save to localStorage only on explicit user action
+        if (persist) {
+            saveTheme(theme);
+        }
 
         // Dispatch custom event for other components to react
         window.dispatchEvent(new CustomEvent('themechange', {
@@ -108,7 +141,7 @@ const ThemeManager = (function() {
      */
     function toggle() {
         const newTheme = currentTheme === THEMES.LIGHT ? THEMES.DARK : THEMES.LIGHT;
-        applyTheme(newTheme);
+        applyTheme(newTheme, true);
         return newTheme;
     }
 
@@ -122,7 +155,7 @@ const ThemeManager = (function() {
             console.error(`[ThemeManager] Invalid theme: ${theme}`);
             return false;
         }
-        applyTheme(theme);
+        applyTheme(theme, true);
         return true;
     }
 
@@ -154,28 +187,20 @@ const ThemeManager = (function() {
      * Listen to system theme changes (optional enhancement)
      */
     function watchSystemPreference() {
-        if (window.matchMedia) {
-            const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-            // Modern browsers
-            if (darkModeQuery.addEventListener) {
-                darkModeQuery.addEventListener('change', function(e) {
-                    // Only auto-switch if user hasn't manually set a preference
-                    if (!getSavedTheme()) {
-                        const newTheme = e.matches ? THEMES.DARK : THEMES.LIGHT;
-                        applyTheme(newTheme);
-                    }
-                });
+        if (systemPreferenceWatched || !window.matchMedia) {
+            return;
+        }
+        systemPreferenceWatched = true;
+        const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const onChange = function(e) {
+            if (!getSavedTheme()) {
+                applyTheme(e.matches ? THEMES.DARK : THEMES.LIGHT, false);
             }
-            // Legacy browsers
-            else if (darkModeQuery.addListener) {
-                darkModeQuery.addListener(function(e) {
-                    if (!getSavedTheme()) {
-                        const newTheme = e.matches ? THEMES.DARK : THEMES.LIGHT;
-                        applyTheme(newTheme);
-                    }
-                });
-            }
+        };
+        if (darkModeQuery.addEventListener) {
+            darkModeQuery.addEventListener('change', onChange);
+        } else if (darkModeQuery.addListener) {
+            darkModeQuery.addListener(onChange);
         }
     }
 
@@ -187,6 +212,8 @@ const ThemeManager = (function() {
         getCurrentTheme: getCurrentTheme,
         isDark: isDark,
         isLight: isLight,
+        setColorblindMode: setColorblindMode,
+        getColorblindMode: getColorblindMode,
         THEMES: THEMES
     };
 })();

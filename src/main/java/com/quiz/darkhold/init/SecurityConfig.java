@@ -44,7 +44,8 @@ import java.util.Map;
 @EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
     private static final String[] GUEST_GAME_PATHS = {"/interstitial", "/question", "/game", "/answer/",
-        "/validate_answer/", "/scoreboard", "/final", "/team/list/**", "/darkhold-websocket/**", "/logout"};
+        "/validate_answer/", "/scoreboard", "/final", "/team/list/**", "/team/scores/**", "/team/player/**",
+        "/darkhold-websocket/**", "/logout"};
 
 
     private final UserDetailsService userDetailsService;
@@ -122,7 +123,7 @@ public class SecurityConfig {
         http.logout((logout) -> logout.logoutSuccessUrl("/")
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
-                .deleteCookies("JSESSIONID", "XSRF-TOKEN"));
+                .deleteCookies("SESSION", "JSESSIONID", "XSRF-TOKEN"));
 
         http.headers(
                 (header) -> header.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
@@ -141,7 +142,7 @@ public class SecurityConfig {
                                             final FilterChain chain) throws ServletException, IOException {
                 if ("POST".equals(req.getMethod()) && (req.getContextPath() + "/login").equals(req.getRequestURI())
                         && !rateLimiter.isAllowed(loginKey(req))) {
-                    res.sendRedirect("/login?error");
+                    res.sendRedirect(req.getContextPath() + "/login?error=locked");
                     return;
                 }
                 chain.doFilter(req, res);

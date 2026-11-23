@@ -1,24 +1,19 @@
 package com.quiz.darkhold.user.controller;
 
 import com.quiz.darkhold.user.service.SecurityService;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.ui.Model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,12 +27,6 @@ class LoginControllerTest {
 
     @Mock
     private Model model;
-
-    @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpSession session;
 
     private LoginController loginController;
 
@@ -124,6 +113,18 @@ class LoginControllerTest {
             // When both are present, logout takes priority in modelAttributes logic
             verify(model).addAttribute("message", "You have been logged out successfully.");
         }
+
+        @Test
+        @DisplayName("should set locked flag when error is locked")
+        void testLogin_WhenErrorLocked_ShouldSetLockedFlag() {
+            when(securityService.isAuthenticated()).thenReturn(false);
+
+            var result = loginController.login(model, "locked", null);
+
+            assertEquals("login", result);
+            verify(model).addAttribute("locked", true);
+            verify(model).addAttribute(anyString(), anyString());
+        }
     }
 
     @Nested
@@ -131,86 +132,10 @@ class LoginControllerTest {
     class LogoutMethodTests {
 
         @Test
-        @DisplayName("should clear security context when session exists")
-        void testLogout_WhenSessionExists_ShouldClearSecurityContextAndInvalidateSession() {
-            // Given
-            when(request.getSession(false)).thenReturn(session);
-
-            // When
-            try (MockedStatic<SecurityContextHolder> mockedSecurityContext = mockStatic(SecurityContextHolder.class)) {
-                String result = loginController.logout(request);
-
-                // Then
-                assertEquals("login", result);
-                verify(request).getSession(false);
-                verify(session).invalidate();
-                mockedSecurityContext.verify(SecurityContextHolder::clearContext);
-            }
-        }
-
-        @Test
-        @DisplayName("should clear security context when session is null")
-        void testLogout_WhenSessionIsNull_ShouldClearSecurityContext() {
-            // Given
-            when(request.getSession(false)).thenReturn(null);
-
-            // When
-            try (MockedStatic<SecurityContextHolder> mockedSecurityContext = mockStatic(SecurityContextHolder.class)) {
-                String result = loginController.logout(request);
-
-                // Then
-                assertEquals("login", result);
-                verify(request).getSession(false);
-                mockedSecurityContext.verify(SecurityContextHolder::clearContext);
-            }
-        }
-
-        @Test
-        @DisplayName("should not invalidate null session")
-        void testLogout_WhenSessionIsNull_ShouldNotCallInvalidate() {
-            // Given
-            when(request.getSession(false)).thenReturn(null);
-
-            // When
-            try (MockedStatic<SecurityContextHolder> mockedSecurityContext = mockStatic(SecurityContextHolder.class)) {
-                loginController.logout(request);
-
-                // Then
-                verify(session, never()).invalidate();
-                mockedSecurityContext.verify(SecurityContextHolder::clearContext);
-            }
-        }
-
-        @Test
-        @DisplayName("should return login view after logout")
-        void testLogout_ShouldReturnLoginView() {
-            // Given
-            when(request.getSession(false)).thenReturn(session);
-
-            // When
-            try (MockedStatic<SecurityContextHolder> mockedSecurityContext = mockStatic(SecurityContextHolder.class)) {
-                String result = loginController.logout(request);
-
-                // Then
-                assertEquals("login", result);
-            }
-        }
-
-        @Test
-        @DisplayName("should use getSession(false) to avoid creating new session")
-        void testLogout_ShouldUseGetSessionFalse() {
-            // Given
-            when(request.getSession(false)).thenReturn(null);
-
-            // When
-            try (MockedStatic<SecurityContextHolder> mockedSecurityContext = mockStatic(SecurityContextHolder.class)) {
-                loginController.logout(request);
-
-                // Then
-                verify(request).getSession(false);
-                verify(request, never()).getSession();
-                verify(request, never()).getSession(true);
-            }
+        @DisplayName("GET /logout should redirect to /login without CSRF-less logout")
+        void testLogout_ShouldRedirectToLogin() {
+            String result = loginController.logout();
+            assertEquals("redirect:/login", result);
         }
     }
 

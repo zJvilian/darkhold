@@ -1,5 +1,6 @@
 package com.quiz.darkhold.user.controller;
 
+import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import com.quiz.darkhold.user.entity.Role;
 import com.quiz.darkhold.user.entity.User;
 import com.quiz.darkhold.user.exception.UserNotFoundException;
@@ -12,8 +13,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.context.MessageSource;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.ui.Model;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -59,6 +61,7 @@ class UserControllerTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(userService.isEmailUnique(any(), any())).thenReturn(true);
         userController = new UserController(userService, messages);
     }
 
@@ -66,34 +69,41 @@ class UserControllerTest {
 
     @Test
     void testManageUsers_ShouldDelegateToListByPage() {
-        // Given
         var mockUsers = createMockUserList(5);
         var page = new PageImpl<>(mockUsers);
         when(userService.getAllUsers(1)).thenReturn(page);
 
-        // When
-        var result = userController.manageUsers(model);
+        var result = userController.manageUsers(null, model);
 
-        // Then
         assertEquals("user/usermanagement", result);
         verify(userService).getAllUsers(1);
         verify(model).addAttribute(eq("currentPage"), eq(1));
         verify(model).addAttribute(eq("listusers"), eq(mockUsers));
     }
 
+    @Test
+    void testListByPage_WithSearchQuery_ShouldSearchUsers() {
+        var mockUsers = createMockUserList(1);
+        var page = new PageImpl<>(mockUsers);
+        when(userService.searchUsers(1, "User1")).thenReturn(page);
+
+        var result = userController.listByPage(1, "  User1  ", model);
+
+        assertEquals("user/usermanagement", result);
+        verify(userService).searchUsers(1, "User1");
+        verify(model).addAttribute("query", "User1");
+    }
+
     // ======================== listByPage Tests ========================
 
     @Test
     void testListByPage_FirstPage_ShouldDisplayCorrectCounts() {
-        // Given
         var mockUsers = createMockUserList(5);
         var page = new PageImpl<>(mockUsers);
         when(userService.getAllUsers(1)).thenReturn(page);
 
-        // When
-        var result = userController.listByPage(1, model);
+        var result = userController.listByPage(1, null, model);
 
-        // Then
         assertEquals("user/usermanagement", result);
         verify(model).addAttribute("currentPage", 1);
         verify(model).addAttribute("totalPages", 1);
@@ -105,15 +115,12 @@ class UserControllerTest {
 
     @Test
     void testListByPage_SecondPage_ShouldCalculateCorrectStartCount() {
-        // Given
         var mockUsers = createMockUserList(5);
         var page = new PageImpl<>(mockUsers);
         when(userService.getAllUsers(2)).thenReturn(page);
 
-        // When
-        var result = userController.listByPage(2, model);
+        var result = userController.listByPage(2, null, model);
 
-        // Then
         assertEquals("user/usermanagement", result);
         var expectedStartCount = UserServiceImpl.USERS_PER_PAGE + 1;
         verify(model).addAttribute("currentPage", 2);
@@ -122,30 +129,24 @@ class UserControllerTest {
 
     @Test
     void testListByPage_LastPageWithFewerItems_ShouldAdjustEndCount() {
-        // Given
-        var mockUsers = createMockUserList(3); // Only 3 items on last page
+        var mockUsers = createMockUserList(3);
         var page = new PageImpl<>(mockUsers);
         when(userService.getAllUsers(3)).thenReturn(page);
 
-        // When
-        var result = userController.listByPage(3, model);
+        var result = userController.listByPage(3, null, model);
 
-        // Then
         assertEquals("user/usermanagement", result);
-        verify(model).addAttribute("endCount", 3L); // Should cap at total elements
+        verify(model).addAttribute("endCount", 3L);
     }
 
     @Test
     void testListByPage_EmptyPage_ShouldHandleCorrectly() {
-        // Given
         var emptyList = new ArrayList<User>();
         var page = new PageImpl<>(emptyList);
         when(userService.getAllUsers(1)).thenReturn(page);
 
-        // When
-        var result = userController.listByPage(1, model);
+        var result = userController.listByPage(1, null, model);
 
-        // Then
         assertEquals("user/usermanagement", result);
         verify(model).addAttribute("totalItems", 0L);
         verify(model).addAttribute("listusers", emptyList);
@@ -155,20 +156,16 @@ class UserControllerTest {
 
     @Test
     void testCreateUser_ShouldPopulateModelWithRolesAndNewUser() {
-        // Given
         var mockRoles = createMockRoleList(3);
         when(userService.listRoles()).thenReturn(mockRoles);
 
-        // When
         var result = userController.createUser(model);
 
-        // Then
         assertEquals("user/user_form", result);
         verify(userService).listRoles();
         verify(model).addAttribute(eq("listRoles"), eq(mockRoles));
         verify(model).addAttribute(eq("pageTitle"), eq("Create New User"));
 
-        // Verify that user form is added and enabled is set to true
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(model).addAttribute(eq("userForm"), userCaptor.capture());
         assertEquals(true, userCaptor.getValue().getEnabled());
@@ -176,14 +173,11 @@ class UserControllerTest {
 
     @Test
     void testCreateUser_EmptyRoleList_ShouldStillReturnForm() {
-        // Given
         var emptyRoles = new ArrayList<Role>();
         when(userService.listRoles()).thenReturn(emptyRoles);
 
-        // When
         var result = userController.createUser(model);
 
-        // Then
         assertEquals("user/user_form", result);
         verify(model).addAttribute(eq("listRoles"), eq(emptyRoles));
     }
@@ -192,7 +186,6 @@ class UserControllerTest {
 
     @Test
     void testSaveUser_WithValidImageFile_ShouldUploadAndRedirect() throws IOException {
-        // Given
         final var user = createMockUser(null);
         var fileName = "photo.jpg";
         var savedUser = createMockUser(1L);
@@ -205,10 +198,11 @@ class UserControllerTest {
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
             fileUploadUtil.when(() -> com.quiz.darkhold.init.FileUploadUtil.imageFileName(fileName))
                     .thenReturn(fileName);
-            // When
-            var result = userController.saveUser(user, redirectAttributes, multipartFile);
+            fileUploadUtil.when(() -> com.quiz.darkhold.init.FileUploadUtil.detectImageExtension(multipartFile))
+                    .thenReturn("jpg");
 
-            // Then
+            var result = userController.saveUser(user, redirectAttributes, multipartFile, null, model);
+
             assertEquals("redirect:/userManagement", result);
             verify(userService).save(any(User.class));
             fileUploadUtil.verify(() -> cleanDir("user-photos/" + savedUser.getId()));
@@ -221,7 +215,6 @@ class UserControllerTest {
 
     @Test
     void testSaveUser_WithEmptyImageFile_ShouldNotUploadFile() throws IOException {
-        // Given
         var user = createMockUser(null);
         user.setPhoto("");
 
@@ -230,10 +223,8 @@ class UserControllerTest {
 
         try (MockedStatic<com.quiz.darkhold.init.FileUploadUtil> fileUploadUtil
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
-            // When
-            var result = userController.saveUser(user, redirectAttributes, multipartFile);
+            var result = userController.saveUser(user, redirectAttributes, multipartFile, null, model);
 
-            // Then
             assertEquals("redirect:/userManagement", result);
             verify(userService).save(any(User.class));
             fileUploadUtil.verify(() -> cleanDir(anyString()), never());
@@ -245,7 +236,6 @@ class UserControllerTest {
 
     @Test
     void testSaveUser_WithNullMultipartFile_ShouldNotUploadFile() throws IOException {
-        // Given
         var user = createMockUser(null);
         user.setPhoto("");
 
@@ -253,10 +243,8 @@ class UserControllerTest {
 
         try (MockedStatic<com.quiz.darkhold.init.FileUploadUtil> fileUploadUtil
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
-            // When
-            var result = userController.saveUser(user, redirectAttributes, null);
+            var result = userController.saveUser(user, redirectAttributes, null, null, model);
 
-            // Then
             assertEquals("redirect:/userManagement", result);
             verify(userService).save(any(User.class));
             fileUploadUtil.verify(() -> cleanDir(anyString()), never());
@@ -267,7 +255,6 @@ class UserControllerTest {
 
     @Test
     void testSaveUser_WithExistingPhoto_ShouldPreservePhotoIfFileEmpty() throws IOException {
-        // Given
         var user = createMockUser(1L);
         user.setPhoto("existing_photo.jpg");
 
@@ -276,10 +263,8 @@ class UserControllerTest {
 
         try (MockedStatic<com.quiz.darkhold.init.FileUploadUtil> fileUploadUtil
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
-            // When
-            var result = userController.saveUser(user, redirectAttributes, multipartFile);
+            var result = userController.saveUser(user, redirectAttributes, multipartFile, null, model);
 
-            // Then
             assertEquals("redirect:/userManagement", result);
             verify(userService).save(user);
             fileUploadUtil.verify(() -> cleanDir(anyString()), never());
@@ -288,7 +273,6 @@ class UserControllerTest {
 
     @Test
     void testSaveUser_FileUploadIOException_ShouldPropagateException() {
-        // Given
         final var user = createMockUser(null);
         var fileName = "photo.jpg";
         var savedUser = createMockUser(1L);
@@ -301,12 +285,13 @@ class UserControllerTest {
                 = mockStatic(com.quiz.darkhold.init.FileUploadUtil.class)) {
             fileUploadUtil.when(() -> com.quiz.darkhold.init.FileUploadUtil.imageFileName(fileName))
                     .thenReturn(fileName);
+            fileUploadUtil.when(() -> com.quiz.darkhold.init.FileUploadUtil.detectImageExtension(multipartFile))
+                    .thenReturn("jpg");
             fileUploadUtil.when(() -> saveFile(anyString(), anyString(), any(MultipartFile.class)))
                     .thenThrow(new IOException("File upload failed"));
 
-            // When & Then
             try {
-                userController.saveUser(user, redirectAttributes, multipartFile);
+                userController.saveUser(user, redirectAttributes, multipartFile, null, model);
             } catch (IOException ex) {
                 assertEquals("File upload failed", ex.getMessage());
             }
@@ -318,11 +303,35 @@ class UserControllerTest {
         when(multipartFile.isEmpty()).thenReturn(false);
         when(multipartFile.getOriginalFilename()).thenReturn("../../shell.jsp");
 
-        var result = userController.saveUser(createMockUser(null), redirectAttributes, multipartFile);
+        var result = userController.saveUser(createMockUser(null), redirectAttributes, multipartFile, null, model);
 
         assertEquals("redirect:/userManagement", result);
         verify(userService, never()).save(any(User.class));
         verify(redirectAttributes).addFlashAttribute(eq("errorMessage"), anyString());
+    }
+
+    @Test
+    void testSaveUser_DuplicateEmailReturnsFormWithError() throws IOException {
+        var user = createMockUser(null);
+        when(userService.isEmailUnique(null, user.getEmail())).thenReturn(false);
+
+        var result = userController.saveUser(user, redirectAttributes, null, null, model);
+
+        assertEquals("user/user_form", result);
+        verify(userService, never()).save(any(User.class));
+        verify(model).addAttribute(eq("errorMessage"), anyString());
+    }
+
+    @Test
+    void testSaveUser_NewUserWithShortPasswordReturnsFormWithError() throws IOException {
+        var user = createMockUser(null);
+        user.setPassword("short");
+
+        var result = userController.saveUser(user, redirectAttributes, null, null, model);
+
+        assertEquals("user/user_form", result);
+        verify(userService, never()).save(any(User.class));
+        verify(model).addAttribute(eq("errorMessage"), anyString());
     }
 
     @Test
@@ -339,45 +348,38 @@ class UserControllerTest {
 
     @Test
     void testEditUser_WithValidId_ShouldPopulateModelAndReturnForm() throws UserNotFoundException {
-        // Given
         var userId = 1L;
         var user = createMockUser(userId);
         var mockRoles = createMockRoleList(2);
         when(userService.get(userId)).thenReturn(user);
         when(userService.listRoles()).thenReturn(mockRoles);
 
-        // When
         var result = userController.editUser(userId, model, redirectAttributes);
 
-        // Then
         assertEquals("user/user_form", result);
         verify(userService).get(userId);
         verify(userService).listRoles();
         verify(model).addAttribute("userForm", user);
         verify(model).addAttribute("pageTitle", "Edit User (ID: " + userId + ")");
         verify(model).addAttribute("listRoles", mockRoles);
-        verify(redirectAttributes, never()).addAttribute(anyString(), anyString());
+        verify(redirectAttributes, never()).addFlashAttribute(anyString(), any());
     }
 
     @Test
-    void testEditUser_UserNotFound_ShouldRedirectWithErrorMessage() throws UserNotFoundException {
-        // Given
+    void testEditUser_UserNotFound_ShouldRedirectWithFlashMessage() throws UserNotFoundException {
         var userId = 999L;
         var errorMessage = "User not found with id: " + userId;
         when(userService.get(userId)).thenThrow(new UserNotFoundException(errorMessage));
 
-        // When
         var result = userController.editUser(userId, model, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result);
-        verify(redirectAttributes).addAttribute("message", errorMessage);
+        verify(redirectAttributes).addFlashAttribute("message", errorMessage);
         verify(model, never()).addAttribute(anyString(), any());
     }
 
     @Test
     void testEditUser_MultipleCallsWithDifferentIds_ShouldHandleCorrectly() throws UserNotFoundException {
-        // Given
         var userId1 = 1L;
         var userId2 = 2L;
         var user1 = createMockUser(userId1);
@@ -388,11 +390,9 @@ class UserControllerTest {
         when(userService.get(userId2)).thenReturn(user2);
         when(userService.listRoles()).thenReturn(mockRoles);
 
-        // When
         var result1 = userController.editUser(userId1, model, redirectAttributes);
         var result2 = userController.editUser(userId2, model, redirectAttributes);
 
-        // Then
         assertEquals("user/user_form", result1);
         assertEquals("user/user_form", result2);
         verify(userService).get(userId1);
@@ -404,14 +404,11 @@ class UserControllerTest {
 
     @Test
     void testDeleteUser_WithValidId_ShouldDeleteAndRedirect() throws UserNotFoundException {
-        // Given
         var userId = 1L;
         doNothing().when(userService).delete(userId);
 
-        // When
-        var result = userController.deleteUser(userId, redirectAttributes);
+        var result = userController.deleteUser(userId, null, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result);
         verify(userService).delete(userId);
         verify(redirectAttributes).addFlashAttribute("message",
@@ -419,33 +416,39 @@ class UserControllerTest {
     }
 
     @Test
+    void testDeleteUser_OwnAccount_IsRejected() throws UserNotFoundException {
+        var admin = createMockUser(1L);
+        var principal = new DarkholdUserDetails(admin);
+
+        var result = userController.deleteUser(1L, principal, redirectAttributes);
+
+        assertEquals("redirect:/userManagement", result);
+        verify(userService, never()).delete(1L);
+        verify(redirectAttributes).addFlashAttribute(eq("errorMessage"), anyString());
+    }
+
+    @Test
     void testDeleteUser_UserNotFound_ShouldRedirectWithErrorMessage() throws UserNotFoundException {
-        // Given
         var userId = 999L;
         var errorMessage = "User not found with id: " + userId;
         doThrow(new UserNotFoundException(errorMessage)).when(userService).delete(userId);
 
-        // When
-        var result = userController.deleteUser(userId, redirectAttributes);
+        var result = userController.deleteUser(userId, null, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result);
         verify(redirectAttributes).addFlashAttribute("message", errorMessage);
     }
 
     @Test
     void testDeleteUser_MultipleDeletes_ShouldHandleCorrectly() throws UserNotFoundException {
-        // Given
         var userId1 = 1L;
         var userId2 = 2L;
         doNothing().when(userService).delete(userId1);
         doNothing().when(userService).delete(userId2);
 
-        // When
-        var result1 = userController.deleteUser(userId1, redirectAttributes);
-        var result2 = userController.deleteUser(userId2, redirectAttributes);
+        var result1 = userController.deleteUser(userId1, null, redirectAttributes);
+        var result2 = userController.deleteUser(userId2, null, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result1);
         assertEquals("redirect:/userManagement", result2);
         verify(userService).delete(userId1);
@@ -456,15 +459,12 @@ class UserControllerTest {
 
     @Test
     void testUpdateUserEnabledStatus_EnableUser_ShouldSetStatusAndRedirect() {
-        // Given
         var userId = 1L;
         var enabled = true;
         doNothing().when(userService).updateUserEnabledStatus(userId, enabled);
 
-        // When
-        var result = userController.updateUserEnabledStatus(userId, enabled, redirectAttributes);
+        var result = userController.updateUserEnabledStatus(userId, enabled, null, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result);
         verify(userService).updateUserEnabledStatus(userId, enabled);
         verify(redirectAttributes).addFlashAttribute("message",
@@ -473,15 +473,12 @@ class UserControllerTest {
 
     @Test
     void testUpdateUserEnabledStatus_DisableUser_ShouldSetStatusAndRedirect() {
-        // Given
         var userId = 2L;
         var enabled = false;
         doNothing().when(userService).updateUserEnabledStatus(userId, enabled);
 
-        // When
-        var result = userController.updateUserEnabledStatus(userId, enabled, redirectAttributes);
+        var result = userController.updateUserEnabledStatus(userId, enabled, null, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result);
         verify(userService).updateUserEnabledStatus(userId, enabled);
         verify(redirectAttributes).addFlashAttribute("message",
@@ -489,17 +486,26 @@ class UserControllerTest {
     }
 
     @Test
+    void testUpdateUserEnabledStatus_DisableOwnAccount_IsRejected() {
+        var admin = createMockUser(1L);
+        var principal = new DarkholdUserDetails(admin);
+
+        var result = userController.updateUserEnabledStatus(1L, false, principal, redirectAttributes);
+
+        assertEquals("redirect:/userManagement", result);
+        verify(userService, never()).updateUserEnabledStatus(1L, false);
+        verify(redirectAttributes).addFlashAttribute(eq("errorMessage"), anyString());
+    }
+
+    @Test
     void testUpdateUserEnabledStatus_ToggleMultipleTimes_ShouldHandleCorrectly() {
-        // Given
         var userId = 1L;
         doNothing().when(userService).updateUserEnabledStatus(userId, true);
         doNothing().when(userService).updateUserEnabledStatus(userId, false);
 
-        // When
-        var result1 = userController.updateUserEnabledStatus(userId, true, redirectAttributes);
-        var result2 = userController.updateUserEnabledStatus(userId, false, redirectAttributes);
+        var result1 = userController.updateUserEnabledStatus(userId, true, null, redirectAttributes);
+        var result2 = userController.updateUserEnabledStatus(userId, false, null, redirectAttributes);
 
-        // Then
         assertEquals("redirect:/userManagement", result1);
         assertEquals("redirect:/userManagement", result2);
         verify(userService).updateUserEnabledStatus(userId, true);

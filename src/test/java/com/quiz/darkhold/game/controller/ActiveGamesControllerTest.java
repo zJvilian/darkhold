@@ -90,4 +90,34 @@ class ActiveGamesControllerTest {
         verify(liveQuizService).terminateAllForHost(anyString());
         verify(previewService).terminateAllGamesForModerator("moderator@test.com");
     }
+
+    @Test
+    void adminsSeeEveryModeratorsGames() throws Exception {
+        var admin = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "admin#1", "n/a",
+                List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ADMIN")));
+        when(previewService.getAllActiveGames()).thenReturn(List.of());
+        when(liveQuizService.allActiveRooms()).thenReturn(List.of());
+
+        mockMvc.perform(get("/my-active-games").principal(admin)).andExpect(status().isOk());
+
+        verify(previewService).getAllActiveGames();
+        verify(liveQuizService).allActiveRooms();
+    }
+
+    @Test
+    void participantCountNeverGoesNegative() throws Exception {
+        final Principal principal = () -> "moderator@test.com";
+        Game game = new Game();
+        game.setPin("12345");
+        game.setGameStatus("WAITING");
+        when(previewService.getActiveGamesForModerator("moderator@test.com")).thenReturn(List.of(game));
+        when(currentGame.getParticipantCount("12345")).thenReturn(0);
+
+        var result = mockMvc.perform(get("/my-active-games").principal(principal)).andReturn();
+
+        var games = (List<?>) result.getModelAndView().getModel().get("activeGames");
+        org.junit.jupiter.api.Assertions.assertEquals(0,
+                ((com.quiz.darkhold.game.model.GameInfo) games.get(0)).getParticipantCount());
+    }
 }

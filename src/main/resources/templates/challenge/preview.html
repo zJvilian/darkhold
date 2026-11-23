@@ -56,12 +56,21 @@
                             <div class="question-header" th:onclick="'toggleQuestion(' + ${chStat.index} + ')'">
                                 <span class="question-number" th:text="${chStat.index + 1}">1</span>
                                 <span class="question-text" th:text="${ch.question}">What is the capital of France?</span>
+                                <th:block th:unless="${#strings.isEmpty(ch.imageUrl)}"
+                                          th:with="audio=${ch.imageUrl matches '(?i).*\.(mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)([?#].*)?'}">
+                                    <i th:if="${audio}" class="fas fa-volume-up" role="img"
+                                       th:title="#{challenge.preview.questionAudio}" th:aria-label="#{challenge.preview.questionAudio}"></i>
+                                    <i th:unless="${audio}" class="fas fa-image" role="img"
+                                       th:title="#{game.questionImage}" th:aria-label="#{game.questionImage}"></i>
+                                </th:block>
+                                <i th:unless="${#strings.isEmpty(ch.videoUrl)}" class="fas fa-video" role="img"
+                                   th:title="#{live.videoTitle}" th:aria-label="#{live.videoTitle}"></i>
                                 <i class="fas fa-chevron-down question-toggle-icon"></i>
                             </div>
                             <div class="question-body" th:id="'question-body-' + ${chStat.index}"
                                  th:with="type=${ch.questionType != null ? ch.questionType.name() : 'MULTIPLE_CHOICE'}, opts=${ch.correctOptions ?: ''}">
                                 <th:block th:if="${type == 'MULTIPLE_CHOICE' or type == 'POLL'}">
-                                    <div th:each="answer, st : ${ {ch.answer1, ch.answer2, ch.answer3, ch.answer4} }" th:if="${answer != null}"
+                                    <div th:each="answer, st : ${ {ch.answer1, ch.answer2, ch.answer3, ch.answer4} }" th:unless="${#strings.isEmpty(answer)}"
                                          th:with="letter=${#strings.substring('ABCD', st.index, st.index + 1)}"
                                          th:class="${type != 'POLL' and #strings.contains(opts, letter)} ? 'answer-option correct' : 'answer-option'">
                                         <span class="answer-label" th:text="${letter}">A</span>
@@ -80,7 +89,14 @@
                                     <span th:text="${ch.answer1}">Paris</span>
                                     <span th:if="${ch.acceptableAnswers}"> (<span th:text="#{client.alsoAccepts}">also accepts:</span> <span th:text="${ch.acceptableAnswers}"></span>)</span>
                                 </div>
-                                <div th:if="${type == 'SORTING'}" class="answer-option" th:text="${opts}"></div>
+                                <!-- Sorting: the answers in their right order -->
+                                <th:block th:if="${type == 'SORTING' and ch.sortingAnswers != null}">
+                                    <div th:each="letter : ${#strings.arraySplit(opts, ',')}" class="answer-option correct"
+                                         th:with="idx=${#strings.indexOf('ABCDEFGHIJ', #strings.trim(letter))}">
+                                        <span class="answer-label" th:text="${#strings.trim(letter)}">A</span>
+                                        <span th:text="${idx >= 0 and idx < #arrays.length(ch.sortingAnswers) ? ch.sortingAnswers[idx] : ''}">First</span>
+                                    </div>
+                                </th:block>
                                 <div th:if="${type == 'WORD_CLOUD'}" class="answer-option"
                                      th:text="${opts == 'EXACT' ? #messages.msg('challenge.edit.wordCloudExactSummary') : #messages.msg('challenge.edit.wordCloudFuzzySummary')}"></div>
                             </div>

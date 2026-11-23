@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 @Service
 public class ImageProcessingService {
@@ -108,6 +109,13 @@ public class ImageProcessingService {
                 throw new ImageValidationException(
                         "Invalid audio file. Allowed extensions: mp3, wav, ogg, m4a, aac, flac, webm, opus, oga");
             }
+            try {
+                if (!hasAudioSignature(file.getBytes())) {
+                    throw new ImageValidationException("File is not a valid audio file");
+                }
+            } catch (IOException ioException) {
+                throw new ImageValidationException("Failed to read audio file: " + ioException.getMessage());
+            }
             return;
         }
 
@@ -153,10 +161,10 @@ public class ImageProcessingService {
 
             int originalWidth = originalImage.getWidth();
             int originalHeight = originalImage.getHeight();
+            String extension = getFileExtension(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
 
-            // Check if resizing is needed
-            if (originalWidth <= maxImageWidth && originalHeight <= maxImageHeight) {
-                // No resizing needed, return original
+            // Check if resizing is needed; a GIF is kept as is because re-encoding would drop its animation
+            if (originalWidth <= maxImageWidth && originalHeight <= maxImageHeight || "gif".equals(extension)) {
                 return file.getBytes();
             }
 
@@ -171,8 +179,10 @@ public class ImageProcessingService {
             logger.info("Resizing image from {}x{} to {}x{}",
                     originalWidth, originalHeight, newWidth, newHeight);
 
-            // Create resized image
-            BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+            // PNG keeps its transparency and format; everything else becomes JPEG
+            boolean png = "png".equals(extension);
+            BufferedImage resizedImage = new BufferedImage(newWidth, newHeight,
+                    png ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB);
             Graphics2D graphics = resizedImage.createGraphics();
 
             // Set rendering hints for quality
@@ -188,9 +198,8 @@ public class ImageProcessingService {
                     0, 0, newWidth, newHeight, null);
             graphics.dispose();
 
-            // Compress to JPEG with 70% quality
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            ImageIO.write(resizedImage, "jpg", outputStream);
+            ImageIO.write(resizedImage, png ? "png" : "jpg", outputStream);
 
             return outputStream.toByteArray();
         } catch (IOException ioException) {
@@ -319,6 +328,35 @@ public class ImageProcessingService {
     }
 
     /**
+     * Give a copied quiz or question its own file for a media URL, so deleting one never breaks the other.
+     * Only files under the media directory are cloned; any other URL is returned unchanged.
+     *
+     * @param url         the media URL of the original
+     * @param challengeId the challenge the copy belongs to
+     * @return the URL of the cloned file, the same URL when it is not a local file, or null when the local file is gone
+     */
+    public String copyMedia(final String url, final Long challengeId) {
+        if (url == null || !url.startsWith(QUESTION_IMAGES_URL_PREFIX)) {
+            return url;
+        }
+        Path root = Paths.get(questionImagesDir).toAbsolutePath().normalize();
+        Path source = root.resolve(relativeMediaPath(url)).normalize();
+        if (!source.startsWith(root) || !Files.isRegularFile(source)) {
+            return null;
+        }
+        String folder = UUID.randomUUID().toString();
+        String filename = source.getFileName().toString();
+        try {
+            Path targetDir = Files.createDirectories(root.resolve(challengeId.toString()).resolve(folder));
+            Files.copy(source, targetDir.resolve(filename));
+            return QUESTION_IMAGES_URL_PREFIX + challengeId + "/" + folder + "/" + filename;
+        } catch (IOException ioException) {
+            logger.error("Failed to copy media {}: {}", url, ioException.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Delete all images for a challenge.
      *
      * @param challengeId the challenge ID
@@ -342,6 +380,36 @@ public class ImageProcessingService {
         }
         String normalized = contentType.toLowerCase(Locale.ROOT);
         return normalized.startsWith("audio/") || "application/ogg".equals(normalized);
+    }
+
+    /**
+     * Check the leading bytes against the audio containers we accept, so a renamed non-audio file is refused.
+     */
+    private static boolean hasAudioSignature(final byte[] bytes) {
+        if (bytes.length < 4) {
+            return false;
+        }
+        boolean mpegSync = (bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xE0) == 0xE0; // MP3 and AAC (ADTS) frames
+        return mpegSync
+                || startsWith(bytes, 0, "ID3")
+                || startsWith(bytes, 0, "OggS")
+                || startsWith(bytes, 0, "fLaC")
+                || startsWith(bytes, 4, "ftyp")
+                || (startsWith(bytes, 0, "RIFF") && startsWith(bytes, 8, "WAVE"))
+                || ((bytes[0] & 0xFF) == 0x1A && (bytes[1] & 0xFF) == 0x45
+                && (bytes[2] & 0xFF) == 0xDF && (bytes[3] & 0xFF) == 0xA3); // WebM
+    }
+
+    private static boolean startsWith(final byte[] bytes, final int offset, final String ascii) {
+        if (bytes.length < offset + ascii.length()) {
+            return false;
+        }
+        for (int i = 0; i < ascii.length(); i++) {
+            if (bytes[offset + i] != ascii.charAt(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean hasValidAudioExtension(final String filename) {

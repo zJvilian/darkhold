@@ -175,6 +175,9 @@ public class QuestionController {
      */
     @PostMapping("/bulk-delete")
     public ResponseEntity<Map<String, Integer>> bulkDeleteQuestions(@RequestBody final List<Long> questionIds) {
+        if (questionIds == null || questionIds.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         logger.info("Bulk deleting {} questions", questionIds.size());
         int deleted = questionService.bulkDeleteQuestions(questionIds);
         return ResponseEntity.ok(Map.of("deleted", deleted));

@@ -2,6 +2,7 @@ package com.quiz.darkhold.game.controller;
 
 import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.challenge.entity.QuestionType;
+import com.quiz.darkhold.challenge.service.ImageProcessingService;
 import com.quiz.darkhold.game.model.Challenge;
 import com.quiz.darkhold.game.model.CurrentScore;
 import com.quiz.darkhold.game.model.Game;
@@ -23,15 +24,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.Principal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("unused")
 @Controller
@@ -41,6 +50,10 @@ public class GameController {
     private static final int MAX_TIME_FACTOR = 1000;
     private static final int MESSAGE_PARTS_KICK_PLAYER = 2;
     private static final int MESSAGE_PARTS_TEAM_ASSIGN = 3;
+    private static final Set<String> YOUTUBE_HOSTS = Set.of("youtube.com", "www.youtube.com", "m.youtube.com",
+            "youtube-nocookie.com", "www.youtube-nocookie.com", "youtu.be");
+    private static final Pattern YOUTUBE_PATH = Pattern.compile("^/(?:embed/|shorts/|live/|v/)?([\\w-]{11})/?$");
+    private static final Pattern YOUTUBE_ID = Pattern.compile("(?:^|&)v=([\\w-]{11})(?:&|$)");
 
     private final GameService gameService;
     private final GameConfig gameConfig;
@@ -125,10 +138,7 @@ public class GameController {
         logger.info("On to the finalScore for PIN: {}", quizPin);
         CurrentScore score = new CurrentScore();
         Map<String, Integer> scores = gameService.getCurrentScore();
-        // Accounts are keyed "<first name>#<id>"; the podium shows the name only
-        Map<String, Integer> shown = new java.util.LinkedHashMap<>();
-        scores.forEach((name, points) -> shown.merge(name.replaceFirst("#\\d+$", ""), points, Integer::sum));
-        score.setScore(shown);
+        score.setScore(displayNames(scores));
         model.addAttribute("score", score);
 
         // Check if team mode and add team scores
@@ -148,6 +158,20 @@ public class GameController {
             finalizeGame(quizPin);
         }
         return "finalscore";
+    }
+
+    /**
+     * Accounts are keyed "&lt;first name&gt;#&lt;id&gt;"; the podium shows the name only, unless two
+     * players share it: then the later one keeps its full key so neither score is lost.
+     */
+    static Map<String, Integer> displayNames(final Map<String, Integer> scores) {
+        Map<String, Integer> shown = new LinkedHashMap<>();
+        scores.forEach((name, points) -> {
+            String plain = name.replaceFirst("#\\d+$", "");
+            boolean taken = shown.containsKey(plain) || (!plain.equals(name) && scores.containsKey(plain));
+            shown.put(taken ? name : plain, points);
+        });
+        return shown;
     }
 
     private void finalizeGame(final String quizPin) {
@@ -183,6 +207,11 @@ public class GameController {
                             @RequestParam(value = "quizPin", required = false) final String quizPin,
                             final Principal principal) {
         logger.info("On to game : {}", quizPin);
+        if (quizPin != null && !gameService.isSessionGame(quizPin)
+                && (gameService.isModerator(quizPin, principal) || isAdmin(principal))) {
+            // the host returns from the active games dashboard, with another (or no) game in the session
+            gameService.useGame(quizPin);
+        }
         QuestionPointer questionPointer = quizPin != null
                 ? gameService.getCurrentQuestionPointer(quizPin)
                 : gameService.getCurrentQuestionPointer();
@@ -200,7 +229,15 @@ public class GameController {
         model.addAttribute("challenge", challenge);
         model.addAttribute("quizPin", quizPin);
         model.addAttribute("gameMode", gameMode.name());
+        model.addAttribute("gamePaused", gameService.getGameStatus() == GameStatus.PAUSED);
+        // players only learn the right answer once theirs is in (see revealAnswer); practice checks locally
+        model.addAttribute("correctOptions", gameMode == GameMode.PRACTICE
+                ? Objects.toString(currentQuestion.getCorrectOptions(), "") : "");
         addQuestionAttributes(model, currentQuestion);
+        // guests in a multiplayer game pick every right option and then submit
+        boolean guest = principal instanceof Authentication auth && auth.getAuthorities().isEmpty();
+        model.addAttribute("multiSelect", guest && gameMode != GameMode.PRACTICE
+                && answerCount(currentQuestion) > 1);
         return "game";
     }
 
@@ -220,6 +257,45 @@ public class GameController {
         model.addAttribute("question_type", qType.name());
         int points = qs.getPoints() != null ? qs.getPoints() : 1000;
         model.addAttribute("question_points", String.valueOf(points));
+        model.addAttribute("answerCount", answerCount(qs));
+        model.addAttribute("videoEmbed", youtubeEmbed(qs.getVideoUrl()));
+        String media = qs.getImageUrl() == null || qs.getImageUrl().isBlank() ? null : qs.getImageUrl();
+        boolean audio = ImageProcessingService.isAudioUrl(media);
+        model.addAttribute("questionImage", audio ? null : media);
+        model.addAttribute("questionAudio", audio && ImageProcessingService.supportsAudio(qType) ? media : null);
+    }
+
+    // a question with several right options lets the player pick several
+    private static int answerCount(final QuestionSet qs) {
+        String correct = qs.getCorrectOptions();
+        boolean choice = qs.getQuestionType() == null || qs.getQuestionType() == QuestionType.MULTIPLE_CHOICE;
+        return choice && correct != null ? correct.split(",", -1).length : 1;
+    }
+
+    /**
+     * Embed address for a YouTube link (watch, youtu.be, shorts, embed and mobile links); null for anything else.
+     *
+     * @param url link as entered by the quiz author
+     * @return privacy-enhanced embed address, or null
+     */
+    static String youtubeEmbed(final String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            URI uri = new URI(url.strip());
+            String scheme = Objects.toString(uri.getScheme(), "").toLowerCase(java.util.Locale.ROOT);
+            String host = Objects.toString(uri.getHost(), "").toLowerCase(java.util.Locale.ROOT);
+            if (!scheme.matches("https?") || !YOUTUBE_HOSTS.contains(host)) {
+                return null;
+            }
+            Matcher query = YOUTUBE_ID.matcher(Objects.toString(uri.getRawQuery(), ""));
+            Matcher path = YOUTUBE_PATH.matcher(Objects.toString(uri.getPath(), ""));
+            String id = query.find() ? query.group(1) : path.matches() ? path.group(1) : null;
+            return id == null ? null : "https://www.youtube-nocookie.com/embed/" + id;
+        } catch (URISyntaxException ex) {
+            return null;
+        }
     }
 
     /**
@@ -248,7 +324,10 @@ public class GameController {
 
         // In practice mode, moderator CAN score. In multiplayer, moderator cannot.
         if (!isModerator || isPracticeMode) {
-            scoreAnswer(user, question, answerValidationService.validateSelection(question, selectedAnswer));
+            boolean timedOut = selectedAnswer.isBlank();
+            boolean correct = answerValidationService.shouldScore(question)
+                    ? answerValidationService.validateSelection(question, selectedAnswer) : !timedOut;
+            scoreAnswer(user, questionNo, question, correct, timedOut);
         }
         // Multiplayer: the moderator's answer post moves the game on. Practice: the player is the moderator.
         if (isModerator) {
@@ -257,14 +336,38 @@ public class GameController {
         return true;
     }
 
-    private void scoreAnswer(final String user, final QuestionSet question, final boolean isCorrect) {
-        int streak = gameService.updateStreak(user, isCorrect);
-        int basePoints = answerValidationService.shouldScore(question)
-                ? answerValidationService.getPoints(question) : 0;
-        int scoreOnStatus = isCorrect
-                ? calculateTimeFactor(question, gameService.elapsedMillis(), basePoints, streak) : 0;
+    private void scoreAnswer(final String user, final int questionNo, final QuestionSet question,
+                             final boolean isCorrect, final boolean timedOut) {
+        boolean scored = answerValidationService.shouldScore(question);
+        // polls and word clouds neither build nor break a streak
+        int streak = scored ? gameService.updateStreak(user, isCorrect) : gameService.getStreak(user);
+        int basePoints = scored ? answerValidationService.getPoints(question) : 0;
+        long elapsed = gameService.elapsedMillis();
+        int scoreOnStatus = isCorrect ? calculateTimeFactor(question, elapsed, basePoints, streak) : 0;
         logger.info("score is {} (streak: {}, base: {})", scoreOnStatus, streak, basePoints);
         gameService.saveCurrentScore(user, scoreOnStatus);
+        if (!timedOut) {
+            gameService.recordAnswer(user, questionNo, scored, isCorrect, streak, elapsed);
+        }
+    }
+
+    /**
+     * The right answer to the caller's question, once the caller's own answer (or timeout) is in.
+     * Served on the answer path (with a "reveal" parameter) because that is where PIN guests may post.
+     *
+     * @param principal the asking player or host
+     * @return comma-separated right options, or empty while the caller can still answer
+     */
+    @PostMapping(value = "/answer/", params = "reveal")
+    public @ResponseBody
+    String revealAnswer(final Principal principal) {
+        Integer questionNo = gameService.shownQuestionNo();
+        QuestionSet question = questionNo == null ? null : gameService.questionAt(questionNo);
+        if (question == null || !answerValidationService.shouldScore(question)
+                || !gameService.hasAnswered(principal.getName(), questionNo)) {
+            return "";
+        }
+        return Objects.toString(question.getCorrectOptions(), "");
     }
 
     /**
@@ -290,7 +393,7 @@ public class GameController {
             return "incorrect";
         }
         boolean isCorrect = answerValidationService.validateAnswer(question, userAnswer);
-        scoreAnswer(user, question, isCorrect);
+        scoreAnswer(user, questionNo, question, isCorrect, userAnswer.isBlank());
         if (isModerator) {
             // practice mode: scoring player is the moderator and moves the game on
             gameService.incrementQuestionNo();
@@ -507,6 +610,14 @@ public class GameController {
         boolean kicked = gameService.kickPlayer(pin, username);
         String result = kicked ? username : null;
         messagingTemplate.convertAndSend("/topic/" + pin + "/player_kicked", result);
+        if (kicked) {
+            // everyone else's lobby drops the player too
+            messagingTemplate.convertAndSend("/topic/" + pin + "/user",
+                    new UserResponse(gameService.getAllParticipants(pin)));
+            if (teamService.isTeamMode(pin)) {
+                messagingTemplate.convertAndSend("/topic/" + pin + "/team_update", teamService.getTeams(pin));
+            }
+        }
     }
 
     /**
@@ -547,7 +658,12 @@ public class GameController {
         }
 
         logger.info("Assigning player {} to team {} in game {}", username, teamName, pin);
-        teamService.assignPlayerToTeam(pin, username, teamName);
+        try {
+            teamService.assignPlayerToTeam(pin, username, teamName);
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Ignoring team assignment for game {}: {}", CommonUtils.sanitizedString(pin), ex.getMessage());
+            return;
+        }
 
         List<TeamInfo> teams = teamService.getTeams(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/team_update", teams);
@@ -577,6 +693,11 @@ public class GameController {
         logger.info("Fetching team scores for game: {}", pin);
         Map<String, Integer> teamScores = teamService.calculateTeamScores(pin);
         messagingTemplate.convertAndSend("/topic/" + pin + "/team_scores", teamScores);
+    }
+
+    private static boolean isAdmin(final Principal principal) {
+        return principal instanceof Authentication auth
+                && auth.getAuthorities().stream().anyMatch(a -> "ADMIN".equals(a.getAuthority()));
     }
 
     /**

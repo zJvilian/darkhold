@@ -1,18 +1,24 @@
 package com.quiz.darkhold.user.service;
 
+import com.quiz.darkhold.init.FileUploadUtil;
 import com.quiz.darkhold.user.entity.Role;
 import com.quiz.darkhold.user.entity.User;
 import com.quiz.darkhold.user.exception.UserNotFoundException;
 import com.quiz.darkhold.user.repository.RoleRepository;
 import com.quiz.darkhold.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -22,24 +28,44 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BCryptPasswordEncoder encoder;
+    private final FindByIndexNameSessionRepository<?> sessions;
 
     public UserServiceImpl(final UserRepository userRepository,
                            final RoleRepository roleRepository,
                            final BCryptPasswordEncoder encoder) {
+        this(userRepository, roleRepository, encoder, Optional.empty());
+    }
+
+    @Autowired
+    public UserServiceImpl(final UserRepository userRepository,
+                           final RoleRepository roleRepository,
+                           final BCryptPasswordEncoder encoder,
+                           final Optional<FindByIndexNameSessionRepository<?>> sessions) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.encoder = encoder;
+        this.sessions = sessions.orElse(null);
     }
 
     @Override
     public User save(final User user) {
         if (isUpdatingUser(user)) {
-            User existingUser = findExistingUser(user.getId());
-            user.setPassword(getPassword(user, existingUser));
+            user.setPassword(getPassword(user, findExistingUser(user.getId())));
         } else {
-            user.setPassword(encodePassword(user.getPassword()));
+            user.setPassword(encodeNewPassword(user.getPassword()));
         }
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        if (isUpdatingUser(user) && !Boolean.TRUE.equals(saved.getEnabled())) {
+            invalidateSessions(saved.getId());
+        }
+        return saved;
+    }
+
+    private String encodeNewPassword(final String password) {
+        if (password == null || password.isEmpty()) {
+            throw new IllegalArgumentException("Password is required for a new user");
+        }
+        return encodePassword(password);
     }
 
     private boolean isUpdatingUser(final User user) {
@@ -47,11 +73,13 @@ public class UserServiceImpl implements UserService {
     }
 
     private User findExistingUser(final Long id) {
-        return userRepository.findById(id).get();
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Could not find any user with the id " + id));
     }
 
     private String getPassword(final User newUser, final User existingUser) {
-        return newUser.getPassword().isEmpty() ? existingUser.getPassword() : encodePassword(newUser.getPassword());
+        String password = newUser.getPassword();
+        return (password == null || password.isEmpty()) ? existingUser.getPassword() : encodePassword(password);
     }
 
     private String encodePassword(final String password) {
@@ -70,6 +98,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Page<User> searchUsers(final int pageNumber, final String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return getAllUsers(pageNumber);
+        }
+        Pageable pageable = PageRequest.of(pageNumber - 1, USERS_PER_PAGE);
+        return userRepository.search(keyword.trim(), pageable);
+    }
+
+    @Override
     public List<Role> listRoles() {
         return (List<Role>) roleRepository.findAll();
     }
@@ -80,7 +117,7 @@ public class UserServiceImpl implements UserService {
         if (userByEmail == null) {
             return true;
         }
-        return isCreatingNew(id) ? userByEmail == null : userByEmail.getId().equals(id);
+        return isCreatingNew(id) ? false : userByEmail.getId().equals(id);
     }
 
     private boolean isCreatingNew(final Long id) {
@@ -96,15 +133,40 @@ public class UserServiceImpl implements UserService {
     @Override
     public void delete(final Long id) throws UserNotFoundException {
         Long countById = userRepository.countById(id);
-        if (countById == null ||  countById == 0) {
+        if (countById == null || countById == 0) {
             throw new UserNotFoundException("Could not find any user with the id " + id);
         }
         userRepository.deleteById(id);
+        invalidateSessions(id);
+        schedulePhotoCleanup(id);
     }
 
     @Override
     public void updateUserEnabledStatus(final Long id, final boolean enabled) {
         userRepository.updateEnabledStatus(id, enabled);
+        if (!enabled) {
+            invalidateSessions(id);
+        }
+    }
+
+    private void invalidateSessions(final Long id) {
+        if (sessions != null) {
+            sessions.findByPrincipalName(String.valueOf(id)).keySet().forEach(sessions::deleteById);
+        }
+    }
+
+    private void schedulePhotoCleanup(final Long id) {
+        String dir = "user-photos/" + id;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    FileUploadUtil.deleteDir(dir);
+                }
+            });
+        } else {
+            FileUploadUtil.deleteDir(dir);
+        }
     }
 
     @Override

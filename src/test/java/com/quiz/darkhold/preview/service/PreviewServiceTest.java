@@ -5,6 +5,7 @@ import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.init.GameConfig;
+import com.quiz.darkhold.live.LiveRoomRepository;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.user.entity.DarkholdUserDetails;
 import org.junit.jupiter.api.Assertions;
@@ -31,6 +32,7 @@ class PreviewServiceTest {
     private final GameRepository gameRepository = Mockito.mock(GameRepository.class);
     private final CurrentGame currentGame = Mockito.mock(CurrentGame.class);
     private final GameConfig gameConfig = Mockito.mock(GameConfig.class);
+    private final LiveRoomRepository liveRoomRepository = Mockito.mock(LiveRoomRepository.class);
     private PreviewService previewService;
 
     @BeforeEach
@@ -40,7 +42,8 @@ class PreviewServiceTest {
                 challengeRepository,
                 gameRepository,
                 currentGame,
-                gameConfig);
+                gameConfig,
+                liveRoomRepository);
     }
 
     @Test
@@ -90,9 +93,49 @@ class PreviewServiceTest {
         when(gameRepository.existsByPin(anyString())).thenReturn(false);
         when(gameRepository.save(Mockito.any(Game.class))).thenReturn(game);
         when(gameRepository.findByPin(anyString())).thenReturn(game);
-        when(challengeRepository.findById(anyLong())).thenReturn(mockOptionalChallenge());
+        when(challengeRepository.findById(anyLong())).thenReturn(Optional.of(playableChallenge()));
         var publishInfo = previewService.generateQuizPin("1234", user);
         Assertions.assertEquals(user, publishInfo.getModerator());
+    }
+
+    @Test
+    void generateQuizPinRejectsAQuizWithoutQuestions() {
+        signIn("USER");
+        when(challengeRepository.findById(anyLong())).thenReturn(mockOptionalChallenge());
+        Assertions.assertThrows(IllegalArgumentException.class, () -> previewService.generateQuizPin("1234", "USER"));
+        Mockito.verify(gameRepository, Mockito.never()).save(Mockito.any(Game.class));
+    }
+
+    @Test
+    void generateQuizPinSkipsCodesTakenByLiveRooms() {
+        signIn("USER");
+        var game = mockGame("1234");
+        when(gameRepository.existsByPin(anyString())).thenReturn(false);
+        when(liveRoomRepository.existsById(anyString())).thenReturn(true, false);
+        when(gameRepository.save(Mockito.any(Game.class))).thenReturn(game);
+        when(gameRepository.findByPin(anyString())).thenReturn(game);
+        when(challengeRepository.findById(anyLong())).thenReturn(Optional.of(playableChallenge()));
+        previewService.generateQuizPin("1234", "USER", false);
+        Mockito.verify(liveRoomRepository, Mockito.times(2)).existsById(anyString());
+    }
+
+    @Test
+    void hostedGameOnlyForItsHostOrAnAdmin() {
+        var game = mockGame("1234");
+        game.setModerator("host#1");
+        game.setGameStatus("WAITING");
+        when(gameRepository.findByPin("12345")).thenReturn(game);
+        Assertions.assertSame(game, previewService.hostedGame("12345", "host#1", false));
+        Assertions.assertNull(previewService.hostedGame("12345", "other#2", false));
+        Assertions.assertSame(game, previewService.hostedGame("12345", "other#2", true));
+        game.setGameStatus("FINISHED");
+        Assertions.assertNull(previewService.hostedGame("12345", "host#1", false));
+    }
+
+    private Challenge playableChallenge() {
+        var challenge = mockChallenge();
+        challenge.setQuestionSets(new ArrayList<>(List.of(new com.quiz.darkhold.challenge.entity.QuestionSet())));
+        return challenge;
     }
 
     @Test

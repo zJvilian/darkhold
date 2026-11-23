@@ -1,8 +1,6 @@
 package com.quiz.darkhold.options.controller;
 
 import com.quiz.darkhold.options.OptionsConfigurations;
-import com.quiz.darkhold.preview.model.PublishInfo;
-import com.quiz.darkhold.preview.service.PreviewService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,9 +11,9 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -28,9 +26,6 @@ class OptionsControllerTest {
 
     @Autowired
     private OptionsController optionsController;
-
-    @Autowired
-    private PreviewService previewService;
 
     @BeforeEach
     public void setUp() {
@@ -76,15 +71,9 @@ class OptionsControllerTest {
     }
 
     @Test
-    void testActiveChallenge() throws Exception {
+    void activeChallengeRedirectsToOwnActiveGames() throws Exception {
         mvc.perform(post("/activeChallenge"))
-                .andExpect(status().is(200));
-    }
-
-    @Test
-    void validActiveChallenge() throws Exception {
-        when(previewService.getActiveChallenge()).thenReturn(new PublishInfo());
-        mvc.perform(post("/activeChallenge"))
-                .andExpect(status().is(200));
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/my-active-games"));
     }
 }

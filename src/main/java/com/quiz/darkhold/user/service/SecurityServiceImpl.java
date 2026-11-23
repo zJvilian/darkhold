@@ -20,6 +20,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,8 +36,8 @@ public class SecurityServiceImpl implements SecurityService {
 
     @Override
     public String findLoggedInUsername() {
-        Object userDetails = SecurityContextHolder.getContext().getAuthentication().getDetails();
-        if (userDetails instanceof UserDetails details) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserDetails details) {
             return details.getUsername();
         }
         return null;
@@ -46,7 +47,7 @@ public class SecurityServiceImpl implements SecurityService {
     public void autoLogin(final String username, final String password) {
         boolean unRegistered = password.equalsIgnoreCase(UNREGISTERED_USER);
         UserDetails userDetails = getUserDetails(username, unRegistered);
-        Set<GrantedAuthority> authorities = (Set<GrantedAuthority>) userDetails.getAuthorities();
+        Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
         logger.info("Successfully fetched user details : {} ", userDetails);
         UsernamePasswordAuthenticationToken token = createAuthToken(userDetails, password, authorities);
         if (!unRegistered) {
@@ -81,9 +82,10 @@ public class SecurityServiceImpl implements SecurityService {
         return authentication.isAuthenticated();
     }
 
-    private UsernamePasswordAuthenticationToken createAuthToken(final UserDetails userDetails,
-                                                                final String password,
-                                                                final Set<GrantedAuthority> authorities) {
+    private UsernamePasswordAuthenticationToken createAuthToken(
+            final UserDetails userDetails,
+            final String password,
+            final Collection<? extends GrantedAuthority> authorities) {
         return new UsernamePasswordAuthenticationToken(userDetails, password, authorities);
     }
 

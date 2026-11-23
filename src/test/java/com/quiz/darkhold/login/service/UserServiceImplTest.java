@@ -30,6 +30,7 @@ class UserServiceImplTest {
         when(encoder.encode(anyString())).thenReturn("MockedPassword");
         when(roleRepository.findAll()).thenReturn(mockRoles());
         var user = new User();
+        user.setPassword("secret123");
         Assertions.assertAll(() -> userService.save(user));
     }
 

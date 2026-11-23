@@ -162,4 +162,61 @@ class CurrentGameTest {
         currentGame.startQuestion("1234", 3);
         Assertions.assertEquals(900, session.getPreviousScoresMap().get("admin"));
     }
+
+    @Test
+    void saveUserToActiveGame_joinsEachPlayerOnce() {
+        CurrentGameSession session = createMockSession();
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
+
+        currentGame.saveUserToActiveGame("1234", "tester");
+        currentGame.saveUserToActiveGame("1234", "newbie");
+
+        Assertions.assertEquals(List.of("admin", "tester", "newbie"), session.getUsersList());
+    }
+
+    @Test
+    void removeUserFromGame_alsoLeavesTheTeam() {
+        CurrentGameSession session = createMockSession();
+        session.setTeamsJson("[{\"name\":\"Red\",\"color\":\"red\",\"members\":[\"tester\"]}]");
+        session.setPlayerTeamsMap(new java.util.HashMap<>(java.util.Map.of("tester", "Red")));
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
+
+        Assertions.assertTrue(currentGame.removeUserFromGame("1234", "tester"));
+
+        Assertions.assertTrue(session.getPlayerTeamsMap().isEmpty());
+        Assertions.assertFalse(session.getTeamsJson().contains("tester"));
+    }
+
+    @Test
+    void recordAnswer_tracksPlayerAndQuestionStatistics() {
+        currentGame.recordAnswer("1234", "tester", 0, true, true, 1, 2000);
+        currentGame.recordAnswer("1234", "tester", 1, true, false, 0, 4000);
+        currentGame.recordAnswer("1234", "other", 0, true, true, 3, 1000);
+        currentGame.recordAnswer("1234", "tester", 2, false, true, 0, 6000);
+
+        Assertions.assertAll(
+                () -> Assertions.assertEquals(1, currentGame.getPlayerCorrectCount("1234", "tester")),
+                () -> Assertions.assertEquals(1, currentGame.getPlayerIncorrectCount("1234", "tester")),
+                () -> Assertions.assertEquals(3, currentGame.getPlayerMaxStreak("1234", "other")),
+                () -> Assertions.assertEquals(4, currentGame.getPlayerAvgAnswerTimeSeconds("1234", "tester")),
+                () -> Assertions.assertEquals(2, currentGame.getQuestionCorrectCount("1234", 0)),
+                () -> Assertions.assertEquals(1, currentGame.getQuestionIncorrectCount("1234", 1)),
+                () -> Assertions.assertEquals(2, currentGame.getQuestionAvgAnswerTimeSeconds("1234", 0)),
+                () -> Assertions.assertEquals(1, currentGame.getQuestionFastestAnswerTimeSeconds("1234", 0)),
+                () -> Assertions.assertEquals(0, currentGame.getPlayerCorrectCount("1234", "nobody")));
+    }
+
+    @Test
+    void pausedTimeCountsForTheCurrentQuestionOnly() {
+        CurrentGameSession session = createMockSession();
+        when(repository.lockByPin("1234")).thenReturn(Optional.of(session));
+        when(repository.findByPin("1234")).thenReturn(Optional.of(session));
+        session.setPausedAt(System.currentTimeMillis() - 3000);
+
+        currentGame.resumeGame("1234");
+        Assertions.assertTrue(currentGame.getPausedMillis("1234") >= 3000);
+
+        currentGame.startQuestion("1234", 1);
+        Assertions.assertEquals(0, currentGame.getPausedMillis("1234"));
+    }
 }

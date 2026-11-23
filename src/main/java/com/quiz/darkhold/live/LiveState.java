@@ -18,6 +18,25 @@ public class LiveState {
     public long startedAt;
     public long endsAt;
     public boolean locked;
+    /** Answer statistics per played question, stored with the result when the quiz ends. */
+    public List<Round> rounds = new ArrayList<>();
+
+    public static class Round {
+        public int correct;
+        public int incorrect;
+        public long totalMillis;
+        public long fastestMillis = -1;
+
+        void record(final boolean right, final long millis) {
+            if (right) {
+                correct++;
+            } else {
+                incorrect++;
+            }
+            totalMillis += millis;
+            fastestMillis = fastestMillis < 0 ? millis : Math.min(fastestMillis, millis);
+        }
+    }
 
     public static class Player {
         public String name;

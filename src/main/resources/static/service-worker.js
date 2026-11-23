@@ -5,12 +5,11 @@
  * Provides offline support and caching for better performance
  */
 
-const CACHE_NAME = 'darkhold-quiz-v5';
+const CACHE_NAME = 'darkhold-quiz-v6';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
-    '/',
     OFFLINE_URL,
     '/styles/darkhold-styles.css',
     '/styles/theme-variables.css',
@@ -88,13 +87,9 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Skip WebSocket requests
-    if (event.request.url.includes('/ws')) {
-        return;
-    }
-
-    // Skip STOMP/SockJS requests
-    if (event.request.url.includes('/sockjs') || event.request.url.includes('/stomp')) {
+    // Skip WebSocket / STOMP / SockJS requests
+    if (pathname.startsWith('/darkhold-websocket') || event.request.url.includes('/ws')
+            || event.request.url.includes('/sockjs') || event.request.url.includes('/stomp')) {
         return;
     }
 

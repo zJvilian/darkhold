@@ -16,7 +16,6 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
@@ -68,12 +67,6 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> statusError(final HttpStatus status, final String code) {
         return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON)
                 .body(new ErrorResponse(code, status.getReasonPhrase()));
-    }
-
-
-    public ResponseEntity<ErrorResponse> handleUnsupportedMethod(final HttpRequestMethodNotSupportedException ex) {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(new ErrorResponse("METHOD_NOT_ALLOWED", "This action requires a supported HTTP method."));
     }
 
     /**

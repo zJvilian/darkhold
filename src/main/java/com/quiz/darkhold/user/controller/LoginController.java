@@ -1,10 +1,8 @@
 package com.quiz.darkhold.user.controller;
 
 import com.quiz.darkhold.user.service.SecurityService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,7 +25,15 @@ public class LoginController {
             logger.info("authenticated ...");
             return "redirect:/";
         }
-        if (error != null) {
+        addLoginFeedback(model, error, logout);
+        return LOGIN;
+    }
+
+    private void addLoginFeedback(final Model model, final String error, final String logout) {
+        if ("locked".equals(error)) {
+            model.addAttribute("locked", true);
+            model.addAttribute("danger", "Too many failed login attempts. Please try again later.");
+        } else if (error != null) {
             logger.info("error is there ...{}", error);
             model.addAttribute("danger", "Your username or password is invalid.");
         }
@@ -35,18 +41,11 @@ public class LoginController {
             logger.info("logout is there ... {}", logout);
             model.addAttribute("message", "You have been logged out successfully.");
         }
-        return "login";
     }
 
     @GetMapping("/logout")
-    public String logout(final HttpServletRequest request) {
-        logger.info("Inside logout method of user controller");
-        jakarta.servlet.http.HttpSession session = request.getSession(false);
-        SecurityContextHolder.clearContext();
-        if (session != null) {
-            session.invalidate();
-        }
-        return "login";
+    public String logout() {
+        return "redirect:/login";
     }
 
     /**

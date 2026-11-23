@@ -121,9 +121,32 @@ class SecurityConfigTest {
             mockMvc.perform(login("admin@admin.com", "wrong", "10.1.1.1"))
                     .andExpect(redirectedUrl("/login?error"));
         }
-        mockMvc.perform(login("admin@admin.com", "admin", "10.1.1.1")).andExpect(redirectedUrl("/login?error"));
+        mockMvc.perform(login("admin@admin.com", "admin", "10.1.1.1")).andExpect(redirectedUrl("/login?error=locked"));
         // another client is unaffected
         mockMvc.perform(login("admin@admin.com", "admin", "10.1.1.2")).andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    @DisplayName("Logout clears SESSION, JSESSIONID and XSRF-TOKEN cookies")
+    void logoutClearsSessionCookie() throws Exception {
+        mockMvc.perform(post("/logout").with(user("host").authorities(() -> "GUEST")).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/"))
+                .andExpect(result -> {
+                    var sessionCookie = result.getResponse().getCookie("SESSION");
+                    assertNotNull(sessionCookie);
+                    assertTrue(sessionCookie.getMaxAge() == 0);
+                });
+    }
+
+    @Test
+    @DisplayName("PIN guests can reach team score and player endpoints")
+    void pinGuestsCanAccessTeamEndpoints() throws Exception {
+        var guest = user("Alice").authorities(java.util.List.of());
+        mockMvc.perform(get("/team/scores/99999").with(guest))
+                .andExpect(result -> assertTrue(result.getResponse().getStatus() != 403));
+        mockMvc.perform(get("/team/player/99999/Alice").with(guest))
+                .andExpect(result -> assertTrue(result.getResponse().getStatus() != 403));
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder login(

@@ -89,4 +89,32 @@ class RegistrationIntegrationTest {
                 .andExpect(content().string(not(containsString(originalHash))));
         assertEquals(originalHash, userService.findByUsername("registration-test@example.invalid").getPassword());
     }
+
+    @Test
+    void invalidRegistrationFieldsReturnForm() throws Exception {
+        mockMvc.perform(post("/registration").with(csrf())
+                        .with(req -> {
+                            req.setRemoteAddr("10.2.2.1");
+                            return req;
+                        })
+                        .param("firstName", "A").param("lastName", "B")
+                        .param("email", "not-an-email").param("password", "short"))
+                .andExpect(status().isOk()).andExpect(view().name("registration"))
+                .andExpect(model().attributeHasFieldErrors("user", "firstName", "lastName", "email", "password"));
+    }
+
+    @Test
+    void registrationIsRateLimitedPerIp() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(registration("Valid-pass-123!").with(req -> {
+                req.setRemoteAddr("10.2.2.2");
+                return req;
+            }));
+        }
+        mockMvc.perform(registration("Valid-pass-123!").with(req -> {
+            req.setRemoteAddr("10.2.2.2");
+            return req;
+        })).andExpect(status().isOk()).andExpect(view().name("registration"))
+                .andExpect(model().attributeHasErrors("user"));
+    }
 }

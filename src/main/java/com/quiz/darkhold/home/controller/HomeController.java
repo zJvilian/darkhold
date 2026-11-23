@@ -13,6 +13,9 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -109,11 +112,13 @@ public class HomeController {
 
         logger.info("Game pin attempt: {} from IP: {}", sanitizedPin, clientIp);
         Boolean isValid = homeService.validateGamePin(sanitizedPin);
+        // Classic and live PINs never collide, so a live room code sends the guest to the live join page
+        boolean liveRoom = !isValid && homeService.isLiveRoom(sanitizedPin);
 
         // Record attempt result and return response
-        if (isValid) {
+        if (isValid || liveRoom) {
             rateLimitingService.recordSuccessfulAttempt(clientIp);
-            return PinValidationResponse.validPin();
+            return liveRoom ? PinValidationResponse.liveRoomPin() : PinValidationResponse.validPin();
         } else {
             rateLimitingService.recordFailedAttempt(clientIp);
             int remainingAttempts = rateLimitingService.getRemainingAttempts(clientIp);
@@ -142,18 +147,19 @@ public class HomeController {
             model.addAttribute(GAME_INFO, gameInfo);
             return "index";
         }
+        gameInfo.setGamePin(CommonUtils.sanitizedString(gameInfo.getGamePin()));
         // The PIN can't be trusted just because /enterGame accepted it earlier: re-check it, with the same limiter
         String clientIp = request.getRemoteAddr();
         if (!rateLimitingService.isAllowed(clientIp)) {
             return rejectJoin(gameInfo, bindingResult, model, "home.rateLimitWarning");
         }
-        if (!homeService.validateGamePin(CommonUtils.sanitizedString(gameInfo.getGamePin()))) {
+        if (!homeService.validateGamePin(gameInfo.getGamePin())) {
             rateLimitingService.recordFailedAttempt(clientIp);
             return rejectJoin(gameInfo, bindingResult, model, "home.invalidPin");
         }
         rateLimitingService.recordSuccessfulAttempt(clientIp);
         logger.info("joinGame : gameInfo is {}", gameInfo);
-        securityService.autoLogin(gameInfo.getName(), UNREGISTERED_USER);
+        signInPlayer(gameInfo);
         populateGameInfo(gameInfo);
 
         // Check if moderator is trying to join their own game
@@ -180,6 +186,20 @@ public class HomeController {
 
         model.addAttribute(GAME_INFO, gameInfo);
         return "game/gamewait";
+    }
+
+    /**
+     * Guests are signed in under the name they chose. A signed-in account keeps its session and plays under
+     * its account name, which is also the name the game knows it by.
+     */
+    private void signInPlayer(final GameInfo gameInfo) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)
+                && !auth.getAuthorities().isEmpty()) {
+            gameInfo.setName(auth.getName());
+        } else {
+            securityService.autoLogin(gameInfo.getName(), UNREGISTERED_USER);
+        }
     }
 
     private String rejectJoin(final GameInfo gameInfo, final BindingResult bindingResult, final Model model,

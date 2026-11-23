@@ -1,15 +1,12 @@
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org" lang="en" th:lang="${#locale.language}">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" th:content="#{app.description}" content="darkhold registration page" />
     <meta name="author" content="Suraj" />
     <title th:text="#{registration.title} + ': ' + #{app.name} + ' ' + #{app.description}">Registration: Kahvoid classroom quiz experience</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="shortcut icon" href="/images/favicon.png">
     <link rel="manifest" href="/manifest.json">
     <link href="/styles/darkhold-styles.css" rel="stylesheet" />
@@ -26,9 +23,19 @@
     <main class="login-page">
         <div class="login-panel-right">
             <div class="login-card">
-                <button type="button" class="theme-toggle" onclick="ThemeManager.toggle(); updateIcon();" th:aria-label="#{nav.toggleTheme}">
-                    <i class="fas fa-moon" id="login-theme-icon"></i>
-                </button>
+                <div style="position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <select class="form-select form-select-sm" style="width: auto;"
+                            id="registration-language-select" th:aria-label="#{language.select}"
+                            onchange="LanguageManager.changeLanguage(this.value)">
+                        <option value="en" th:selected="${#locale.language == 'en'}">EN</option>
+                        <option value="de" th:selected="${#locale.language == 'de'}">DE</option>
+                        <option value="es" th:selected="${#locale.language == 'es'}">ES</option>
+                        <option value="fr" th:selected="${#locale.language == 'fr'}">FR</option>
+                    </select>
+                    <button type="button" class="theme-toggle" style="position: static;" onclick="ThemeManager.toggle(); updateIcon();" th:aria-label="#{nav.toggleTheme}">
+                        <i class="fas fa-moon" id="login-theme-icon"></i>
+                    </button>
+                </div>
 
                 <div class="login-brand-mobile">
                     <svg class="login-logo-mobile" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -55,7 +62,7 @@
                         <label for="name" class="form-group-label" th:text="#{registration.firstName}">name</label>
                         <div class="input-wrapper">
                             <input id="name" class="login-input" type="text" th:field="*{firstName}"
-                                   th:placeholder="#{registration.firstName}" required minlength="2" maxlength="90" autocomplete="given-name" autofocus />
+                                   th:placeholder="#{registration.firstName}" required minlength="2" maxlength="64" autocomplete="given-name" autofocus />
                             <div class="input-icon-right">
                                 <i class="fas fa-user"></i>
                             </div>
@@ -66,7 +73,7 @@
                         <label for="name2" class="form-group-label" th:text="#{registration.lastName}">name2</label>
                         <div class="input-wrapper">
                             <input id="name2" class="login-input" type="text" th:field="*{lastName}"
-                                   th:placeholder="#{registration.lastName}" required minlength="2" maxlength="90" autocomplete="family-name" />
+                                   th:placeholder="#{registration.lastName}" required minlength="2" maxlength="64" autocomplete="family-name" />
                             <div class="input-icon-right">
                                 <i class="fas fa-user"></i>
                             </div>
@@ -77,7 +84,7 @@
                         <label for="email" class="form-group-label" th:text="#{registration.email}">email</label>
                         <div class="input-wrapper">
                             <input id="email" class="login-input" type="email" th:field="*{email}"
-                                   th:placeholder="#{registration.email}" required minlength="6" maxlength="90" autocomplete="email" />
+                                   th:placeholder="#{registration.email}" required minlength="6" maxlength="225" autocomplete="email" />
                             <div class="input-icon-right">
                                 <i class="fas fa-envelope"></i>
                             </div>
@@ -88,7 +95,7 @@
                         <label for="password" class="form-group-label" th:text="#{registration.password}">password</label>
                         <div class="input-wrapper">
                             <input id="password" class="login-input" type="password" name="password"
-                                   th:placeholder="#{registration.password}" required minlength="8" maxlength="90" autocomplete="new-password" />
+                                   th:placeholder="#{registration.password}" required minlength="8" maxlength="72" autocomplete="new-password" />
                             <div class="input-icon-right">
                                 <i class="fas fa-lock"></i>
                             </div>

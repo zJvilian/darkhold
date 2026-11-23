@@ -1,5 +1,7 @@
 package com.quiz.darkhold.preview.controller;
 
+import com.quiz.darkhold.game.entity.Game;
+import com.quiz.darkhold.game.entity.GameStatus;
 import com.quiz.darkhold.practice.service.PracticeService;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.service.PreviewService;
@@ -17,12 +19,15 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Controller;
+import org.springframework.security.core.Authentication;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.security.Principal;
+import java.util.List;
 
 @SuppressWarnings("unused")
 @Controller
@@ -91,7 +96,40 @@ public class PreviewController {
         storeSessionAttributes(session, publishInfo.getPin(), teamMode);
         createTeamsIfEnabled(teamMode, teamCount, assignmentMethod, teamNames, publishInfo.getPin());
         addPublishAttributes(model, publishInfo, teamMode, teamCount, assignmentMethod);
+        model.addAttribute("players", List.of());
         return "challenge/publish";
+    }
+
+    /**
+     * Back to the lobby of a game that has not started yet (from the active games dashboard).
+     *
+     * @param model     model
+     * @param pin       game PIN
+     * @param principal the game's host or an admin
+     * @param session   HTTP session to store game PIN
+     * @return publish page, or the dashboard if the lobby is not the caller's or is closed
+     */
+    @GetMapping("/lobby/{pin}")
+    public String lobby(final Model model, @PathVariable final String pin, final Principal principal,
+                        final HttpSession session) {
+        Game game = previewService.hostedGame(pin, principal.getName(), isAdmin(principal));
+        if (game == null || !GameStatus.WAITING.name().equals(game.getGameStatus())) {
+            return "redirect:/my-active-games";
+        }
+        boolean teamMode = Boolean.TRUE.equals(game.getTeamMode());
+        storeSessionAttributes(session, pin, teamMode);
+        PublishInfo publishInfo = new PublishInfo();
+        publishInfo.setPin(pin);
+        publishInfo.setModerator(game.getModerator());
+        addPublishAttributes(model, publishInfo, teamMode, teamMode ? teamService.getTeams(pin).size() : 2,
+                teamMode ? teamService.getAssignmentMethod(pin).name() : TeamAssignmentMethod.BALANCED.name());
+        model.addAttribute("players", previewService.playersInGame(pin));
+        return "challenge/publish";
+    }
+
+    private static boolean isAdmin(final Principal principal) {
+        return principal instanceof Authentication auth
+                && auth.getAuthorities().stream().anyMatch(a -> "ADMIN".equals(a.getAuthority()));
     }
 
     private void storeSessionAttributes(final HttpSession session, final String pin, final boolean teamMode) {
@@ -106,11 +144,19 @@ public class PreviewController {
         if (teamMode) {
             TeamConfig teamConfig = new TeamConfig();
             teamConfig.setTeamCount(teamCount);
-            teamConfig.setAssignmentMethod(TeamAssignmentMethod.valueOf(assignmentMethod));
+            teamConfig.setAssignmentMethod(assignmentMethod(assignmentMethod));
             teamConfig.setTeamNames(parseTeamNames(teamNames));
             teamService.createTeams(pin, teamConfig);
             log.info("Created {} teams for game {} with custom names: {}",
                     teamCount, pin, teamNames);
+        }
+    }
+
+    private static TeamAssignmentMethod assignmentMethod(final String name) {
+        try {
+            return TeamAssignmentMethod.valueOf(name);
+        } catch (IllegalArgumentException ex) {
+            return TeamAssignmentMethod.BALANCED;
         }
     }
 

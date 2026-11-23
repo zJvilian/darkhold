@@ -10,9 +10,6 @@ import java.util.UUID;
 
 @Component
 public class AppMvcInterceptor implements HandlerInterceptor {
-    public AppMvcInterceptor() {
-        MDC.put("transactionId", UUID.randomUUID().toString());
-    }
 
     @Override
     public boolean preHandle(final HttpServletRequest request,
@@ -21,5 +18,13 @@ public class AppMvcInterceptor implements HandlerInterceptor {
         String traceID = UUID.randomUUID().toString();
         MDC.put("transactionId", traceID);
         return true;
+    }
+
+    @Override
+    public void afterCompletion(final HttpServletRequest request,
+                                final HttpServletResponse response,
+                                final Object handler,
+                                final Exception ex) {
+        MDC.remove("transactionId");
     }
 }

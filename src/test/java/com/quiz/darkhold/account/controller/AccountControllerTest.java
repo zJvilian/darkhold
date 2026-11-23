@@ -145,4 +145,28 @@ class AccountControllerTest {
         assertEquals("New", saved.getFirstName());
         assertEquals(email, saved.getEmail());
     }
+
+    @Test
+    void spoofedPhotoBytesAreRejected() throws Exception {
+        var spoofed = new MockMultipartFile("image", "evil.png", "image/png",
+                "not-image".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(multipart("/account/profile").file(spoofed).with(asMe()).with(csrf())
+                        .param("firstName", "Self").param("lastName", "Edit").param("email", me.getEmail()))
+                .andExpect(flash().attribute("errorMessage", "account.error.photo"));
+    }
+
+    @Test
+    void webpPhotoUpdatesNavbarAndSettingsControlsRender() throws Exception {
+        var webp = new MockMultipartFile("image", "pic.webp", "image/webp",
+                new byte[]{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P', 'V', 'P', '8', ' '});
+        Cookie session = login();
+        mvc.perform(multipart("/account/profile").file(webp).cookie(session).with(csrf())
+                        .param("firstName", "Self").param("lastName", "Edit").param("email", me.getEmail()))
+                .andExpect(flash().attribute("message", "account.profileUpdated"));
+        mvc.perform(get("/account").cookie(session)).andExpect(status().isOk())
+                .andExpect(content().string(containsString("sound-volume-slider")))
+                .andExpect(content().string(containsString("colorblind-select-settings")))
+                .andExpect(content().string(containsString("/user-photos/" + me.getId() + "/")));
+        com.quiz.darkhold.init.FileUploadUtil.deleteDir("user-photos/" + me.getId());
+    }
 }

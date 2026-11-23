@@ -6,11 +6,15 @@ import com.quiz.darkhold.game.model.GameStatus;
 import com.quiz.darkhold.game.model.QuestionPointer;
 import com.quiz.darkhold.preview.entity.CurrentGameSession;
 import com.quiz.darkhold.preview.model.PublishInfo;
+import com.quiz.darkhold.team.model.TeamInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -18,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class CurrentGame {
@@ -26,6 +31,44 @@ public class CurrentGame {
 
     @Autowired
     private CurrentGameSessionRepository repository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // In memory per PIN, dropped in stopTheGame: answer statistics and time the current question spent paused
+    private final Map<String, GameStats> stats = new ConcurrentHashMap<>();
+    private final Map<String, Long> pausedMillis = new ConcurrentHashMap<>();
+
+    /** Running answer tallies for one player or one question. */
+    private static final class Tally {
+        private int correct;
+        private int incorrect;
+        private int maxStreak;
+        private long totalMillis;
+        private int timed;
+        private long fastestMillis = -1;
+
+        private synchronized void add(final Boolean right, final int streak, final long millis) {
+            if (right != null && right) {
+                correct++;
+            } else if (right != null) {
+                incorrect++;
+            }
+            maxStreak = Math.max(maxStreak, streak);
+            totalMillis += millis;
+            timed++;
+            fastestMillis = fastestMillis < 0 ? millis : Math.min(fastestMillis, millis);
+        }
+
+        private int averageSeconds() {
+            return timed == 0 ? 0 : (int) Math.round(totalMillis / 1000.0 / timed);
+        }
+    }
+
+    private record GameStats(Map<String, Tally> players, Map<Integer, Tally> questions) {
+        GameStats() {
+            this(new ConcurrentHashMap<>(), new ConcurrentHashMap<>());
+        }
+    }
 
     /**
      * save the game info to H2 database before we start the game.
@@ -75,6 +118,10 @@ public class CurrentGame {
             List<String> users = gameSession.getUsersList();
             if (users == null) {
                 users = new ArrayList<>();
+            }
+            if (users.contains(userName)) {
+                // a reconnect or reload joins again; the player is already in
+                return;
             }
             users.add(userName);
             gameSession.setUsersList(users);
@@ -226,6 +273,8 @@ public class CurrentGame {
     }
 
     public void stopTheGame(final String pin) {
+        stats.remove(pin);
+        pausedMillis.remove(pin);
         Optional<CurrentGameSession> session = repository.findByPin(pin);
         session.ifPresent(currentGameSession -> repository.delete(currentGameSession));
     }
@@ -335,6 +384,19 @@ public class CurrentGame {
     }
 
     /**
+     * Whether a player already answered (or timed out on) a question.
+     *
+     * @param pin        game pin
+     * @param username   player
+     * @param questionNo zero-based question number
+     * @return true once the player's answer for that question is in
+     */
+    public boolean hasAnswered(final String pin, final String username, final int questionNo) {
+        Integer last = repository.findByPin(pin).map(session -> session.getAnsweredMap().get(username)).orElse(null);
+        return last != null && last >= questionNo;
+    }
+
+    /**
      * Mark a question as started. The first caller per question snapshots the scores as the
      * baseline for the scoreboard delta; later callers (other players loading the page) are no-ops.
      *
@@ -347,6 +409,7 @@ public class CurrentGame {
         if (session.isPresent() && !Integer.valueOf(questionNo).equals(session.get().getStartedQuestionNo())) {
             CurrentGameSession gameSession = session.get();
             gameSession.setStartedQuestionNo(questionNo);
+            pausedMillis.remove(pin);
             Map<String, Integer> scores = gameSession.getScoresMap();
             gameSession.setPreviousScoresMap(scores != null ? new HashMap<>(scores) : new HashMap<>());
             repository.save(gameSession);
@@ -420,6 +483,7 @@ public class CurrentGame {
             CurrentGameSession gameSession = session.get();
             gameSession.setGameStatus(GameStatus.ACTIVE);
             long elapsed = calculateElapsedPause(gameSession.getPausedAt());
+            pausedMillis.merge(pin, elapsed, Long::sum);
             gameSession.setPausedAt(null);
             repository.save(gameSession);
             logger.info("Game {} resumed after {}ms pause", pin, elapsed);
@@ -430,6 +494,79 @@ public class CurrentGame {
 
     private long calculateElapsedPause(final Long pausedAt) {
         return pausedAt != null ? System.currentTimeMillis() - pausedAt : 0;
+    }
+
+    /**
+     * How long the current question has been paused, including a pause still going on.
+     *
+     * @param pin game pin
+     * @return paused milliseconds
+     */
+    public long getPausedMillis(final String pin) {
+        Long running = repository.findByPin(pin).map(CurrentGameSession::getPausedAt).orElse(null);
+        return pausedMillis.getOrDefault(pin, 0L) + calculateElapsedPause(running);
+    }
+
+    // ==================== Answer Statistics ====================
+
+    /**
+     * Count an answer towards the player's and the question's statistics. Timeouts are not answers: skip them.
+     *
+     * @param pin        game pin
+     * @param username   player
+     * @param questionNo zero-based question number
+     * @param scored     whether the question has a right answer (not a poll or word cloud)
+     * @param correct    whether the answer was accepted
+     * @param streak     the player's streak after this answer
+     * @param millis     time taken to answer
+     */
+    public void recordAnswer(final String pin, final String username, final int questionNo, final boolean scored,
+                             final boolean correct, final int streak, final long millis) {
+        GameStats game = stats.computeIfAbsent(pin, key -> new GameStats());
+        long time = Math.max(0, millis);
+        game.players().computeIfAbsent(username, key -> new Tally()).add(scored ? correct : null, streak, time);
+        game.questions().computeIfAbsent(questionNo, key -> new Tally()).add(correct, 0, time);
+    }
+
+    private Optional<Tally> player(final String pin, final String username) {
+        return Optional.ofNullable(stats.get(pin)).map(game -> game.players().get(username));
+    }
+
+    private Optional<Tally> question(final String pin, final int questionNo) {
+        return Optional.ofNullable(stats.get(pin)).map(game -> game.questions().get(questionNo));
+    }
+
+    public int getPlayerCorrectCount(final String pin, final String username) {
+        return player(pin, username).map(tally -> tally.correct).orElse(0);
+    }
+
+    public int getPlayerIncorrectCount(final String pin, final String username) {
+        return player(pin, username).map(tally -> tally.incorrect).orElse(0);
+    }
+
+    public int getPlayerMaxStreak(final String pin, final String username) {
+        return player(pin, username).map(tally -> tally.maxStreak).orElse(0);
+    }
+
+    public int getPlayerAvgAnswerTimeSeconds(final String pin, final String username) {
+        return player(pin, username).map(Tally::averageSeconds).orElse(0);
+    }
+
+    public int getQuestionCorrectCount(final String pin, final int questionNo) {
+        return question(pin, questionNo).map(tally -> tally.correct).orElse(0);
+    }
+
+    public int getQuestionIncorrectCount(final String pin, final int questionNo) {
+        return question(pin, questionNo).map(tally -> tally.incorrect).orElse(0);
+    }
+
+    public int getQuestionAvgAnswerTimeSeconds(final String pin, final int questionNo) {
+        return question(pin, questionNo).map(Tally::averageSeconds).orElse(0);
+    }
+
+    public int getQuestionFastestAnswerTimeSeconds(final String pin, final int questionNo) {
+        return question(pin, questionNo).filter(tally -> tally.fastestMillis >= 0)
+                .map(tally -> (int) Math.round(tally.fastestMillis / 1000.0)).orElse(0);
     }
 
     // ==================== Player Management Methods ====================
@@ -469,6 +606,22 @@ public class CurrentGame {
         if (streaks != null) {
             streaks.remove(username);
             session.setStreakMap(streaks);
+        }
+        Map<String, String> playerTeams = session.getPlayerTeamsMap();
+        if (playerTeams.remove(username) != null) {
+            session.setPlayerTeamsMap(playerTeams);
+            removeFromTeams(session, username);
+        }
+    }
+
+    private void removeFromTeams(final CurrentGameSession session, final String username) {
+        try {
+            List<TeamInfo> teams = objectMapper.readValue(session.getTeamsJson(),
+                    new TypeReference<List<TeamInfo>>() { });
+            teams.forEach(team -> team.removeMember(username));
+            session.setTeamsJson(objectMapper.writeValueAsString(teams));
+        } catch (JacksonException | IllegalArgumentException ex) {
+            logger.error("Could not remove {} from the teams", username, ex);
         }
     }
 

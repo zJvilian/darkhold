@@ -3,6 +3,7 @@ package com.quiz.darkhold.game.controller;
 import com.quiz.darkhold.challenge.repository.ChallengeRepository;
 import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.model.GameInfo;
+import com.quiz.darkhold.game.model.GameStatus;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.preview.service.PreviewService;
 import com.quiz.darkhold.live.LiveQuizService;
@@ -52,11 +53,13 @@ public class ActiveGamesController {
         }
 
         String moderator = principal.getName();
-        List<Game> activeGames = previewService.getActiveGamesForModerator(moderator);
-        List<GameInfo> gameInfos = convertToGameInfos(activeGames);
-
-        model.addAttribute("activeGames", gameInfos);
-        model.addAttribute("liveRooms", liveQuizService.roomsForHost(LiveQuizService.hostIdentity(principal)));
+        // admins oversee every moderator's games
+        boolean admin = isAdmin(principal);
+        List<Game> activeGames = admin ? previewService.getAllActiveGames()
+                : previewService.getActiveGamesForModerator(moderator);
+        model.addAttribute("activeGames", convertToGameInfos(activeGames));
+        model.addAttribute("liveRooms", admin ? liveQuizService.allActiveRooms()
+                : liveQuizService.roomsForHost(LiveQuizService.hostIdentity(principal)));
         model.addAttribute("moderator", moderator);
         return "activegames";
     }
@@ -73,7 +76,9 @@ public class ActiveGamesController {
     private GameInfo createGameInfo(final Game game) {
         GameInfo info = new GameInfo();
         info.setPin(game.getPin());
-        info.setStatus(game.getGameStatus());
+        // a pause lives in the running session, not in the stored game
+        info.setStatus(currentGame.getGameStatus(game.getPin()) == GameStatus.PAUSED
+                ? GameStatus.PAUSED.name() : game.getGameStatus());
         info.setChallengeId(game.getChallengeId());
         info.setCreatedOn(game.getCreatedOn());
         info.setGameMode(game.getGameMode());
@@ -122,7 +127,7 @@ public class ActiveGamesController {
     private boolean isAdmin(final Principal principal) {
         return principal instanceof Authentication auth
                 && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+                .anyMatch(a -> "ADMIN".equals(a.getAuthority()));
     }
 
     private void setChallengeName(final GameInfo info, final String challengeIdStr) {
@@ -136,8 +141,6 @@ public class ActiveGamesController {
     }
 
     private void setParticipantCount(final GameInfo info, final String pin) {
-        List<String> participants = currentGame.getActiveUsersInGame(pin);
-        int count = participants != null ? participants.size() - 1 : 0; // Exclude moderator
-        info.setParticipantCount(count);
+        info.setParticipantCount(Math.max(0, currentGame.getParticipantCount(pin)));
     }
 }

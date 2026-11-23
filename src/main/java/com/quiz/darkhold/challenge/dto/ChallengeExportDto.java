@@ -14,12 +14,14 @@ public class ChallengeExportDto {
 
     private String title;
     private String description;
+    private String coverImageUrl;
     private List<QuestionExportDto> questions = new ArrayList<>();
 
     public static ChallengeExportDto fromEntity(final Challenge challenge) {
         ChallengeExportDto dto = new ChallengeExportDto();
         dto.setTitle(challenge.getTitle());
         dto.setDescription(challenge.getDescription());
+        dto.setCoverImageUrl(challenge.getCoverImageUrl());
         if (challenge.getQuestionSets() != null) {
             for (QuestionSet questionSet : challenge.getQuestionSets()) {
                 dto.getQuestions().add(QuestionExportDto.fromEntity(questionSet));
@@ -42,6 +44,14 @@ public class ChallengeExportDto {
 
     public void setDescription(final String description) {
         this.description = description;
+    }
+
+    public String getCoverImageUrl() {
+        return coverImageUrl;
+    }
+
+    public void setCoverImageUrl(final String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
     }
 
     public List<QuestionExportDto> getQuestions() {

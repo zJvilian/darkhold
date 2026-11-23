@@ -19,6 +19,9 @@ services:
       - DARKHOLD_ADMIN_PASSWORD=${DARKHOLD_ADMIN_PASSWORD:-}
       - JAVA_OPTS=-Xmx512m
       - DARKHOLD_PUBLIC_BASE_URL=${DARKHOLD_PUBLIC_BASE_URL:-}
+    volumes:
+      - question_images:/app/question-images
+      - user_photos:/app/user-photos
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8181/actuator/health"]
@@ -45,4 +48,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  question_images:
+    driver: local
+  user_photos:
     driver: local

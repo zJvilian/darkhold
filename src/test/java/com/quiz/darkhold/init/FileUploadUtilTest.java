@@ -6,6 +6,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +16,7 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -128,5 +132,31 @@ class FileUploadUtilTest {
         var dir = tempDir.resolve("photos").toString();
         assertThrows(IOException.class, () -> FileUploadUtil.saveFile(dir, "../escaped.png", file));
         assertFalse(Files.exists(tempDir.resolve("escaped.png")));
+    }
+
+    @Test
+    @DisplayName("Should detect valid PNG and WebP images and reject spoofed content")
+    void detectImageExtensionValidatesMagicBytesAndDecoding() throws IOException {
+        var pngOut = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB), "png", pngOut);
+        var validPng = new MockMultipartFile("image", "a.png", "image/png", pngOut.toByteArray());
+        var validWebp = new MockMultipartFile("image", "a.webp", "image/webp",
+                new byte[]{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'E', 'B', 'P', 'V', 'P', '8', ' '});
+        var spoofed = new MockMultipartFile("image", "evil.png", "image/png",
+                "not-an-image".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        assertEquals("png", FileUploadUtil.detectImageExtension(validPng));
+        assertEquals("webp", FileUploadUtil.detectImageExtension(validWebp));
+        assertNull(FileUploadUtil.detectImageExtension(spoofed));
+    }
+
+    @Test
+    @DisplayName("Should delete directory and its files")
+    void deleteDirRemovesDirectoryAndFiles() throws IOException {
+        var dir = tempDir.resolve("user-42");
+        Files.createDirectory(dir);
+        Files.writeString(dir.resolve("avatar.png"), "data");
+        FileUploadUtil.deleteDir(dir.toString());
+        assertFalse(Files.exists(dir));
     }
 }

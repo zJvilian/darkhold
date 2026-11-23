@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns:th="https://www.thymeleaf.org">
 <body>
-<!-- Shared quiz list: filter/sort toolbar + one row per quiz. manage=true adds select, duplicate and delete. -->
+<!-- Shared quiz list: filter/sort toolbar + one row per quiz. manage=true adds select, duplicate, export and delete. -->
 <div th:fragment="quizList(quizzes, manage)" id="quizList">
     <section class="search-section">
         <div class="quiz-toolbar">
@@ -63,14 +63,24 @@
                    th:title="#{challenge.view.edit}" th:aria-label="#{challenge.view.edit}" title="Edit">
                     <i class="fas fa-edit"></i>
                 </a>
-                <button type="button" th:if="${manage and ch.owned}"
+                <button type="button" th:if="${manage}"
                         class="challenge-action-btn challenge-action-btn--duplicate"
                         onclick="duplicateChallenge(this);"
                         th:title="#{challenge.view.duplicate}" th:aria-label="#{challenge.view.duplicate}"
                         title="Duplicate">
                     <i class="fas fa-copy"></i>
                 </button>
-                <button type="button" th:if="${manage and ch.owned}"
+                <a th:if="${manage}" class="challenge-action-btn"
+                   th:href="@{/export_challenge/{id}/json(id=${ch.challengeId})}" download
+                   th:title="#{quizList.exportJson}" th:aria-label="#{quizList.exportJson}" title="Export JSON">
+                    <i class="fas fa-file-code"></i>
+                </a>
+                <a th:if="${manage}" class="challenge-action-btn"
+                   th:href="@{/export_challenge/{id}/csv(id=${ch.challengeId})}" download
+                   th:title="#{quizList.exportCsv}" th:aria-label="#{quizList.exportCsv}" title="Export CSV">
+                    <i class="fas fa-file-csv"></i>
+                </a>
+                <button type="button" th:if="${manage}"
                         class="challenge-action-btn challenge-action-btn--delete"
                         data-bs-toggle="modal" data-bs-target="#confirmModal"
                         onclick="markQuizForDeletion(this);"

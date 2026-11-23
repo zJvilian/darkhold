@@ -137,14 +137,14 @@
                     <div class="game-card-actions">
                         <!-- Show for WAITING status -->
                         <a th:if="${game.status == 'WAITING'}"
-                           th:href="@{/publish(challengeId=${game.challengeId})}"
+                           th:href="@{/lobby/{pin}(pin=${game.pin})}"
                            class="game-action-btn game-action-btn--primary">
                             <i class="fas fa-door-open"></i>
                             <span th:text="#{activegames.viewLobby}">View Lobby</span>
                         </a>
 
-                        <!-- Show for IN_PROGRESS status -->
-                        <form th:if="${game.status == 'IN_PROGRESS'}"
+                        <!-- Show for a running game -->
+                        <form th:if="${game.status == 'STARTED' or game.status == 'ACTIVE' or game.status == 'IN_PROGRESS'}"
                               th:action="@{/game}" method="post" style="flex: 1; margin: 0;">
                             <input type="hidden" name="quizPin" th:value="${game.pin}"/>
                             <button type="submit" class="game-action-btn game-action-btn--success" style="width: 100%;">

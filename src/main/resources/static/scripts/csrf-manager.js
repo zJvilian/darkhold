@@ -33,12 +33,10 @@ const CsrfManager = (() => {
     }
 
     /**
-     * Get CSRF token
+     * Get CSRF token (always reads fresh cookie to avoid stale cached tokens)
      */
     function getToken() {
-        if (!csrfToken) {
-            init();
-        }
+        csrfToken = getCookie('XSRF-TOKEN');
         return csrfToken;
     }
 
@@ -83,21 +81,25 @@ const CsrfManager = (() => {
 
     /**
      * Get CSRF headers for STOMP connection
-     * Returns object with X-CSRF-TOKEN header
+     * Returns object with X-XSRF-TOKEN header
      */
     function getHeadersForStomp() {
         const token = getToken();
-        return token ? { 'X-CSRF-TOKEN': token } : {};
+        return token ? { [csrfHeader]: token } : {};
     }
 
     /**
      * Create hidden input field with CSRF token for forms
      */
     function createHiddenInput() {
+        const token = getToken();
+        if (!token) {
+            return null;
+        }
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = '_csrf';
-        input.value = getToken();
+        input.value = token;
         return input;
     }
 
@@ -116,7 +118,10 @@ const CsrfManager = (() => {
             }
 
             // Add CSRF token to form
-            form.appendChild(createHiddenInput());
+            const input = createHiddenInput();
+            if (input) {
+                form.appendChild(input);
+            }
         });
     }
 

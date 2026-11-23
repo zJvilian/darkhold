@@ -9,6 +9,7 @@ import org.slf4j.MDC;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -21,9 +22,25 @@ class AppMvcInterceptorTest {
 
     @BeforeEach
     void setUp() {
+        MDC.clear();
         interceptor = new AppMvcInterceptor();
         request = mock(HttpServletRequest.class);
         response = mock(HttpServletResponse.class);
+    }
+
+    @Test
+    @DisplayName("Should not set transactionId in constructor")
+    void shouldNotSetTransactionIdInConstructor() {
+        assertNull(MDC.get("transactionId"));
+    }
+
+    @Test
+    @DisplayName("Should clear transactionId in afterCompletion")
+    void shouldClearTransactionIdInAfterCompletion() throws Exception {
+        interceptor.preHandle(request, response, new Object());
+        assertNotNull(MDC.get("transactionId"));
+        interceptor.afterCompletion(request, response, new Object(), null);
+        assertNull(MDC.get("transactionId"));
     }
 
     @Test

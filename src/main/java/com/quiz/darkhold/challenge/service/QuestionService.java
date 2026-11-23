@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class QuestionService {
@@ -106,7 +107,7 @@ public class QuestionService {
     public int bulkDeleteQuestions(final List<Long> questionIds) {
         int deleted = 0;
         for (Long questionId : questionIds) {
-            if (deleteQuestion(questionId)) {
+            if (questionId != null && deleteQuestion(questionId)) {
                 deleted++;
             }
         }
@@ -284,7 +285,8 @@ public class QuestionService {
         dest.setPoints(src.getPoints());
         dest.setAcceptableAnswers(src.getAcceptableAnswers());
         dest.setVideoUrl(src.getVideoUrl());
-        // Note: imageUrl is NOT copied - each question should have unique images
+        // the copy owns a clone of the file, so deleting either question leaves the other's picture or audio alone
+        dest.setImageUrl(imageProcessingService.copyMedia(src.getImageUrl(), src.getChallenge().getId()));
     }
 
     private com.quiz.darkhold.user.entity.User currentUser() {
@@ -297,6 +299,6 @@ public class QuestionService {
     }
 
     private boolean canEdit(final Challenge challenge) {
-        return challenge.getChallengeOwner().equals(currentUserId()) || currentUser().canManageAllChallenges();
+        return Objects.equals(challenge.getChallengeOwner(), currentUserId()) || currentUser().canManageAllChallenges();
     }
 }

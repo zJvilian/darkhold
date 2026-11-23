@@ -3,6 +3,8 @@ package com.quiz.darkhold.practice.service;
 import com.quiz.darkhold.challenge.entity.Challenge;
 import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.challenge.repository.ChallengeRepository;
+import com.quiz.darkhold.game.entity.Game;
+import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.preview.entity.CurrentGameSession;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGameSessionRepository;
@@ -45,11 +47,14 @@ class PracticeServiceTest {
     @Mock
     private HttpSession httpSession;
 
+    @Mock
+    private GameRepository gameRepository;
+
     private PracticeService practiceService;
 
     @BeforeEach
     void setUp() {
-        practiceService = new PracticeService(challengeRepository, sessionRepository);
+        practiceService = new PracticeService(challengeRepository, sessionRepository, gameRepository);
         signIn("player1");
     }
 
@@ -77,7 +82,7 @@ class PracticeServiceTest {
         }
 
         @Test
-        @DisplayName("Should return PublishInfo with PRACTICE- prefixed pin")
+        @DisplayName("Should return a non-numeric pin that fits the stored result")
         void shouldReturnPublishInfoWithPracticePrefixedPin() {
             Challenge challenge = createTestChallenge();
             when(challengeRepository.findById(1L)).thenReturn(Optional.of(challenge));
@@ -85,7 +90,49 @@ class PracticeServiceTest {
             PublishInfo result = practiceService.initializePracticeGame("1", "player1", httpSession);
 
             assertNotNull(result);
-            assertTrue(result.getPin().startsWith("PRACTICE-"));
+            assertTrue(result.getPin().startsWith("P-"));
+            assertTrue(result.getPin().length() <= 10);
+        }
+
+        @Test
+        @DisplayName("Should store a practice game so the run can be saved under Past Games")
+        void shouldPersistPracticeGame() {
+            when(challengeRepository.findById(1L)).thenReturn(Optional.of(createTestChallenge()));
+
+            PublishInfo result = practiceService.initializePracticeGame("1", "player1", httpSession);
+
+            ArgumentCaptor<Game> captor = ArgumentCaptor.forClass(Game.class);
+            verify(gameRepository).save(captor.capture());
+            assertEquals(result.getPin(), captor.getValue().getPin());
+            assertEquals("PRACTICE", captor.getValue().getGameMode());
+            assertEquals("player1", captor.getValue().getModerator());
+            assertEquals("1", captor.getValue().getChallengeId());
+            assertNotNull(captor.getValue().getCreatedOn());
+        }
+
+        @Test
+        @DisplayName("Should let admins and game managers practice any quiz")
+        void shouldAllowManagersToPracticeForeignQuiz() {
+            when(challengeRepository.findById(1L)).thenReturn(Optional.of(createTestChallenge()));
+            var manager = new com.quiz.darkhold.user.entity.User();
+            manager.setEmail("manager");
+            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                    new DarkholdUserDetails(manager), "n/a",
+                    List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("GAME_MANAGER"))));
+
+            assertNotNull(practiceService.initializePracticeGame("1", "manager", httpSession));
+        }
+
+        @Test
+        @DisplayName("Should reject a quiz without questions")
+        void shouldRejectEmptyQuiz() {
+            Challenge challenge = createTestChallenge();
+            challenge.setQuestionSets(new ArrayList<>());
+            when(challengeRepository.findById(1L)).thenReturn(Optional.of(challenge));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> practiceService.initializePracticeGame("1", "player1", httpSession));
+            verify(gameRepository, never()).save(org.mockito.ArgumentMatchers.any());
         }
 
         @Test

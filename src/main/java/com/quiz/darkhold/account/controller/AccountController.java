@@ -37,7 +37,7 @@ public class AccountController {
     private static final int MAX_EMAIL = 128;
     private static final Pattern EMAIL = Pattern.compile("[^@\\s]+@[^@\\s]+\\.[^@\\s]+");
     private static final Map<String, String> PHOTO_TYPES =
-            Map.of("image/png", "png", "image/jpeg", "jpg", "image/gif", "gif");
+            Map.of("image/png", "png", "image/jpeg", "jpg", "image/gif", "gif", "image/webp", "webp");
 
     private final UserService userService;
     private final UserValidator userValidator;
@@ -76,17 +76,29 @@ public class AccountController {
                                 final HttpSession session, final RedirectAttributes redirect)
             throws IOException, UserNotFoundException {
         User me = principal.getUser();
-        String extension = image.isEmpty() ? null : PHOTO_TYPES.get(image.getContentType());
+        String extension = detectPhotoExtension(image);
         String error = profileError(me, form, !image.isEmpty() && extension == null);
         if (error != null) {
             return fail(redirect, error);
         }
-        String photo = photoName(extension);
-        userService.updateProfile(me.getId(), form.firstName(), form.lastName(), form.email(), photo);
-        savePhoto(me.getId(), photo, image);
-        refreshLogin(me.getId(), session);
+        saveProfileAndRefresh(me.getId(), form, photoName(extension), image, session);
         redirect.addFlashAttribute("message", "account.profileUpdated");
         return "redirect:/account";
+    }
+
+    private String detectPhotoExtension(final MultipartFile image) throws IOException {
+        if (image.isEmpty() || !PHOTO_TYPES.containsKey(image.getContentType())) {
+            return null;
+        }
+        return FileUploadUtil.detectImageExtension(image);
+    }
+
+    private void saveProfileAndRefresh(final Long id, final ProfileForm form, final String photo,
+                                       final MultipartFile image, final HttpSession session)
+            throws IOException, UserNotFoundException {
+        savePhoto(id, photo, image);
+        userService.updateProfile(id, form.firstName(), form.lastName(), form.email(), photo);
+        refreshLogin(id, session);
     }
 
     // Server-chosen name: no client path reaches the disk, and a new name defeats browser caching.

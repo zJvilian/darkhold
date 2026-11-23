@@ -11,6 +11,7 @@
     <link href="/styles/darkhold-styles.css" rel="stylesheet" />
     <link href="/styles/login.css" rel="stylesheet" />
     <script type="text/javascript" src="/scripts/theme-manager.js"></script>
+    <script type="text/javascript" src="/scripts/language-manager.js"></script>
 </head>
 <body>
     <main class="login-page">
@@ -19,10 +20,20 @@
              ============================ -->
         <div class="login-panel-right">
             <div class="login-card">
-                <!-- Theme toggle -->
-                <button type="button" class="theme-toggle" onclick="ThemeManager.toggle(); updateIcon();" th:aria-label="#{nav.toggleTheme}">
-                    <i class="fas fa-moon" id="login-theme-icon"></i>
-                </button>
+                <!-- Language & Theme controls -->
+                <div style="position: absolute; top: 0; right: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <select class="form-select form-select-sm" style="width: auto;"
+                            id="login-language-select" th:aria-label="#{language.select}"
+                            onchange="LanguageManager.changeLanguage(this.value)">
+                        <option value="en" th:selected="${#locale.language == 'en'}">EN</option>
+                        <option value="de" th:selected="${#locale.language == 'de'}">DE</option>
+                        <option value="es" th:selected="${#locale.language == 'es'}">ES</option>
+                        <option value="fr" th:selected="${#locale.language == 'fr'}">FR</option>
+                    </select>
+                    <button type="button" class="theme-toggle" style="position: static;" onclick="ThemeManager.toggle(); updateIcon();" th:aria-label="#{nav.toggleTheme}">
+                        <i class="fas fa-moon" id="login-theme-icon"></i>
+                    </button>
+                </div>
 
                 <!-- Brand Header -->
                 <div class="login-brand-mobile">
@@ -39,10 +50,16 @@
                     <p class="login-subtitle" th:text="#{app.tagline}">Interactive Quiz Platform</p>
                 </div>
 
+                <!-- Logout / Status Message -->
+                <div th:if="${message}" class="alert alert-success" role="status" th:text="${message}">
+                    You have been logged out successfully.
+                </div>
+
                 <!-- Error Message -->
                 <div th:if="${danger}" class="login-error" role="alert">
                     <i class="fas fa-exclamation-circle"></i>
-                    <span th:text="#{login.invalidCredentials}">Invalid credentials</span>
+                    <span th:if="${locked}" th:text="#{home.rateLimitBlocked}">Too many failed attempts. You have been temporarily blocked for 15 minutes.</span>
+                    <span th:unless="${locked}" th:text="#{login.invalidCredentials}">Invalid credentials</span>
                 </div>
 
                 <!-- Login Form -->

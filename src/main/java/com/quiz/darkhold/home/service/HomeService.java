@@ -2,6 +2,7 @@ package com.quiz.darkhold.home.service;
 
 import com.quiz.darkhold.game.entity.GameStatus;
 import com.quiz.darkhold.game.repository.GameRepository;
+import com.quiz.darkhold.live.LiveRoomRepository;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +14,25 @@ public class HomeService {
 
     private final CurrentGame currentGame;
 
-    public HomeService(final GameRepository gameRepository, final CurrentGame currentGame) {
+    private final LiveRoomRepository liveRoomRepository;
+
+    public HomeService(final GameRepository gameRepository, final CurrentGame currentGame,
+                       final LiveRoomRepository liveRoomRepository) {
         this.gameRepository = gameRepository;
         this.currentGame = currentGame;
+        this.liveRoomRepository = liveRoomRepository;
+    }
+
+    /**
+     * Whether the PIN is the code of an open live quiz room.
+     *
+     * @param pin pin
+     * @return true for a live room that has not expired
+     */
+    public boolean isLiveRoom(final String pin) {
+        long now = System.currentTimeMillis();
+        return pin != null && pin.matches("[0-9]{6}")
+                && liveRoomRepository.findById(pin).filter(room -> room.getExpiresAt() > now).isPresent();
     }
 
     /**

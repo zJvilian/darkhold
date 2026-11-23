@@ -101,29 +101,21 @@
                         </span>
                     </div>
 
-                    <!-- Players Grid -->
-                    <div id="playersGrid" class="players-grid">
-                        <!-- Initial player -->
-                        <div class="player-card">
-                            <div class="player-avatar">
-                                <i class="fas fa-user"></i>
-                            </div>
-                            <span class="player-name" th:text="${#strings.substringBefore(user + '#', '#')}"></span>
-                        </div>
-                    </div>
+                    <!-- Players Grid (the host is not a player; filled by publish-scripts.js) -->
+                    <div id="playersGrid" class="players-grid"></div>
 
                     <!-- Empty State -->
-                    <div id="emptyState" class="empty-state-lobby" style="display: none;">
+                    <div id="emptyState" class="empty-state-lobby">
                         <div class="empty-state-icon-lobby">
                             <i class="fas fa-user-plus"></i>
                         </div>
                         <p class="empty-state-text-lobby" th:text="#{game.lobby.emptyState}">Waiting for players to join...</p>
                     </div>
 
-                    <!-- Hidden table for WebSocket compatibility -->
+                    <!-- Players already in the lobby when the page loads -->
                     <table id="conversation" style="display: none;">
                         <tbody id="players">
-                            <tr><td>[[${user}]]</td></tr>
+                            <tr th:each="player : ${players}"><td th:text="${player}"></td></tr>
                         </tbody>
                     </table>
                 </section>
@@ -173,7 +165,9 @@
             <!-- Hidden table for team mode (used by WebSocket handlers) -->
             <div th:if="${teamMode}" style="display:none;">
                 <table id="conversation">
-                    <tbody id="players"></tbody>
+                    <tbody id="players">
+                        <tr th:each="player : ${players}"><td th:text="${player}"></td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -189,50 +183,5 @@
 
     <script type="text/javascript" src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
 
-    <script>
-        // Update player count in badge
-        function updatePlayerCount() {
-            const playerCards = document.querySelectorAll('.player-card');
-            const count = playerCards.length;
-            const countBadge = document.getElementById('playerCount');
-            if (countBadge) {
-                countBadge.textContent = count;
-            }
-        }
-
-        // Enhance the showGreeting function to use the new grid layout
-        const originalShowGreeting = window.showGreeting;
-        window.showGreeting = function(users) {
-            // Call original function to maintain compatibility
-            if (originalShowGreeting) {
-                originalShowGreeting(users);
-            }
-
-            // Update the grid view
-            const playersGrid = document.getElementById('playersGrid');
-            const emptyState = document.getElementById('emptyState');
-
-            if (!playersGrid) return;
-
-            if (users && users.length > 0) {
-                playersGrid.innerHTML = users.map(user => `
-                    <div class="player-card">
-                        <div class="player-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span class="player-name">${escapeHtml(user)}</span>
-                    </div>
-                `).join('');
-                if (emptyState) emptyState.style.display = 'none';
-                updatePlayerCount();
-            } else {
-                playersGrid.innerHTML = '';
-                if (emptyState) emptyState.style.display = 'block';
-            }
-        };
-
-        // Initialize player count on load
-        document.addEventListener('DOMContentLoaded', updatePlayerCount);
-    </script>
 </body>
 </html>

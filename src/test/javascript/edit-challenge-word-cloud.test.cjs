@@ -120,6 +120,7 @@ test('saving a word cloud question sets points to 0 and records typo tolerance m
 test('sorting saves the explicit order and rejects repeated or missing answers', async () => {
     const { getEl, context, getSavedData } = setupEditor();
     getEl('questionType').value = 'SORTING';
+    getEl('questionText').value = 'Put these in order';
     getEl('answer1').value = 'Alpha';
     getEl('answer2').value = 'Beta';
     getEl('answer3').value = 'Gamma';
@@ -152,4 +153,45 @@ test('audio media is only accepted for MULTIPLE_CHOICE, TRUE_FALSE, and TYPE_ANS
         assert.ok(!getEl('questionImageInput').accept.includes('audio/*'), `${disallowed} must not accept audio`);
         assert.equal(context.window.currentImageUrl, null);
     }
+});
+
+test('a zero point value is saved as zero instead of resetting to 1000', async () => {
+    const { getEl, context, getSavedData } = setupEditor();
+    getEl('questionText').value = 'Free points?';
+    getEl('answer1').value = 'Yes';
+    getEl('answer2').value = 'No';
+    getEl('correctA').checked = true;
+    getEl('points').value = '0';
+    await context.saveQuestion();
+    assert.equal(getSavedData().points, 0);
+    getEl('points').value = '';
+    await context.saveQuestion();
+    assert.equal(getSavedData().points, 1000, 'a blank field still falls back to the default');
+});
+
+test('a question without text or without answers A and B is not sent', async () => {
+    const { getEl, context, getSavedData } = setupEditor();
+    getEl('correctA').checked = true;
+    getEl('answer1').value = 'Yes';
+    getEl('answer2').value = 'No';
+    getEl('questionText').value = '   ';
+    await context.saveQuestion();
+    assert.equal(getSavedData(), null, 'blank question text');
+    getEl('questionText').value = 'Pick one';
+    getEl('answer2').value = ' ';
+    await context.saveQuestion();
+    assert.equal(getSavedData(), null, 'blank answer B');
+    getEl('answer2').value = 'No';
+    await context.saveQuestion();
+    assert.equal(getSavedData().question, 'Pick one');
+});
+
+test('a saved question keeps its id so a retried image upload updates it', async () => {
+    const { getEl, context } = setupEditor();
+    getEl('questionText').value = 'With picture';
+    getEl('answer1').value = 'Yes';
+    getEl('answer2').value = 'No';
+    getEl('correctA').checked = true;
+    await context.saveQuestion();
+    assert.equal(getEl('editingQuestionId').value, 1);
 });

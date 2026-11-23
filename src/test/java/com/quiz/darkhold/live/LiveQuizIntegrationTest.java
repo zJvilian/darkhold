@@ -320,8 +320,43 @@ class LiveQuizIntegrationTest {
         assertEquals(2, saved.getParticipantCount());
         assertEquals("First", saved.getWinnerUsername());
         // read the way the result page does, after the transaction has ended
-        var winner = resultService.getGameResultById(saved.getId()).getParticipantResults().get(0);
+        var stored = resultService.getGameResultById(saved.getId());
+        var winner = stored.getParticipantResults().get(0);
         assertTrue(winner.getCorrectAnswers() > 0);
+        // per-question statistics for the result page and the CSV export
+        assertEquals(2, stored.getQuestionResults().size());
+        var firstQuestion = stored.getQuestionResults().get(0);
+        assertEquals(1, firstQuestion.getCorrectCount());
+        assertEquals(1, firstQuestion.getIncorrectCount());
+        assertEquals(0, firstQuestion.getTimeoutCount());
+        assertNotNull(firstQuestion.getFastestAnswerTimeSeconds());
+    }
+
+    @Test
+    void streaksMultiplyTheScoreOfRightAnswersInARow() throws Exception {
+        var guest = join("Streaky", "owl");
+        control("start", -1);
+        setClock(false);
+        answer(guest, 0, "A,C");
+        control("next", 0);
+        setClock(false);
+        answer(guest, 1, "Earth");
+        LiveState.Player player = mapper.readValue(rooms.findById(pin).orElseThrow().getStateJson(), LiveState.class)
+                .players.values().iterator().next();
+        assertEquals(2, player.streak);
+        assertTrue(player.earned > 1000, "a second right answer in a row earns the streak bonus");
+    }
+
+    @Test
+    void removedPlayersFreeTheirNicknameAndAQuizEndedInTheLobbyLeavesNoResult() throws Exception {
+        join("Guest", "frog");
+        mvc.perform(post("/api/live/" + pin + "/control").with(user(HOST)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"kick\",\"questionIndex\":-1,\"playerName\":\"Guest\"}"))
+                .andExpect(status().isOk());
+        join("Guest", "fox");
+        assertEquals("FINISHED", control("end", -1).path("phase").asText());
+        assertTrue(gameResults.findFirstByPinOrderByIdAsc(pin).isEmpty());
     }
 
     @Test

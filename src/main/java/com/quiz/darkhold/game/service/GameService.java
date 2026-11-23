@@ -178,14 +178,55 @@ public class GameService {
     }
 
     /**
-     * Server-side time since this HTTP session was shown its question.
+     * Server-side time since this HTTP session was shown its question, not counting time the game was paused.
      *
      * @return elapsed milliseconds
      */
     public long elapsedMillis() {
         HttpSession session = httpSession();
         Long shownAt = session != null ? (Long) session.getAttribute(SESSION_QUESTION_SHOWN_AT) : null;
-        return shownAt != null ? Math.max(0, System.currentTimeMillis() - shownAt) : Long.MAX_VALUE;
+        if (shownAt == null) {
+            return Long.MAX_VALUE;
+        }
+        long paused = currentGame.getPausedMillis(currentPin());
+        return Math.max(0, System.currentTimeMillis() - shownAt - paused);
+    }
+
+    /**
+     * Count an answer in the game's statistics.
+     *
+     * @param user       player
+     * @param questionNo zero-based question number
+     * @param scored     whether the question has a right answer
+     * @param correct    whether the answer was accepted
+     * @param streak     the player's streak after this answer
+     * @param millis     time taken
+     */
+    public void recordAnswer(final String user, final int questionNo, final boolean scored,
+                             final boolean correct, final int streak, final long millis) {
+        currentGame.recordAnswer(currentPin(), user, questionNo, scored, correct, streak, millis);
+    }
+
+    /**
+     * Point this HTTP session at a game, so its host (or an admin) can return to it from another page.
+     *
+     * @param pin game PIN
+     */
+    public void useGame(final String pin) {
+        HttpSession session = httpSession();
+        if (session != null) {
+            session.setAttribute("gamePin", pin);
+        }
+    }
+
+    /**
+     * Whether this HTTP session's game is the given one.
+     *
+     * @param pin game PIN
+     * @return true if the session plays that game
+     */
+    public boolean isSessionGame(final String pin) {
+        return pin != null && pin.equals(getSessionPin());
     }
 
     /**
@@ -197,6 +238,17 @@ public class GameService {
      */
     public boolean markAnswered(final String user, final int questionNo) {
         return currentGame.markAnswered(currentPin(), user, questionNo);
+    }
+
+    /**
+     * Whether the player's answer to a question is already in.
+     *
+     * @param user       player
+     * @param questionNo zero-based question number
+     * @return true if answered or timed out
+     */
+    public boolean hasAnswered(final String user, final int questionNo) {
+        return currentGame.hasAnswered(currentPin(), user, questionNo);
     }
 
     /**

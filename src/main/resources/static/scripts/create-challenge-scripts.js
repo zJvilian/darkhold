@@ -91,11 +91,7 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
         headers: CsrfManager.addTokenToFetch(),
         body: formData
     })
-    .then(async response => {
-        const isJson = (response.headers.get('content-type') || '').includes('application/json');
-        const data = isJson ? await response.json().catch(() => null) : null;
-        return validateChallengeResponse(response.status, data, response.redirected);
-    })
+    .then(parseChallengeResponse)
     .then(data => {
         showChallengeMessage(resultDiv, LanguageManager.text('client.create.success'), 'success');
         uploadButton.style.display = 'none';
@@ -107,6 +103,40 @@ function createEmptyChallenge(uploadButton, title, description, resultDiv) {
         uploadButton.disabled = false;
         uploadButton.innerHTML = '<i class="fas fa-plus-circle"></i> ' + LanguageManager.text('client.create.create');
     });
+}
+
+function importJson() {
+    const button = document.getElementById('btnImportJson');
+    const files = document.getElementById('jsonUpload').files;
+    const resultDiv = document.getElementById('jsonResultMessage');
+    if (!files || files.length === 0) {
+        showChallengeMessage(resultDiv, LanguageManager.text('client.create.chooseJson'), 'danger');
+        return Promise.resolve();
+    }
+    button.disabled = true;
+    const formData = new FormData();
+    formData.append('file', files[0], files[0].name);
+    return fetch('/import_challenge/json', {
+        method: 'POST',
+        headers: CsrfManager.addTokenToFetch(),
+        body: formData
+    })
+    .then(parseChallengeResponse)
+    .then(data => {
+        showChallengeMessage(resultDiv, LanguageManager.text('client.create.success'), 'success');
+        button.style.display = 'none';
+        editChallengeLink(resultDiv, data.challengeId);
+    })
+    .catch(error => {
+        showChallengeMessage(resultDiv, error.message, 'danger');
+        button.disabled = false;
+    });
+}
+
+async function parseChallengeResponse(response) {
+    const isJson = (response.headers.get('content-type') || '').includes('application/json');
+    const data = isJson ? await response.json().catch(() => null) : null;
+    return validateChallengeResponse(response.status, data, response.redirected);
 }
 
 function validateChallengeResponse(status, data, redirected = false) {
@@ -126,33 +156,6 @@ function showChallengeMessage(resultDiv, message, type) {
     resultDiv.replaceChildren(alert);
 }
 
-function update_progress(e) {
-    let uploadButton = document.getElementById('btnSubmit');
-    let progress = document.getElementById('progress');
-    if (e.lengthComputable) {
-        let percentage = Math.round((e.loaded / e.total) * 100);
-        progress.value = percentage;
-        uploadButton.innerHTML = LanguageManager.text('client.create.uploadPercent', percentage);
-        console.log("percent " + percentage + '%');
-    } else {
-        console.log("Unable to compute progress information since the total size is unknown");
-    }
-}
-
-function toOptions() {
-    document.forms[0].action = "/options";
-    document.forms[0].submit();
-}
-
-function logOut() {
-    document.forms[0].action = "/logout";
-    document.forms[0].submit();
-}
-
-function toHome() {
-    window.location.href = "/";
-}
-
 function editChallengeLink(elem, challengeId) {
     const editBtn = document.createElement('a');
     editBtn.href = '/edit_challenge/' + challengeId;
@@ -167,9 +170,4 @@ function viewChallenge(elem, challengeId) {
     viewButton.setAttribute("href", "/preconfigure?challenges=" + challengeId);
     viewButton.innerHTML = '<i class="fas fa-eye"></i> ' + LanguageManager.text('client.create.view');
     elem.appendChild(viewButton);
-}
-
-function goToChallengePage(challengeId) {
-    console.log("ready to got to challenge page");
-    window.location.href = "/preconfigure?challenges=" + encodeURIComponent(challengeId);
 }

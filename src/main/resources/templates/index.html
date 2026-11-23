@@ -29,7 +29,7 @@
 </head>
 <body class="home-page" onload="initialize_home();">
     <!-- Skip to main content for accessibility -->
-    <a href="#main-content" class="skip-link" th:text="#{nav.home}">Skip to main content</a>
+    <a href="#main-content" class="skip-link" th:text="#{a11y.skipToContent}">Skip to main content</a>
 
     <!-- Navigation -->
     <div th:insert="~{navbar :: navbar}"></div>
@@ -108,7 +108,7 @@
                                     <input type="text"
                                            inputmode="numeric"
                                            pattern="[0-9]*"
-                                           maxlength="6"
+                                           maxlength="8"
                                            class="pin-input"
                                            th:field="*{gamePin}"
                                            id="gamePin"
@@ -116,7 +116,7 @@
                                            th:placeholder="#{home.pinPlaceholder}"
                                            placeholder="Game PIN"
                                            aria-labelledby="pin-label"
-                                           aria-describedby="pin-help pin-error"
+                                           aria-describedby="message_disp"
                                            autocomplete="off"
                                            autofocus />
                                     <div class="input-icon">
@@ -139,7 +139,7 @@
                                            th:placeholder="#{home.namePlaceholder}"
                                            placeholder="Your nickname"
                                            aria-labelledby="name-label"
-                                           aria-describedby="name-help"
+                                           aria-describedby="message_disp"
                                            autocomplete="off"
                                            maxlength="20" />
                                     <div class="input-icon">

@@ -106,4 +106,35 @@ class QuestionServiceTest {
         verify(questionSetRepository, never()).save(any());
         verify(questionSetRepository, never()).delete(any());
     }
+
+    @Test
+    @DisplayName("A quiz without an owner is not editable by a plain user and does not throw")
+    void nullOwnerDoesNotThrow() {
+        signIn("USER");
+        question.getChallenge().setChallengeOwner(null);
+        assertNull(questionService.getQuestion(QUESTION_ID));
+    }
+
+    @Test
+    @DisplayName("Duplicating a question clones its image file instead of sharing it")
+    void duplicateClonesTheImage() {
+        signIn("ADMIN");
+        question.setImageUrl("/question-images/5/10/image_1.png");
+        question.getChallenge().setQuestionSets(new java.util.ArrayList<>());
+        when(imageProcessingService.copyMedia("/question-images/5/10/image_1.png", 5L))
+                .thenReturn("/question-images/5/abc/image_1.png");
+        when(questionSetRepository.save(any(QuestionSet.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var copy = questionService.duplicateQuestion(QUESTION_ID);
+
+        org.junit.jupiter.api.Assertions.assertEquals("/question-images/5/abc/image_1.png", copy.getImageUrl());
+    }
+
+    @Test
+    @DisplayName("Bulk delete skips null ids")
+    void bulkDeleteSkipsNullIds() {
+        signIn("ADMIN");
+        org.junit.jupiter.api.Assertions.assertEquals(1,
+                questionService.bulkDeleteQuestions(java.util.Arrays.asList(null, QUESTION_ID)));
+    }
 }

@@ -7,6 +7,7 @@ import com.quiz.darkhold.team.model.TeamInfo;
 import com.quiz.darkhold.team.service.TeamService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,10 +27,13 @@ public class TeamController {
 
     private final TeamService teamService;
     private final CurrentGame currentGame;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public TeamController(final TeamService teamService, final CurrentGame currentGame) {
+    public TeamController(final TeamService teamService, final CurrentGame currentGame,
+                          final SimpMessagingTemplate messagingTemplate) {
         this.teamService = teamService;
         this.currentGame = currentGame;
+        this.messagingTemplate = messagingTemplate;
     }
 
     private boolean isModerator(final String pin, final Principal principal) {
@@ -78,6 +82,8 @@ public class TeamController {
             String teamName = request.get("teamName");
 
             teamService.assignPlayerToTeam(pin, username, teamName);
+            // waiting players see their team change right away
+            messagingTemplate.convertAndSend("/topic/" + pin + "/team_update", teamService.getTeams(pin));
             return ResponseEntity.ok("Player assigned successfully");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error assigning player");

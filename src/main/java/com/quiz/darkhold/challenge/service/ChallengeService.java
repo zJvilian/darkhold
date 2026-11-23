@@ -17,6 +17,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,13 @@ import java.util.Objects;
 @Service
 public class ChallengeService {
     private static final int MAX_POINTS = 10_000;
+    private static final int MAX_TITLE_LENGTH = 100;
+    private static final int MAX_DESCRIPTION_LENGTH = 250;
+    private static final int DEFAULT_POINTS = 1000;
+    private static final int MAX_MEDIA_URL_LENGTH = 500;
+    private static final java.util.Set<String> HEADER_NAMES = java.util.Set.of("question", "questiontext");
+    private static final String DUPLICATE_TITLE =
+            "A quiz with this title already exists. Please choose a different title.";
     private final Logger logger = LogManager.getLogger(ChallengeService.class);
     private final ChallengeRepository challengeRepository;
     private final QuestionSetRepository questionSetRepository;
@@ -60,7 +68,7 @@ public class ChallengeService {
                                             final String description)
             throws ChallengeException {
         if (challengeRepository.existsByTitle(title)) {
-            throw new ChallengeException("A quiz with this title already exists. Please choose a different title.");
+            throw new ChallengeException(DUPLICATE_TITLE);
         }
         Deque<QuestionSet> questionSets = readAndProcessChallenge(upload);
         Challenge challenge = new Challenge();
@@ -88,7 +96,7 @@ public class ChallengeService {
             java.util.List<QuestionSet> questionSets = challenge.get().getQuestionSets();
             questionSetRepository.deleteAll(questionSets);
             challengeRepository.delete(challenge.get());
-            imageProcessingService.deleteQuestionImage(challenge.get().getCoverImageUrl());
+            imageProcessingService.deleteChallengeImages(challengeId); // question images, audio and cover
             response = Boolean.TRUE;
         }
         return response;
@@ -100,8 +108,13 @@ public class ChallengeService {
      * @param title       challenge title
      * @param description challenge description
      * @return the created challenge
+     * @throws ChallengeException when the title is already taken
      */
-    public Challenge createEmptyChallenge(final String title, final String description) {
+    public Challenge createEmptyChallenge(final String title, final String description)
+            throws ChallengeException {
+        if (challengeRepository.existsByTitle(title)) {
+            throw new ChallengeException(DUPLICATE_TITLE);
+        }
         Challenge challenge = new Challenge();
         challenge.setTitle(title);
         challenge.setDescription(description);
@@ -116,8 +129,10 @@ public class ChallengeService {
      * @param title       new title
      * @param description new description
      * @return the updated challenge or null if not found/not editable
+     * @throws ChallengeException when another quiz already has the title
      */
-    public Challenge updateChallenge(final Long challengeId, final String title, final String description) {
+    public Challenge updateChallenge(final Long challengeId, final String title, final String description)
+            throws ChallengeException {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
         if (challengeOpt.isPresent()) {
             Challenge challenge = challengeOpt.get();
@@ -125,6 +140,9 @@ public class ChallengeService {
                 logger.warn("User {} attempted to update challenge {} owned by {}",
                         currentUserId(), challengeId, challenge.getChallengeOwner());
                 return null;
+            }
+            if (!title.equals(challenge.getTitle()) && challengeRepository.existsByTitle(title)) {
+                throw new ChallengeException(DUPLICATE_TITLE);
             }
             challenge.setTitle(title);
             challenge.setDescription(description);
@@ -135,26 +153,36 @@ public class ChallengeService {
 
     // Titles are unique, so a second copy of the same quiz needs its own name
     private String copyTitle(final String title) {
-        String copy = title + " (Copy)";
+        String copy = withSuffix(title, " (Copy)");
         for (int n = 2; challengeRepository.existsByTitle(copy); n++) {
-            copy = title + " (Copy " + n + ")";
+            copy = withSuffix(title, " (Copy " + n + ")");
         }
         return copy;
+    }
+
+    // The title column holds 100 characters, so a long title gives up its own tail to keep the suffix
+    private String withSuffix(final String title, final String suffix) {
+        return clip(title, MAX_TITLE_LENGTH - suffix.length()) + suffix;
+    }
+
+    private static String clip(final String value, final int max) {
+        return value.length() > max ? value.substring(0, max) : value;
     }
 
     /**
      * Duplicate a challenge with all its questions.
      *
      * @param challengeId the challenge to duplicate
-     * @return the new challenge or null if not found/not owned
+     * @return the new challenge or null if not found/not editable by the current user
      */
+    @Transactional
     public Challenge duplicateChallenge(final Long challengeId) {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
         if (challengeOpt.isEmpty()) {
             return null;
         }
         Challenge original = challengeOpt.get();
-        if (!Objects.equals(original.getChallengeOwner(), currentUserId())) {
+        if (!canEdit(original)) {
             logger.warn("User {} attempted to duplicate challenge {} owned by {}",
                     currentUserId(), challengeId, original.getChallengeOwner());
             return null;
@@ -167,13 +195,16 @@ public class ChallengeService {
         newChallenge.setWordCloudFuzzy(original.isWordCloudFuzzy());
         newChallenge.setChallengeOwner(currentUserId());
         Challenge savedChallenge = challengeRepository.save(newChallenge);
+        // the copy gets its own picture files, so deleting one quiz never breaks the other
+        savedChallenge.setCoverImageUrl(imageProcessingService.copyMedia(
+                original.getCoverImageUrl(), savedChallenge.getId()));
 
         // Duplicate all questions
         if (original.getQuestionSets() != null) {
             Deque<QuestionSet> newQuestions = new ArrayDeque<>();
             int order = 0;
             for (QuestionSet origQ : original.getQuestionSets()) {
-                QuestionSet newQ = copyQuestionFields(origQ);
+                QuestionSet newQ = copyQuestionFields(origQ, savedChallenge.getId());
                 newQ.setDisplayOrder(order++);
                 newQ.setChallenge(savedChallenge);
                 newQuestions.add(newQ);
@@ -240,20 +271,37 @@ public class ChallengeService {
     }
 
     /**
-     * Import a challenge from JSON DTO.
+     * Import a challenge from JSON DTO. A title that is already taken gets a "(Copy)" suffix.
+     *
+     * @param dto the parsed export
+     * @return the created challenge
+     * @throws ChallengeException when the export has no title or a question is unusable
      */
-    public Challenge importFromJson(final ChallengeExportDto dto) {
+    @Transactional
+    public Challenge importFromJson(final ChallengeExportDto dto) throws ChallengeException {
+        if (dto == null || dto.getTitle() == null || dto.getTitle().isBlank()) {
+            throw new ChallengeException("The file is not a valid quiz export: the quiz has no title.");
+        }
+        String title = clip(dto.getTitle().trim(), MAX_TITLE_LENGTH);
         Challenge challenge = new Challenge();
-        challenge.setTitle(dto.getTitle());
-        challenge.setDescription(dto.getDescription());
+        challenge.setTitle(challengeRepository.existsByTitle(title) ? copyTitle(title) : title);
+        challenge.setDescription(dto.getDescription() == null
+                ? "" : clip(dto.getDescription(), MAX_DESCRIPTION_LENGTH));
         challenge.setChallengeOwner(currentUserId());
         Challenge savedChallenge = challengeRepository.save(challenge);
+        savedChallenge.setCoverImageUrl(imageProcessingService.copyMedia(
+                safeMediaUrl(dto.getCoverImageUrl()), savedChallenge.getId()));
 
         if (dto.getQuestions() != null) {
             Deque<QuestionSet> questions = new ArrayDeque<>();
             int order = 0;
             for (ChallengeExportDto.QuestionExportDto qDto : dto.getQuestions()) {
-                QuestionSet qs = copyQuestionFieldsFromDto(qDto);
+                QuestionSet qs = copyQuestionFieldsFromDto(qDto, savedChallenge.getId());
+                try {
+                    validateQuestion(qs);
+                } catch (ChallengeException questionError) {
+                    throw new ChallengeException("Question " + (order + 1) + ": " + questionError.getErrorMessage());
+                }
                 qs.setDisplayOrder(order++);
                 qs.setChallenge(savedChallenge);
                 questions.add(qs);
@@ -263,7 +311,16 @@ public class ChallengeService {
         return savedChallenge;
     }
 
-    private QuestionSet copyQuestionFields(final QuestionSet src) {
+    // Imported files may name anything: only our own uploads and plain web links are kept
+    private static String safeMediaUrl(final String url) {
+        if (url == null || url.length() > MAX_MEDIA_URL_LENGTH) {
+            return null;
+        }
+        boolean local = url.startsWith("/question-images/") && !url.contains("..");
+        return local || url.startsWith("https://") || url.startsWith("http://") ? url : null;
+    }
+
+    private QuestionSet copyQuestionFields(final QuestionSet src, final Long newChallengeId) {
         QuestionSet dest = new QuestionSet();
         dest.setQuestion(src.getQuestion());
         dest.setAnswer1(src.getAnswer1());
@@ -281,10 +338,13 @@ public class ChallengeService {
         dest.setTimeLimit(src.getTimeLimit());
         dest.setPoints(src.getPoints());
         dest.setAcceptableAnswers(src.getAcceptableAnswers());
+        dest.setVideoUrl(src.getVideoUrl());
+        dest.setImageUrl(imageProcessingService.copyMedia(src.getImageUrl(), newChallengeId));
         return dest;
     }
 
-    private QuestionSet copyQuestionFieldsFromDto(final ChallengeExportDto.QuestionExportDto src) {
+    private QuestionSet copyQuestionFieldsFromDto(final ChallengeExportDto.QuestionExportDto src,
+                                                  final Long newChallengeId) {
         QuestionSet dest = new QuestionSet();
         dest.setQuestion(src.getQuestion());
         dest.setAnswer1(src.getAnswer1());
@@ -298,10 +358,14 @@ public class ChallengeService {
         dest.setAnswer9(src.getAnswer9());
         dest.setAnswer10(src.getAnswer10());
         dest.setCorrectOptions(src.getCorrectOptions());
-        dest.setQuestionType(src.getQuestionType());
-        dest.setTimeLimit(src.getTimeLimit());
-        dest.setPoints(src.getPoints());
+        if (src.getQuestionType() != null) {
+            dest.setQuestionType(src.getQuestionType());
+        }
+        dest.setTimeLimit(src.getTimeLimit() != null && src.getTimeLimit() > 0 ? src.getTimeLimit() : null);
+        dest.setPoints(src.getPoints() == null ? DEFAULT_POINTS : src.getPoints());
         dest.setAcceptableAnswers(src.getAcceptableAnswers());
+        dest.setVideoUrl(safeMediaUrl(src.getVideoUrl()));
+        dest.setImageUrl(imageProcessingService.copyMedia(safeMediaUrl(src.getImageUrl()), newChallengeId));
         return dest;
     }
 
@@ -325,12 +389,17 @@ public class ChallengeService {
             if (workbook.getNumberOfSheets() == 0) {
                 throw new ChallengeException("The Excel file has no sheets.");
             }
-            for (Row currentRow : workbook.getSheetAt(0)) {
-                if (fetchCellValue(currentRow.getCell(0)) == null) {
-                    continue; // blank or trailing row
+            Sheet sheet = workbook.getSheetAt(0);
+            int order = 0;
+            for (Row currentRow : sheet) {
+                if (fetchCellValue(currentRow.getCell(0)) == null
+                        || (currentRow.getRowNum() == sheet.getFirstRowNum() && looksLikeHeader(currentRow))) {
+                    continue; // blank or trailing row, or the column titles
                 }
                 try {
-                    questionSets.add(populateQuestionSet(currentRow));
+                    QuestionSet questionSet = populateQuestionSet(currentRow);
+                    questionSet.setDisplayOrder(order++);
+                    questionSets.add(questionSet);
                 } catch (ChallengeException rowError) {
                     throw new ChallengeException("Row " + (currentRow.getRowNum() + 1) + ": "
                             + rowError.getErrorMessage());
@@ -344,10 +413,21 @@ public class ChallengeService {
         return questionSets;
     }
 
+    // Exports and hand-made sheets often start with column titles such as Question / CorrectOptions
+    private boolean looksLikeHeader(final Row row) {
+        return HEADER_NAMES.contains(headerKey(fetchCellValue(row.getCell(0))))
+                || "correctoptions".equals(headerKey(fetchCellValue(row.getCell(5))));
+    }
+
+    private static String headerKey(final String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[\\s_]", "");
+    }
+
     @SuppressWarnings("checkstyle:MethodLength")
     private QuestionSet populateQuestionSet(final Row currentRow) throws ChallengeException {
         java.util.Iterator<Cell> cellIterator = currentRow.iterator();
         QuestionSet questionSet = new QuestionSet();
+        String correctOptions = null;
         while (cellIterator.hasNext()) {
             Cell currentCell = cellIterator.next();
             switch (currentCell.getColumnIndex()) {
@@ -356,7 +436,7 @@ public class ChallengeService {
                 case 2 -> questionSet.setAnswer2(fetchCellValue(currentCell));
                 case 3 -> questionSet.setAnswer3(fetchCellValue(currentCell));
                 case 4 -> questionSet.setAnswer4(fetchCellValue(currentCell));
-                case 5 -> questionSet.setCorrectOptions(parseCorrectOptions(currentCell));
+                case 5 -> correctOptions = fetchCellValue(currentCell); // parsed below, it depends on the type
                 case 6 -> questionSet.setQuestionType(parseQuestionType(currentCell));
                 case 7 -> questionSet.setTimeLimit(parseTimeLimit(currentCell));
                 case 8 -> questionSet.setPoints(parsePoints(currentCell));
@@ -372,6 +452,21 @@ public class ChallengeService {
                 default -> logger.debug("Extra column at {}", currentCell.getColumnIndex());
             }
         }
+        if (correctOptions != null) {
+            questionSet.setCorrectOptions(populateOptionsFromString(correctOptions, questionSet.getQuestionType()));
+        }
+        validateQuestion(questionSet);
+        logger.info("Current questions : {}", questionSet);
+        return questionSet;
+    }
+
+    private void validateQuestion(final QuestionSet questionSet) throws ChallengeException {
+        if (questionSet.getQuestion() == null || questionSet.getQuestion().isBlank()) {
+            throw new ChallengeException("The question text is missing");
+        }
+        if (questionSet.getPoints() != null && (questionSet.getPoints() < 0 || questionSet.getPoints() > MAX_POINTS)) {
+            throw new ChallengeException("Points must be between 0 and " + MAX_POINTS);
+        }
         if (questionSet.getQuestionType() == QuestionType.SORTING
                 && !SortingAnswer.isValid(questionSet.getCorrectOptions(), questionSet.getSortingAnswers())) {
             throw new ChallengeException("Sorting requires each answer exactly once in the correct order");
@@ -381,13 +476,6 @@ public class ChallengeService {
             throw new ChallengeException(
                     "Audio is only available for Multiple Choice, True/False, and Type Answer questions");
         }
-        logger.info("Current questions : {}", questionSet);
-        return questionSet;
-    }
-
-    private String parseCorrectOptions(final Cell cell) throws ChallengeException {
-        String options = fetchCellValue(cell);
-        return options == null ? null : populateOptionsFromString(options);
     }
 
     private QuestionType parseQuestionType(final Cell cell) {
@@ -403,36 +491,33 @@ public class ChallengeService {
         }
     }
 
+    /** Seconds, or null (the game default) when blank, invalid or not above zero. */
     private Integer parseTimeLimit(final Cell cell) {
+        Integer seconds = null;
         if (cell.getCellType() == CellType.NUMERIC) {
-            return (int) cell.getNumericCellValue();
+            seconds = (int) cell.getNumericCellValue();
+        } else {
+            String value = fetchCellValue(cell);
+            try {
+                seconds = value == null ? null : Integer.parseInt(value.trim());
+            } catch (NumberFormatException ex) {
+                logger.warn("Invalid time limit: {}", value);
+            }
         }
+        return seconds != null && seconds > 0 ? seconds : null;
+    }
+
+    // out-of-range values are rejected later by validateQuestion
+    private Integer parsePoints(final Cell cell) {
         String value = fetchCellValue(cell);
-        if (value == null || value.isBlank()) {
-            return null;
+        if (value == null) {
+            return DEFAULT_POINTS;
         }
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException ex) {
-            logger.warn("Invalid time limit: {}", value);
-            return null;
-        }
-    }
-
-    private Integer parsePoints(final Cell cell) throws ChallengeException {
-        String value = fetchCellValue(cell);
-        if (value == null) {
-            return 1000; // Default points
-        }
-        try {
-            int points = Integer.parseInt(value.trim());
-            if (points < 0 || points > MAX_POINTS) {
-                throw new ChallengeException("Points must be between 0 and " + MAX_POINTS);
-            }
-            return points;
-        } catch (NumberFormatException ex) {
             logger.warn("Invalid points: {}, defaulting to 1000", value);
-            return 1000;
+            return DEFAULT_POINTS;
         }
     }
 
@@ -445,14 +530,22 @@ public class ChallengeService {
         return value.isEmpty() ? null : value;
     }
 
-    private String populateOptionsFromString(final String options) throws ChallengeException {
+    /** Letters A-J, or TRUE/FALSE for True/False and EXACT/FUZZY for Word Cloud questions. */
+    private String populateOptionsFromString(final String options, final QuestionType type)
+            throws ChallengeException {
+        String single = options.trim().toUpperCase(Locale.ROOT);
+        if ((type == QuestionType.TRUE_FALSE && ("TRUE".equals(single) || "FALSE".equals(single)))
+                || (type == QuestionType.WORD_CLOUD && ("EXACT".equals(single) || "FUZZY".equals(single)))) {
+            return single;
+        }
         java.util.List<String> parsed = new java.util.ArrayList<>();
         for (String raw : options.split(",")) {
             try {
                 parsed.add(Options.valueOf(raw.trim().toUpperCase(Locale.ROOT)).name());
             } catch (IllegalArgumentException ex) {
                 throw new ChallengeException("Invalid correct option '" + raw.trim()
-                        + "'. Use letters A-J separated by commas.");
+                        + "'. Use letters A-J separated by commas, TRUE or FALSE for True/False questions, "
+                        + "or EXACT or FUZZY for Word Cloud questions.");
             }
         }
         return String.join(",", parsed);

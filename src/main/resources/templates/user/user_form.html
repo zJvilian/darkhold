@@ -42,6 +42,7 @@
                 <h1 class="admin-page-title">[[${pageTitle}]]</h1>
             </div>
             <div class="admin-form-card">
+                <div th:if="${errorMessage != null}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
                 <form th:action="@{/users/save}" method="post" th:object="${userForm}"
                       enctype="multipart/form-data"
                       onsubmit="return checkEmailUnique(this);">
@@ -54,7 +55,7 @@
                             <span class="required">*</span>
                         </label>
                         <input type="text" class="admin-form-input" th:field="*{firstName}"
-                               required minlength="2" maxlength="90"
+                               required minlength="2" maxlength="64"
                                th:placeholder="#{user.firstNamePlaceholder}" placeholder="Enter first name" />
                     </div>
 
@@ -65,7 +66,7 @@
                             <span class="required">*</span>
                         </label>
                         <input type="text" class="admin-form-input" th:field="*{lastName}"
-                               required minlength="2" maxlength="90"
+                               required minlength="2" maxlength="64"
                                th:placeholder="#{user.lastNamePlaceholder}" placeholder="Enter last name" />
                     </div>
 
@@ -88,7 +89,7 @@
                         </label>
                         <input type="password" class="admin-form-input" th:field="*{password}"
                                th:required="${userForm.id == null}"
-                               minlength="8" maxlength="20" autocomplete="new-password"
+                               minlength="8" maxlength="72" autocomplete="new-password"
                                th:placeholder="#{user.passwordPlaceholder}" placeholder="Enter password (min 8 characters)" />
                         <div class="admin-form-hint" th:if="${userForm.id != null}" th:text="#{user.passwordHint}">
                             Leave blank to keep current password
@@ -144,7 +145,7 @@
                             </div>
                             <input type="hidden" th:field="*{photo}" />
                             <input type="file" id="fileImage" name="image" class="admin-file-input"
-                                   accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif"
+                                   accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp"
                                    onchange="changeThumbnail(this);" />
                             <div class="admin-form-hint" th:text="#{user.photoHint}">
                                 Maximum file size: 5MB. Formats: PNG, JPEG, GIF
@@ -209,10 +210,10 @@
             }
 
             function changeThumbnail(input) {
-                console.log("thumbnail changed");
-                console.log("File changed : " + input.files[0].name);
+                if (!input.files || !input.files.length) {
+                    return;
+                }
                 const fileSize = input.files[0].size;
-                console.log("File size : " + fileSize);
                 if (fileSize > 5242880) {
                     input.setCustomValidity("Please select a file with a size less than 5 MB.");
                     input.reportValidity();

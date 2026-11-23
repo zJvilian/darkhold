@@ -14,6 +14,8 @@ public interface UserService {
 
     Page<User> getAllUsers(final int pageNumber);
 
+    Page<User> searchUsers(final int pageNumber, final String keyword);
+
     List<Role> listRoles();
 
     Boolean isEmailUnique(Long id, String email);

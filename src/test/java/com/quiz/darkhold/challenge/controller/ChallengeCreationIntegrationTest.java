@@ -53,6 +53,7 @@ class ChallengeCreationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
                 .andExpect(content().string(containsString("id=\"fileUploadForm\"")))
+                .andExpect(content().string(containsString("id=\"jsonImportForm\"")))
                 .andExpect(content().string(containsString("/scripts/create-challenge-scripts.js")));
     }
 

@@ -58,6 +58,9 @@ class ChallengeServiceTest {
     private QuestionSetRepository questionSetRepository;
 
     @Mock
+    private ImageProcessingService imageProcessingService;
+
+    @Mock
     private SecurityContext securityContext;
 
     @Mock
@@ -72,7 +75,7 @@ class ChallengeServiceTest {
     @BeforeEach
     void setUp() {
         challengeService = new ChallengeService(challengeRepository, questionSetRepository,
-                new ImageProcessingService());
+                imageProcessingService);
         setupSecurityContext();
     }
 
@@ -112,13 +115,15 @@ class ChallengeServiceTest {
     }
 
     @Test
-    void jsonImportRetainsAdditionalSortingAnswers() {
+    void jsonImportRetainsAdditionalSortingAnswers() throws ChallengeException {
         var question = new QuestionSet();
+        question.setQuestion("Order these");
         question.setQuestionType(QuestionType.SORTING);
         question.setAnswer1("First");
         question.setAnswer10("Tenth");
         question.setCorrectOptions("J,A");
         var dto = new ChallengeExportDto();
+        dto.setTitle("Sorting quiz");
         dto.setQuestions(List.of(ChallengeExportDto.QuestionExportDto.fromEntity(question)));
         when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
         when(questionSetRepository.saveAll(any())).thenAnswer(inv -> {
@@ -275,6 +280,7 @@ class ChallengeServiceTest {
             verify(challengeRepository).findById(challengeId);
             verify(questionSetRepository).deleteAll(challenge.getQuestionSets());
             verify(challengeRepository).delete(challenge);
+            verify(imageProcessingService).deleteChallengeImages(challengeId);
         }
 
         @Test
@@ -374,7 +380,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should create challenge with title and description")
-        void shouldCreateChallengeWithTitleAndDescription() {
+        void shouldCreateChallengeWithTitleAndDescription() throws ChallengeException {
             Challenge savedChallenge = new Challenge();
             savedChallenge.setId(10L);
             when(challengeRepository.save(any(Challenge.class))).thenReturn(savedChallenge);
@@ -389,7 +395,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should set owner to current user")
-        void shouldSetOwnerToCurrentUser() {
+        void shouldSetOwnerToCurrentUser() throws ChallengeException {
             when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
 
             challengeService.createEmptyChallenge("Quiz", "Desc");
@@ -406,7 +412,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should update title and description")
-        void shouldUpdateTitleAndDescription() {
+        void shouldUpdateTitleAndDescription() throws ChallengeException {
             Challenge existing = new Challenge();
             existing.setId(1L);
             existing.setTitle("Old Title");
@@ -424,7 +430,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should return null when not found")
-        void shouldReturnNullWhenNotFound() {
+        void shouldReturnNullWhenNotFound() throws ChallengeException {
             when(challengeRepository.findById(999L)).thenReturn(Optional.empty());
 
             Challenge result = challengeService.updateChallenge(999L, "Title", "Desc");
@@ -434,7 +440,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should return null when not owned by current user")
-        void shouldReturnNullWhenNotOwnedByCurrentUser() {
+        void shouldReturnNullWhenNotOwnedByCurrentUser() throws ChallengeException {
             Challenge existing = new Challenge();
             existing.setId(1L);
             existing.setChallengeOwner(999L);
@@ -470,7 +476,7 @@ class ChallengeServiceTest {
         @ParameterizedTest
         @ValueSource(strings = {"ADMIN", "GAME_MANAGER"})
         @DisplayName("Managers can get and update another user's challenge")
-        void managersCanEdit(final String role) {
+        void managersCanEdit(final String role) throws ChallengeException {
             signInWithRole(role);
             othersChallenge();
             when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -481,7 +487,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Plain user cannot get or update another user's challenge")
-        void plainUserCannotEdit() {
+        void plainUserCannotEdit() throws ChallengeException {
             signInWithRole("USER");
             othersChallenge();
 
@@ -500,6 +506,20 @@ class ChallengeServiceTest {
             signInWithRole("ADMIN");
             assertEquals(true, challengeService.deleteChallenge(7L));
             verify(challengeRepository).delete(challenge);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"ADMIN", "GAME_MANAGER"})
+        @DisplayName("Managers can duplicate another user's challenge and own the copy")
+        void managersCanDuplicate(final String role) {
+            signInWithRole(role);
+            othersChallenge().setTitle("Theirs");
+            when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            Challenge copy = challengeService.duplicateChallenge(7L);
+
+            assertNotNull(copy);
+            assertEquals(testUserId, copy.getChallengeOwner());
         }
 
         @Test
@@ -624,7 +644,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should create challenge from DTO")
-        void shouldCreateChallengeFromDto() {
+        void shouldCreateChallengeFromDto() throws ChallengeException {
             ChallengeExportDto dto = new ChallengeExportDto();
             dto.setTitle("Imported Quiz");
             dto.setDescription("Imported Description");
@@ -640,7 +660,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should import questions with display order")
-        void shouldImportQuestionsWithDisplayOrder() {
+        void shouldImportQuestionsWithDisplayOrder() throws ChallengeException {
             ChallengeExportDto dto = new ChallengeExportDto();
             dto.setTitle("Quiz");
             dto.setDescription("Desc");
@@ -658,7 +678,7 @@ class ChallengeServiceTest {
 
         @Test
         @DisplayName("Should handle null questions in DTO")
-        void shouldHandleNullQuestionsInDto() {
+        void shouldHandleNullQuestionsInDto() throws ChallengeException {
             ChallengeExportDto dto = new ChallengeExportDto();
             dto.setTitle("Quiz");
             dto.setDescription("Desc");
@@ -805,5 +825,154 @@ class ChallengeServiceTest {
         assertThrows(ChallengeException.class, () -> challengeService.readProcessAndSaveChallenge(
                 createValidExcelFile(), "T", ""));
         verify(challengeRepository, never()).save(any());
+    }
+
+    private byte[] workbookWithRows(final Object[][] rows) throws IOException {
+        try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
+            var sheet = workbook.createSheet();
+            for (int r = 0; r < rows.length; r++) {
+                var row = sheet.createRow(r);
+                for (int c = 0; c < rows[r].length; c++) {
+                    if (rows[r][c] instanceof Number number) {
+                        row.createCell(c).setCellValue(number.doubleValue());
+                    } else if (rows[r][c] != null) {
+                        row.createCell(c).setCellValue(rows[r][c].toString());
+                    }
+                }
+            }
+            workbook.write(output);
+            return output.toByteArray();
+        }
+    }
+
+    private List<QuestionSet> importedQuestions(final Object[][] rows) throws Exception {
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        challengeService.readProcessAndSaveChallenge(new MockMultipartFile("upload", "q.xlsx",
+                "application/octet-stream", workbookWithRows(rows)), "T", "");
+        var captured = ArgumentCaptor.forClass(Challenge.class);
+        verify(challengeRepository).save(captured.capture());
+        return captured.getValue().getQuestionSets();
+    }
+
+    @Test
+    void excelImportAcceptsTrueFalseAndExactFuzzyOptions() throws Exception {
+        var questions = importedQuestions(new Object[][] {
+            {"Sky is blue", "True", "False", null, null, "true", "TRUE_FALSE"},
+            {"Name a fruit", null, null, null, null, "exact", "WORD_CLOUD"},
+            {"Name a color", null, null, null, null, "FUZZY", "WORD_CLOUD"}});
+        assertEquals(List.of("TRUE", "EXACT", "FUZZY"),
+                questions.stream().map(QuestionSet::getCorrectOptions).toList());
+    }
+
+    @Test
+    void excelImportSkipsAHeaderRowAndNumbersQuestionsInOrder() throws Exception {
+        var questions = importedQuestions(new Object[][] {
+            {"Question", "Answer1", "Answer2", "Answer3", "Answer4", "CorrectOptions", "Type", "TimeLimit"},
+            {"First", "a", "b", null, null, "A", null, 0},
+            {"Second", "a", "b", null, null, "B", null, 30},
+            {"Third", "a", "b", null, null, "A", null, -5}});
+        assertEquals(List.of("First", "Second", "Third"), questions.stream().map(QuestionSet::getQuestion).toList());
+        assertEquals(List.of(0, 1, 2), questions.stream().map(QuestionSet::getDisplayOrder).toList());
+        assertEquals(java.util.Arrays.asList(null, 30, null),
+                questions.stream().map(QuestionSet::getTimeLimit).toList());
+    }
+
+    @Test
+    void trueFalseOptionIsStillRejectedForMultipleChoice() throws Exception {
+        var error = assertThrows(ChallengeException.class, () -> challengeService.readProcessAndSaveChallenge(
+                new MockMultipartFile("upload", "q.xlsx", "application/octet-stream",
+                        workbookWithRows(new Object[][] {{"Q", "a", "b", null, null, "TRUE"}})), "T", ""));
+        assertTrue(error.getErrorMessage().startsWith("Row 1: Invalid correct option"));
+    }
+
+    @Test
+    void createAndRenameRejectATitleThatAnotherQuizHas() throws Exception {
+        when(challengeRepository.existsByTitle("Taken")).thenReturn(true);
+        assertThrows(ChallengeException.class, () -> challengeService.createEmptyChallenge("Taken", ""));
+
+        Challenge mine = createChallengeWithQuestions(5L, testUserId);
+        when(challengeRepository.findById(5L)).thenReturn(Optional.of(mine));
+        assertThrows(ChallengeException.class, () -> challengeService.updateChallenge(5L, "Taken", ""));
+        verify(challengeRepository, never()).save(any());
+    }
+
+    @Test
+    void renamingToTheCurrentTitleIsNotADuplicate() throws Exception {
+        Challenge mine = createChallengeWithQuestions(5L, testUserId);
+        when(challengeRepository.findById(5L)).thenReturn(Optional.of(mine));
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        assertEquals("Test Challenge", challengeService.updateChallenge(5L, "Test Challenge", "New").getTitle());
+    }
+
+    @Test
+    void duplicateClonesCoverAndQuestionMediaAndClampsTheTitle() {
+        Challenge original = createChallengeWithQuestions(1L, testUserId);
+        original.setTitle("x".repeat(100));
+        original.setCoverImageUrl("/question-images/1/cover/cover_1.png");
+        QuestionSet question = original.getQuestionSets().getFirst();
+        question.setImageUrl("/question-images/1/2/image_1.png");
+        question.setVideoUrl("https://youtu.be/abc");
+        when(challengeRepository.findById(1L)).thenReturn(Optional.of(original));
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> {
+            Challenge saved = inv.getArgument(0);
+            saved.setId(50L);
+            return saved;
+        });
+        when(imageProcessingService.copyMedia("/question-images/1/cover/cover_1.png", 50L))
+                .thenReturn("/question-images/50/c1/cover_1.png");
+        when(imageProcessingService.copyMedia("/question-images/1/2/image_1.png", 50L))
+                .thenReturn("/question-images/50/c2/image_1.png");
+
+        Challenge copy = challengeService.duplicateChallenge(1L);
+
+        assertEquals(100, copy.getTitle().length());
+        assertTrue(copy.getTitle().endsWith(" (Copy)"));
+        assertEquals("/question-images/50/c1/cover_1.png", copy.getCoverImageUrl());
+        var saved = ArgumentCaptor.forClass(Iterable.class);
+        verify(questionSetRepository).saveAll(saved.capture());
+        QuestionSet copied = (QuestionSet) saved.getValue().iterator().next();
+        assertEquals("/question-images/50/c2/image_1.png", copied.getImageUrl());
+        assertEquals("https://youtu.be/abc", copied.getVideoUrl());
+    }
+
+    @Test
+    void jsonImportKeepsMediaAndRenamesATitleThatIsTaken() throws Exception {
+        var dto = new ChallengeExportDto();
+        dto.setTitle("Taken");
+        dto.setCoverImageUrl("/question-images/1/cover/cover_1.png");
+        var question = new ChallengeExportDto.QuestionExportDto();
+        question.setQuestion("Q");
+        question.setAnswer1("A");
+        question.setAnswer2("B");
+        question.setImageUrl("javascript:alert(1)");
+        question.setVideoUrl("https://youtu.be/abc");
+        dto.setQuestions(List.of(question));
+        when(challengeRepository.existsByTitle("Taken")).thenReturn(true);
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(imageProcessingService.copyMedia("/question-images/1/cover/cover_1.png", null))
+                .thenReturn("/question-images/9/x/cover_1.png");
+
+        Challenge imported = challengeService.importFromJson(dto);
+
+        assertEquals("Taken (Copy)", imported.getTitle());
+        assertEquals("", imported.getDescription());
+        assertEquals("/question-images/9/x/cover_1.png", imported.getCoverImageUrl());
+        var saved = ArgumentCaptor.forClass(Iterable.class);
+        verify(questionSetRepository).saveAll(saved.capture());
+        QuestionSet copied = (QuestionSet) saved.getValue().iterator().next();
+        assertNull(copied.getImageUrl(), "a URL that is neither ours nor http(s) is dropped");
+        assertEquals("https://youtu.be/abc", copied.getVideoUrl());
+        assertEquals(1000, copied.getPoints());
+    }
+
+    @Test
+    void jsonImportRejectsAMissingTitleAndAQuestionWithoutText() {
+        assertThrows(ChallengeException.class, () -> challengeService.importFromJson(new ChallengeExportDto()));
+        var dto = new ChallengeExportDto();
+        dto.setTitle("Quiz");
+        dto.setQuestions(List.of(new ChallengeExportDto.QuestionExportDto()));
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> inv.getArgument(0));
+        var error = assertThrows(ChallengeException.class, () -> challengeService.importFromJson(dto));
+        assertTrue(error.getErrorMessage().startsWith("Question 1:"));
     }
 }

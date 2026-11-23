@@ -115,7 +115,12 @@
                             <span class="rank-medal" th:if="${pr.finalRank == 2}">🥈</span>
                             <span class="rank-medal" th:if="${pr.finalRank == 3}">🥉</span>
                         </div>
-                        <div class="participant-name" th:text="${pr.username}">John Doe</div>
+                        <div class="participant-name">
+                            <span th:text="${pr.username.replaceFirst('#[0-9]+$', '')}">John Doe</span>
+                            <span th:if="${pr.teamName != null}" class="team-badge"
+                                  th:style="${pr.teamColor != null} ? 'background-color: ' + ${pr.teamColor}"
+                                  th:text="${pr.teamName}">Team Red</span>
+                        </div>
                         <div>
                             <span class="stat-value-small" th:text="${pr.finalScore}">8500</span>
                             <span class="stat-label-small" th:text="#{gameresult.score}">Score</span>
@@ -137,6 +142,40 @@
                         <div>
                             <span class="stat-value-small" th:text="${#numbers.formatDecimal(pr.accuracyPercentage, 1, 1)} + '%'">90.0%</span>
                             <span class="stat-label-small" th:text="#{gameresult.accuracy}">Accuracy</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Team Standings -->
+            <section class="results-section" th:if="${teamResults != null and !teamResults.isEmpty()}">
+                <div class="results-section-header">
+                    <div class="results-section-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h2 class="results-section-title" th:text="#{gameresult.teamStandings}">Team Standings</h2>
+                </div>
+
+                <div class="leaderboard">
+                    <div th:each="tr : ${teamResults}" class="leaderboard-row"
+                         th:classappend="${tr.finalRank <= 3 ? 'leaderboard-row--podium' : ''}">
+                        <div class="rank-display">
+                            <span th:text="${tr.finalRank}">1</span>
+                            <span class="rank-medal" th:if="${tr.finalRank == 1}">🥇</span>
+                            <span class="rank-medal" th:if="${tr.finalRank == 2}">🥈</span>
+                            <span class="rank-medal" th:if="${tr.finalRank == 3}">🥉</span>
+                        </div>
+                        <div class="participant-name">
+                            <span class="team-badge" th:style="${tr.teamColor != null} ? 'background-color: ' + ${tr.teamColor}"
+                                  th:text="${tr.teamName}">Team Red</span>
+                        </div>
+                        <div>
+                            <span class="stat-value-small" th:text="${tr.finalScore}">8500</span>
+                            <span class="stat-label-small" th:text="#{gameresult.score}">Score</span>
+                        </div>
+                        <div>
+                            <span class="stat-value-small" th:text="${tr.memberCount}">4</span>
+                            <span class="stat-label-small" th:text="#{gameresult.teamMembers}">Members</span>
                         </div>
                     </div>
                 </div>

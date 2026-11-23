@@ -69,7 +69,7 @@
                                        autocomplete="current-password" />
                                 <label class="settings-option-label" for="image" th:text="#{account.profilePicture}">Profile picture</label>
                                 <input class="form-control" type="file" id="image" name="image"
-                                       accept=".png,.jpg,.jpeg,.gif,image/png,image/jpeg,image/gif" />
+                                       accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" />
                                 <button type="submit" class="btn btn-primary mt-2" th:text="#{user.save}">Save</button>
                             </form>
                         </details>
@@ -126,6 +126,31 @@
                         </div>
                         <div class="settings-option">
                             <div class="settings-option-info">
+                                <label class="settings-option-label" for="sound-volume-slider" th:text="#{account.volume}">Sound Volume</label>
+                                <p class="settings-option-desc" th:text="#{account.volumeDesc}">Adjust sound effect volume</p>
+                            </div>
+                            <div class="settings-option-control" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="range" id="sound-volume-slider" min="0" max="100" value="50"
+                                       th:aria-label="#{account.volume}" style="width: 120px; accent-color: var(--color-primary);" />
+                                <span id="sound-volume-value" style="min-width: 3ch; text-align: right; font-size: 0.85rem;">50%</span>
+                            </div>
+                        </div>
+                        <div class="settings-option">
+                            <div class="settings-option-info">
+                                <label class="settings-option-label" for="colorblind-select-settings" th:text="#{account.colorblind}">Colorblind Mode</label>
+                                <p class="settings-option-desc" th:text="#{account.colorblindDesc}">Adjust colors for color vision deficiency</p>
+                            </div>
+                            <div class="settings-option-control">
+                                <select class="form-select" id="colorblind-select-settings">
+                                    <option value="none" th:text="#{account.colorblind.none}">None</option>
+                                    <option value="deuteranopia" th:text="#{account.colorblind.deuteranopia}">Deuteranopia</option>
+                                    <option value="protanopia" th:text="#{account.colorblind.protanopia}">Protanopia</option>
+                                    <option value="tritanopia" th:text="#{account.colorblind.tritanopia}">Tritanopia</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-option">
+                            <div class="settings-option-info">
                                 <label class="settings-option-label" for="language-select-settings" th:text="#{account.language}">Language</label>
                                 <p class="settings-option-desc" th:text="#{account.languageDesc}">Select your language</p>
                             </div>
@@ -133,7 +158,7 @@
                                 <select class="form-select" id="language-select-settings" onchange="changeLanguage(this.value)">
                                     <option value="en" th:selected="${#locale.language == 'en'}">English</option>
                                     <option value="de" th:selected="${#locale.language == 'de'}">Deutsch</option>
-                                <option value="es" th:selected="${#locale.language == 'es'}">Español</option>
+                                    <option value="es" th:selected="${#locale.language == 'es'}">Español</option>
                                     <option value="fr" th:selected="${#locale.language == 'fr'}">Français</option>
                                 </select>
                             </div>
@@ -144,10 +169,10 @@
 
             <!-- Back Button -->
             <div class="account-footer">
-                <button class="btn btn-secondary" onclick="window.history.back()">
+                <a class="btn btn-secondary" th:href="@{/options}">
                     <i class="fas fa-arrow-left"></i>
                     <span th:text="#{button.back}">Back</span>
-                </button>
+                </a>
             </div>
         </div>
     </main>
@@ -156,7 +181,6 @@
 
     <script type="text/javascript" src="/scripts/core/bootstrap-5.3.1/bootstrap.bundle.min.js"></script>
     <script>
-        // Sync theme icon in settings
         function updateThemeIconSettings() {
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             const icon = document.getElementById('theme-icon-settings');
@@ -165,20 +189,44 @@
             }
         }
 
-        // Sync sound icon in settings
         function updateSoundIconSettings() {
-            const isMuted = localStorage.getItem('sound-enabled') === 'false';
+            const enabled = typeof AudioManager !== 'undefined'
+                ? AudioManager.isEnabled()
+                : localStorage.getItem('darkhold_sounds_enabled') !== 'false';
             const icon = document.getElementById('sound-icon-settings');
             if (icon) {
-                icon.className = isMuted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+                icon.className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
             }
         }
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateThemeIconSettings();
             updateSoundIconSettings();
+
+            const volumeSlider = document.getElementById('sound-volume-slider');
+            const volumeValue = document.getElementById('sound-volume-value');
+            if (volumeSlider && typeof AudioManager !== 'undefined') {
+                const initial = Math.round(AudioManager.getVolume() * 100);
+                volumeSlider.value = initial;
+                if (volumeValue) volumeValue.textContent = initial + '%';
+                volumeSlider.addEventListener('input', function() {
+                    const pct = Number(this.value);
+                    AudioManager.setVolume(pct / 100);
+                    if (volumeValue) volumeValue.textContent = pct + '%';
+                });
+            }
+
+            const colorblindSelect = document.getElementById('colorblind-select-settings');
+            if (colorblindSelect && typeof ThemeManager !== 'undefined') {
+                colorblindSelect.value = ThemeManager.getColorblindMode();
+                colorblindSelect.addEventListener('change', function() {
+                    ThemeManager.setColorblindMode(this.value);
+                });
+            }
         });
+
+        window.addEventListener('themechange', updateThemeIconSettings);
+        window.addEventListener('soundchange', updateSoundIconSettings);
     </script>
 </body>
 </html>

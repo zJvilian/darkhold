@@ -39,12 +39,12 @@ class AnswerValidationServiceTest {
     }
 
     @Test
-    void validateSelectionAcceptsAnyOfSeveralCorrectOptionsAndIgnoresOtherTypes() {
+    void validateSelectionRequiresEveryCorrectOptionAndIgnoresOtherTypes() {
         var multiple = makeQuestion(QuestionType.MULTIPLE_CHOICE, null, null);
-        multiple.setCorrectOptions("A,C");
-        assertTrue(service.validateSelection(multiple, "c"));
+        multiple.setCorrectOptions("A, C");
+        assertFalse(service.validateSelection(multiple, "c"), "one of two right options is not enough");
+        assertTrue(service.validateSelection(multiple, "c, a"));
         assertFalse(service.validateSelection(multiple, "B"));
-        assertFalse(service.validateSelection(multiple, ""));
         assertTrue(service.validateSelection(multiple, "C,A"));
         assertFalse(service.validateSelection(multiple, "A,B"));
         assertFalse(service.validateSelection(multiple, "A,B,C"));

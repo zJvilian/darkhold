@@ -9,6 +9,7 @@ public class PinValidationResponse {
     private String status; // "VALID", "INVALID", "RATE_LIMITED", "BLOCKED"
     private Integer remainingAttempts;
     private String message;
+    private boolean liveRoom;
 
     /**
      * Default constructor required by Jackson for JSON deserialization.
@@ -39,6 +40,17 @@ public class PinValidationResponse {
         return new PinValidationResponse(true, "VALID");
     }
 
+    /**
+     * The PIN belongs to a live quiz room, which guests join on its own page.
+     *
+     * @return valid response flagged as a live room
+     */
+    public static PinValidationResponse liveRoomPin() {
+        PinValidationResponse response = validPin();
+        response.setLiveRoom(true);
+        return response;
+    }
+
     public static PinValidationResponse invalidPin(final int remainingAttempts) {
         return new PinValidationResponse(false, "INVALID", remainingAttempts);
     }
@@ -49,6 +61,14 @@ public class PinValidationResponse {
 
     public static PinValidationResponse blocked() {
         return new PinValidationResponse(false, "BLOCKED", 0);
+    }
+
+    public boolean isLiveRoom() {
+        return liveRoom;
+    }
+
+    public void setLiveRoom(final boolean liveRoom) {
+        this.liveRoom = liveRoom;
     }
 
     public boolean isValid() {

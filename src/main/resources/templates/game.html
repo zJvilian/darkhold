@@ -44,10 +44,11 @@
             </div>
 
             <!-- Game Controls (Moderator only) -->
-            <div class="game-controls" th:if="${not #sets.isEmpty(#authentication.getPrincipal().getAuthorities())}">
+            <div class="game-controls" th:if="${not #sets.isEmpty(#authentication.getPrincipal().getAuthorities()) and gameMode != 'PRACTICE'}">
                 <button id="pauseButton" class="game-control-btn game-control-btn--pause" type="button" onclick="togglePause()">
                     <i class="fas fa-pause"></i>
-                    <span th:text="#{game.pause}">Pause</span>
+                    <span class="pause-label" th:text="#{game.pause}">Pause</span>
+                    <span class="resume-label" hidden th:text="#{game.resume}">Resume</span>
                 </button>
                 <button id="nextButton" class="game-control-btn game-control-btn--next" type="button" style="display:none" onclick="showScoreboard()">
                     <i class="fas fa-arrow-right"></i>
@@ -72,9 +73,12 @@
     </div>
 
     <form action="#" th:object="${challenge}" method="post">
-        <input type="hidden" name="${_csrf.parameterName}" value="${_csrf.token}"/>
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
         <input type="hidden" th:value="${quizPin}" id="quizPin" name="quizPin"/>
-        <input type="hidden" th:value="${challenge.QuestionSet.correctOptions}" id="correctOptions"/>
+        <!-- Empty in multiplayer: the right answer is fetched once the player's answer is in -->
+        <input type="hidden" th:value="${correctOptions}" id="correctOptions"/>
+        <input type="hidden" th:value="${answerCount}" id="answerCount"/>
+        <input type="hidden" th:value="${gamePaused}" id="gamePaused"/>
         <input type="hidden" th:value="${game_timer}" id="time_to_flip"/>
         <input type="hidden" th:name="selectedOptions" id="selectedOptions"/>
         <input type="hidden" th:name="selectedAnswer" id="selectedAnswer"/>
@@ -89,24 +93,25 @@
         <div class="game-content">
 
             <!-- Question Media -->
-            <div th:if="${challenge.QuestionSet.imageUrl != null or challenge.QuestionSet.videoUrl != null}" class="question-media-section">
+            <div th:if="${questionImage != null or questionAudio != null or videoEmbed != null}" class="question-media-section">
                 <!-- Question Image / Audio -->
-                <div th:if="${challenge.QuestionSet.imageUrl != null}" class="question-image-container">
-                    <img id="questionImage" th:src="${challenge.QuestionSet.imageUrl}"
+                <div th:if="${questionImage != null or questionAudio != null}" class="question-image-container">
+                    <img th:if="${questionImage != null}" id="questionImage" th:src="${questionImage}"
                          th:alt="#{game.questionImage}" alt="Question Image"
                          class="question-image">
-                    <audio id="questionAudio" preload="auto" style="display:none;"></audio>
-                    <button th:if="${not #sets.isEmpty(#authentication.getPrincipal().getAuthorities())}"
+                    <audio th:if="${questionAudio != null}" id="questionAudio" preload="auto" style="display:none;"
+                           th:data-src="${questionAudio}"></audio>
+                    <button th:if="${questionAudio != null and not #sets.isEmpty(#authentication.getPrincipal().getAuthorities())}"
                             id="playAudioButton" class="game-control-btn" type="button"
-                            style="display:none;" onclick="playQuestionAudioManually()">
+                            style="display:inline-flex;" onclick="playQuestionAudioManually()">
                         <i class="fas fa-volume-up"></i>
                         <span th:text="#{live.playAudio}">Play sound</span>
                     </button>
                 </div>
                 <!-- Question Video -->
-                <div th:if="${challenge.QuestionSet.videoUrl != null}" class="question-video-container">
+                <div th:if="${videoEmbed != null}" class="question-video-container">
                     <div class="ratio ratio-16x9">
-                        <iframe th:src="${#strings.replace(challenge.QuestionSet.videoUrl, 'watch?v=', 'embed/')}"
+                        <iframe th:src="${videoEmbed}"
                                 frameborder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowfullscreen></iframe>
@@ -118,6 +123,7 @@
             <div id="answerSpace" role="main">
 
                 <!-- MULTIPLE_CHOICE and POLL: Answer Options -->
+                <p th:if="${multiSelect}" id="multiHint" th:text="#{live.multipleHint}">Select all correct answers, then submit.</p>
                 <div th:if="${question_type == 'MULTIPLE_CHOICE' or question_type == 'POLL'}" class="answer-grid">
                     <div id="optionA" class="answer-option-card"
                          role="button" tabindex="0"
@@ -154,6 +160,11 @@
                         </div>
                     </div>
                 </div>
+                <button th:if="${multiSelect}" id="submitChoices" type="button" class="type-answer-submit" disabled
+                        onclick="submitChoices()">
+                    <i class="fas fa-check"></i>
+                    <span th:text="#{live.submitMultiple}">Submit answers</span>
+                </button>
 
                 <div th:if="${question_type == 'SORTING'}" id="sortingAnswers">
                     <p th:text="#{client.sorting.hint}"></p>
@@ -162,7 +173,7 @@
                                 th:with="letter=${ {'A','B','C','D','E','F','G','H','I','J'}[stat.index] }">
                         <button type="button" th:if="${not #strings.isEmpty(label)}" class="btn btn-outline-primary p-3"
                                 th:attr="data-value=${letter}" onclick="chooseSortingAnswer(this)" aria-pressed="false">
-                            <span class="sorting-rank">–</span> <span th:text="${label}"></span>
+                            <span class="sorting-rank">–</span> <span class="sorting-label" th:text="${label}"></span>
                         </button>
                         </th:block>
                     </div>

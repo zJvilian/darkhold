@@ -46,6 +46,8 @@ function toHome() {
 function connect() {
     let pin = document.getElementById('quizPin').value;
     let teamMode = document.getElementById('teamMode')?.value === 'true';
+    // players who joined before this page loaded (returning to the lobby)
+    showGreeting([...document.querySelectorAll('#players td')].map(cell => cell.textContent));
     let socket = new SockJS('/darkhold-websocket');
     stompClient = Stomp.over(socket);
 
@@ -58,9 +60,7 @@ function connect() {
     stompClient.connect(headers, function (frame) {
         // Subscribe to PIN-scoped topic for concurrent game support
         stompClient.subscribe('/topic/' + pin + '/user', function (greeting) {
-            let users = JSON.parse(greeting.body).users;
-            allPlayers = users;
-            showGreeting(users);
+            showGreeting(JSON.parse(greeting.body).users);
             if (teamMode) {
                 loadTeamsAndRender();
             }
@@ -95,37 +95,19 @@ function renderTeamView() {
 
     if (!teamColumns || !unassignedDiv) return;
 
-    // Get all assigned players
     let assignedPlayers = new Set();
     teamData.forEach(team => {
         (team.members || []).forEach(m => assignedPlayers.add(m));
     });
+    let unassigned = allPlayers.filter(p => !assignedPlayers.has(p));
 
-    // Find unassigned players (excluding moderator)
-    let moderator = document.getElementById('user')?.textContent || '';
-    let unassigned = allPlayers.filter(p => !assignedPlayers.has(p) && p !== moderator);
-
-    // Render unassigned players
     unassignedDiv.innerHTML = '';
     if (unassigned.length === 0) {
         unassignedDiv.innerHTML = '<span class="text-muted">' + escapeHtml(LanguageManager.text('client.publish.allAssigned')) + '</span>';
     } else {
-        unassigned.forEach(player => {
-            let badge = document.createElement('div');
-            badge.className = 'team-member-item';
-            badge.innerHTML = `
-                <span>${escapeHtml(player)}</span>
-                <select class="team-assign-dropdown">
-                    <option value="">${escapeHtml(LanguageManager.text('client.publish.assignTo'))}</option>
-                    ${teamData.map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('')}
-                </select>
-            `;
-            badge.querySelector('select').addEventListener('change', e => assignPlayerToTeam(player, e.target.value));
-            unassignedDiv.appendChild(badge);
-        });
+        unassigned.forEach(player => unassignedDiv.appendChild(teamMemberItem(player, null)));
     }
 
-    // Render team columns
     teamColumns.innerHTML = '';
     teamData.forEach(team => {
         let column = document.createElement('div');
@@ -133,21 +115,55 @@ function renderTeamView() {
         column.innerHTML = `
             <div class="team-column-header">
                 <h5 class="team-column-title">
-                    <span class="team-color-dot team-color-dot-${team.color}"></span>
+                    <span class="team-color-dot team-color-dot-${escapeHtml(team.color)}"></span>
                     ${escapeHtml(team.name)}
                 </h5>
                 <div class="team-column-count">${escapeHtml(LanguageManager.text('client.publish.members', (team.members || []).length))}</div>
             </div>
-            <div class="team-members-list">
-                ${(team.members || []).map(m => `
-                    <div class="team-member-item">
-                        <span>${escapeHtml(m)}</span>
-                    </div>
-                `).join('')}
-            </div>
+            <div class="team-members-list"></div>
         `;
+        let list = column.querySelector('.team-members-list');
+        (team.members || []).forEach(member => list.appendChild(teamMemberItem(member, team.name)));
         teamColumns.appendChild(column);
     });
+}
+
+// A player with a dropdown to move them to another team, and a kick button
+function teamMemberItem(player, currentTeam) {
+    let item = document.createElement('div');
+    item.className = 'team-member-item';
+    let name = document.createElement('span');
+    name.textContent = displayName(player);
+    let select = document.createElement('select');
+    select.className = 'team-assign-dropdown';
+    select.setAttribute('aria-label', LanguageManager.text('client.publish.assignTo'));
+    select.innerHTML = `<option value="">${escapeHtml(LanguageManager.text('client.publish.assignTo'))}</option>`
+        + teamData.filter(t => t.name !== currentTeam)
+            .map(t => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`).join('');
+    select.addEventListener('change', e => assignPlayerToTeam(player, e.target.value));
+    item.append(name, select, kickButton(player));
+    return item;
+}
+
+function displayName(player) {
+    // accounts are named "<first name>#<id>"; the lobby shows the name only
+    return String(player).replace(/#\d+$/, '');
+}
+
+function kickButton(player) {
+    let button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-sm btn-danger ms-2';
+    button.textContent = LanguageManager.text('client.lobby.kick');
+    button.addEventListener('click', () => kickPlayer(player));
+    return button;
+}
+
+function kickPlayer(username) {
+    if (!confirm(LanguageManager.text('client.lobby.kickConfirm', displayName(username)))) return;
+    let pin = document.getElementById('quizPin').value;
+    // the server answers with the new player list and teams
+    stompClient.send("/app/kick_player", {}, pin + ':' + username);
 }
 
 function assignPlayerToTeam(username, teamName) {
@@ -179,8 +195,7 @@ function autoAssignAllPlayers() {
         (team.members || []).forEach(m => assignedPlayers.add(m));
     });
 
-    let moderator = document.getElementById('user')?.textContent || '';
-    let unassigned = allPlayers.filter(p => !assignedPlayers.has(p) && p !== moderator);
+    let unassigned = allPlayers.filter(p => !assignedPlayers.has(p));
 
     if (unassigned.length === 0) {
         alert(LanguageManager.text('client.publish.allAlreadyAssigned'));
@@ -223,12 +238,22 @@ function escapeHtml(text) {
     return div.innerHTML.replace(/"/g, '&quot;');
 }
 
-function showGreeting(message) {
-    console.log(message);
-    let tableRef = document.getElementById('conversation').getElementsByTagName('tbody')[0];
-    tableRef.innerHTML = "";
-    for (let i = 0; i < message.length; i++) {
-        let newRow = tableRef.insertRow(tableRef.rows.length);
-        newRow.innerHTML = escapeHtml(message[i]);
-    }
+// The host runs the game but does not play: leave them out of the players
+function showGreeting(users) {
+    let moderator = document.getElementById('user')?.textContent || '';
+    allPlayers = (users || []).filter(user => user !== moderator);
+    let grid = document.getElementById('playersGrid');
+    if (!grid) return;
+    grid.replaceChildren(...allPlayers.map(player => {
+        let card = document.createElement('div');
+        card.className = 'player-card';
+        card.innerHTML = '<div class="player-avatar"><i class="fas fa-user"></i></div>'
+            + '<span class="player-name">' + escapeHtml(displayName(player)) + '</span>';
+        card.appendChild(kickButton(player));
+        return card;
+    }));
+    let emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.style.display = allPlayers.length ? 'none' : 'block';
+    let count = document.getElementById('playerCount');
+    if (count) count.textContent = allPlayers.length;
 }

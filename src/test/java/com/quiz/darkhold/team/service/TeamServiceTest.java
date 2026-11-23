@@ -50,6 +50,18 @@ class TeamServiceTest {
     class CreateTeamsTests {
 
         @Test
+        @DisplayName("Should create at least two teams")
+        void shouldClampTeamCountToTwo() {
+            CurrentGameSession session = new CurrentGameSession("12345", "host");
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
+            when(currentGameRepository.findByPin("12345")).thenReturn(Optional.of(session));
+
+            teamService.createTeams("12345", new TeamConfig(1, TeamAssignmentMethod.BALANCED));
+
+            assertEquals(2, teamService.getTeams("12345").size());
+        }
+
+        @Test
         @DisplayName("Should create correct number of teams")
         void shouldCreateCorrectNumberOfTeams() {
             CurrentGameSession session = new CurrentGameSession("12345", "host");
@@ -191,6 +203,17 @@ class TeamServiceTest {
 
             assertEquals("Team Blue", teamService.getPlayerTeam("12345", "player1"));
         }
+
+        @Test
+        @DisplayName("Should refuse a team that does not exist")
+        void shouldRejectUnknownTeam() {
+            CurrentGameSession session = createSessionWithTeams("12345");
+            when(currentGameRepository.lockByPin("12345")).thenReturn(Optional.of(session));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> teamService.assignPlayerToTeam("12345", "player1", "Team Nowhere"));
+            assertTrue(session.getPlayerTeamsMap().isEmpty());
+        }
     }
 
     @Nested
@@ -273,6 +296,7 @@ class TeamServiceTest {
             List<TeamScoreResult> results = teamService.getTeamScoreResults("12345", List.of(sr1, sr2));
 
             assertEquals(2, results.size());
+            assertEquals(0, results.get(0).getMemberCount(), "members come from the team, not from scores");
             assertEquals(1, results.get(0).getRank());
             assertEquals(2, results.get(1).getRank());
             assertTrue(results.get(0).getTotalScore() >= results.get(1).getTotalScore());

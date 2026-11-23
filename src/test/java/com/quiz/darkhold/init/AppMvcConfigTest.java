@@ -29,6 +29,7 @@ class AppMvcConfigTest {
         localeInterceptor = new LocaleChangeInterceptor();
         setField("appMvcInterceptor", mvcInterceptor);
         setField("localeChangeInterceptor", localeInterceptor);
+        setField("questionImagesDir", "question-images");
     }
 
     private void setField(final String name, final Object value) throws Exception {
@@ -79,5 +80,17 @@ class AppMvcConfigTest {
         when(registration.addResourceLocations(any(String.class))).thenReturn(registration);
         config.addResourceHandlers(registry);
         verify(registry).addResourceHandler("/question-images/**");
+    }
+
+    @Test
+    @DisplayName("Should serve question images from the configured directory")
+    void shouldServeQuestionImagesFromConfiguredDirectory() throws Exception {
+        setField("questionImagesDir", "/data/media");
+        var registry = mock(ResourceHandlerRegistry.class);
+        var registration = mock(ResourceHandlerRegistration.class);
+        when(registry.addResourceHandler(any(String.class))).thenReturn(registration);
+        when(registration.addResourceLocations(any(String.class))).thenReturn(registration);
+        config.addResourceHandlers(registry);
+        verify(registration).addResourceLocations("file:/data/media/");
     }
 }

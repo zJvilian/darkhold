@@ -6,12 +6,14 @@ import com.quiz.darkhold.analytics.entity.QuestionResult;
 import com.quiz.darkhold.analytics.service.ResultService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.view.InternalResourceViewResolver;
 
-import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -62,10 +65,12 @@ class PastGamesControllerTest {
         return viewResolver;
     }
 
-    private Principal createMockPrincipal(final String name) {
-        Principal principal = mock(Principal.class);
-        when(principal.getName()).thenReturn(name);
-        return principal;
+    private Authentication createMockPrincipal(final String name) {
+        return new UsernamePasswordAuthenticationToken(name, null, List.of(new SimpleGrantedAuthority("GAME_MANAGER")));
+    }
+
+    private Authentication createAdmin(final String name) {
+        return new UsernamePasswordAuthenticationToken(name, null, List.of(new SimpleGrantedAuthority("ADMIN")));
     }
 
     private GameResult createMockGameResult() {
@@ -245,8 +250,7 @@ class PastGamesControllerTest {
 
         mockMvc.perform(get("/game-result/999/export-csv")
                         .principal(createMockPrincipal(moderatorEmail)))
-                .andExpect(status().isOk())
-                .andExpect(content().string(""));
+                .andExpect(status().isNotFound());
     }
 
     @Test
@@ -255,15 +259,13 @@ class PastGamesControllerTest {
 
         mockMvc.perform(get("/game-result/1/export-csv")
                         .principal(createMockPrincipal("other@test.com")))
-                .andExpect(status().isOk())
-                .andExpect(content().string(""));
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void testExportGameResultCsv_NotAuthenticated() throws Exception {
         mockMvc.perform(get("/game-result/1/export-csv"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(""));
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -281,7 +283,7 @@ class PastGamesControllerTest {
                 .andExpect(content().string(containsString("1,player1,8500,9,1,5,90.0")))
                 .andExpect(content().string(containsString(questionHeader)))
                 .andExpect(content().string(containsString(
-                        "1,\"What is 2+2?\",MULTIPLE_CHOICE,4,1,0,80.0,EASY")));
+                        "1,What is 2+2?,MULTIPLE_CHOICE,4,1,0,80.0,EASY")));
     }
 
     @Test
@@ -301,5 +303,93 @@ class PastGamesControllerTest {
                         .principal(createMockPrincipal(moderatorEmail)))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("What is \"\"the answer\"\"?")));
+    }
+
+    // ==================== admin, delete and CSV safety ====================
+
+    @Test
+    void testAdminSeesEveryGameAndCanOpenAndExportOthers() throws Exception {
+        when(resultService.getAllGameResults()).thenReturn(mockPastGames);
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+
+        mockMvc.perform(get("/past-games").principal(createAdmin("admin#1")))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("admin", true))
+                .andExpect(model().attribute("pastGames", hasSize(1)));
+        verify(resultService, org.mockito.Mockito.never()).getGameResultsByModerator(anyString());
+        mockMvc.perform(get("/game-result/1").principal(createAdmin("admin#1")))
+                .andExpect(view().name("gameresult"));
+        mockMvc.perform(get("/game-result/1/export-csv").principal(createAdmin("admin#1")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testRoleAdminPrefixIsNotAnAdmin() throws Exception {
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+        var fake = new UsernamePasswordAuthenticationToken("other@test.com", null,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+        mockMvc.perform(get("/game-result/1/export-csv").principal(fake))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testDeleteByOwnerAndAdminButNotByOthers() throws Exception {
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+
+        mockMvc.perform(post("/game-result/1/delete").principal(createMockPrincipal("other@test.com")))
+                .andExpect(redirectedUrl("/past-games"));
+        verify(resultService, org.mockito.Mockito.never()).deleteGameResult(1L);
+
+        mockMvc.perform(post("/game-result/1/delete").principal(createMockPrincipal(moderatorEmail)))
+                .andExpect(redirectedUrl("/past-games"));
+        mockMvc.perform(post("/game-result/1/delete").principal(createAdmin("admin#1")))
+                .andExpect(redirectedUrl("/past-games"));
+        verify(resultService, org.mockito.Mockito.times(2)).deleteGameResult(1L);
+    }
+
+    private com.quiz.darkhold.team.entity.TeamResult teamResult() {
+        com.quiz.darkhold.team.entity.TeamResult team = new com.quiz.darkhold.team.entity.TeamResult();
+        team.setTeamName("@Red");
+        team.setFinalRank(1);
+        team.setFinalScore(10);
+        team.setMemberCount(2);
+        team.setAverageScorePerMember(5);
+        return team;
+    }
+
+    private ParticipantResult formulaParticipant() {
+        ParticipantResult formula = new ParticipantResult();
+        formula.setFinalRank(2);
+        formula.setUsername("=HYPERLINK(\"x\")");
+        formula.setTeamName("Red, Team");
+        formula.setFinalScore(10);
+        formula.setCorrectAnswers(1);
+        formula.setIncorrectAnswers(0);
+        formula.setMaxStreak(1);
+        return formula;
+    }
+
+    @Test
+    void testCsvNeutralisesFormulasEscapesFieldsAndListsTeams() throws Exception {
+        ParticipantResult formula = formulaParticipant();
+        mockGameResult.setParticipantResults(new ArrayList<>(List.of(createMockParticipantResult(), formula)));
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+        when(resultService.getTeamResults(1L)).thenReturn(List.of(teamResult()));
+
+        mockMvc.perform(get("/game-result/1/export-csv").principal(createMockPrincipal(moderatorEmail)))
+                .andExpect(content().string(containsString("2,\"'=HYPERLINK(\"\"x\"\")\",10,")))
+                .andExpect(content().string(containsString(",\"Red, Team\"\n")))
+                .andExpect(content().string(containsString("Team Standings\nRank,Team,Score,Members")))
+                .andExpect(content().string(containsString("1,'@Red,10,2,5")));
+    }
+
+    @Test
+    void testGameResultPageGetsTeamStandings() throws Exception {
+        when(resultService.getGameResultById(1L)).thenReturn(mockGameResult);
+        when(resultService.getTeamResults(1L)).thenReturn(List.of(new com.quiz.darkhold.team.entity.TeamResult()));
+
+        mockMvc.perform(get("/game-result/1").principal(createMockPrincipal(moderatorEmail)))
+                .andExpect(model().attribute("teamResults", hasSize(1)));
     }
 }

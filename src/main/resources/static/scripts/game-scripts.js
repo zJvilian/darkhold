@@ -41,6 +41,9 @@ $(document).ready(function () {
     }
 
     initQuestionAudio();
+    // the host may come back to a game that is still paused
+    const paused = document.getElementById('gamePaused');
+    if (paused && paused.value === 'true') showPauseOverlay();
 });
 
 let questionAudioTimer = null;
@@ -55,17 +58,11 @@ function questionAudioRepeats(duration) {
 }
 
 function initQuestionAudio() {
-    const img = document.getElementById('questionImage');
+    // the server only renders the audio element for question types that may play sound
     const audio = document.getElementById('questionAudio');
-    if (!img || !audio) return;
-    const src = img.getAttribute('src') || '';
-    if (!/\.(?:mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)(?:$|[?#])/i.test(src)) return;
-    img.style.display = 'none';
-    img.removeAttribute('src');
-    if (!['MULTIPLE_CHOICE', 'TRUE_FALSE', 'TYPE_ANSWER'].includes(getQuestionType())) return;
+    const src = audio && audio.dataset ? audio.dataset.src : '';
+    if (!src) return;
     audio.src = src;
-    const playBtn = document.getElementById('playAudioButton');
-    if (playBtn) playBtn.style.display = 'inline-flex';
     audio.addEventListener('ended', function () {
         if (!questionAudioAutoRepeat) return;
         questionAudioPlaysDone++;
@@ -124,12 +121,13 @@ function callTimeOut(answerSaved = false) {
         }
     }
 
-    if (!answerSaved && (questionType !== 'SORTING' || !sortingSubmitted)) saveAnswerOnAjax();
+    const reveal = () => revealAnswer(questionType);
     if (questionType === 'SORTING') {
         sortingClosed = true;
         document.querySelectorAll('#sortingAnswers button').forEach(button => button.disabled = true);
-        document.getElementById('sortingFeedback').textContent = document.getElementById('correctOptions').value;
     }
+    if (!answerSaved && (questionType !== 'SORTING' || !sortingSubmitted)) saveAnswerOnAjax(reveal);
+    else reveal();
 
     // Check if practice mode
     let gameMode = document.getElementById('gameMode') ? document.getElementById('gameMode').value : 'MULTIPLAYER';
@@ -147,13 +145,69 @@ function callTimeOut(answerSaved = false) {
         }
     }
 
-    // Only highlight correct/incorrect for non-POLL questions
-    if (questionType !== 'POLL' && questionType !== 'WORD_CLOUD' && questionType !== 'SORTING') {
-        highlightGreen();
-        highlightRedOnIncorrectSelection();
-    }
     const spinner = document.getElementById('spinner');
     if (spinner) spinner.remove();
+}
+
+function gameText(key, ...args) {
+    return typeof LanguageManager !== 'undefined' ? LanguageManager.text(key, ...args) : key;
+}
+
+function optionList(value) {
+    return (value || '').split(',').map(option => option.trim()).filter(Boolean);
+}
+
+// Multiplayer pages don't carry the right answer: ask for it once this player's answer is in
+function revealAnswer(questionType) {
+    if (['POLL', 'WORD_CLOUD', 'TYPE_ANSWER'].includes(questionType)) return;
+    const correctOptions = document.getElementById('correctOptions');
+    if (correctOptions.value || typeof fetch !== 'function') {
+        showRevealedAnswer(questionType);
+        return;
+    }
+    fetch('/answer/', {
+        method: 'POST',
+        headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/x-www-form-urlencoded'}),
+        body: new URLSearchParams({reveal: 'true'})
+    })
+        .then(response => response.ok ? response.text() : '')
+        .then(answer => {
+            correctOptions.value = answer;
+            showRevealedAnswer(questionType);
+        })
+        .catch(() => {});
+}
+
+function showRevealedAnswer(questionType) {
+    if (questionType === 'SORTING') {
+        showSortingVerdict();
+        return;
+    }
+    const correct = optionList(document.getElementById('correctOptions').value);
+    const picked = optionList(document.getElementById('selectedAnswer').value);
+    if (correct.length && picked.length) {
+        const right = picked.length === correct.length && picked.every(option => correct.includes(option));
+        document.getElementById('selectedOptions').value = right ? 'correct' : 'incorrect';
+    }
+    highlightGreen();
+    highlightRedOnIncorrectSelection();
+}
+
+function showSortingVerdict() {
+    const labels = {};
+    document.querySelectorAll('#sortingAnswers [data-value]').forEach(button => {
+        const label = button.querySelector('.sorting-label');
+        labels[button.dataset.value] = label ? label.textContent : button.dataset.value;
+    });
+    const order = optionList(document.getElementById('correctOptions').value)
+        .map(option => labels[option] || option).join(' → ');
+    const result = document.getElementById('selectedOptions').value;
+    const verdict = result === 'correct' ? '✓' : result === 'incorrect' ? gameText('live.incorrect') : gameText('live.timeUp');
+    document.getElementById('sortingFeedback').textContent = order ? verdict + ' ' + gameText('live.correctAnswer', order) : verdict;
+    if (typeof AudioManager !== 'undefined') {
+        if (result === 'correct') AudioManager.playCorrect();
+        else if (result === 'incorrect') AudioManager.playIncorrect();
+    }
 }
 
 function finishPracticeAnswer() {
@@ -178,8 +232,8 @@ function highlightGreen() {
         return;
     } else {
         // MULTIPLE_CHOICE: a question can have several right options
-        correctAnswer.split(',').forEach(option => {
-            let toGreenChild = document.getElementById("option" + option.trim());
+        optionList(correctAnswer).forEach(option => {
+            let toGreenChild = document.getElementById("option" + option);
             if (toGreenChild) {
                 toGreenChild.children[0].setAttribute('class', 'card text-white bg-success');
                 toGreenChild.classList.add('answer-correct');
@@ -226,14 +280,15 @@ function highlightRedOnIncorrectSelection() {
         // Already handled in validateTypeAnswerOnServer
         return;
     } else {
-        // MULTIPLE_CHOICE
-        let inCorrectDiv = "option" + selectedAnswer;
-        let toRedChild = document.getElementById(inCorrectDiv);
-        if (toRedChild) {
-            toRedChild.children[0].setAttribute('class', 'card text-white bg-danger');
-            // Add animation class
-            toRedChild.classList.add('answer-incorrect');
-        }
+        // MULTIPLE_CHOICE: mark every picked option that is not a right one
+        let correct = optionList(document.getElementById('correctOptions').value);
+        optionList(selectedAnswer).filter(option => !correct.includes(option)).forEach(option => {
+            let toRedChild = document.getElementById("option" + option);
+            if (toRedChild) {
+                toRedChild.children[0].setAttribute('class', 'card text-white bg-danger');
+                toRedChild.classList.add('answer-incorrect');
+            }
+        });
     }
 
     // Play incorrect sound and announce
@@ -262,7 +317,7 @@ function keepQuestionOpen(elem) {
     if (document.getElementById('gameMode').value !== 'PRACTICE' || getQuestionType() !== 'MULTIPLE_CHOICE') {
         return false;
     }
-    let answers = document.getElementById('correctOptions').value.split(',').map(a => a.trim());
+    let answers = optionList(document.getElementById('correctOptions').value);
     let picked = elem.id.charAt(elem.id.length - 1);
     if (answers.length < 2 || !answers.includes(picked)) return false;
     if (!practicePicks.includes(picked)) practicePicks.push(picked);
@@ -274,10 +329,40 @@ function keepQuestionOpen(elem) {
     return true;
 }
 
+// Multiplayer questions with several right options: players toggle options, then submit them together
+const choices = new Set();
+
+function isMultiSelect() {
+    return Number(document.getElementById('answerCount').value) > 1
+        && document.getElementById('gameMode').value !== 'PRACTICE';
+}
+
+function toggleChoice(elem) {
+    let option = elem.id.charAt(elem.id.length - 1);
+    if (choices.has(option)) choices.delete(option); else choices.add(option);
+    elem.children[0].setAttribute('class', choices.has(option) ? 'card text-white bg-dark' : 'answer-card-inner');
+    elem.setAttribute('aria-pressed', String(choices.has(option)));
+    // a timeout submits whatever is picked
+    document.getElementById('selectedAnswer').value = [...choices].sort().join(',');
+    document.getElementById('submitChoices').disabled = choices.size === 0;
+}
+
+function submitChoices() {
+    if (isAnswerSelected || choices.size === 0) return;
+    isAnswerSelected = true;
+    document.getElementById('submitChoices').disabled = true;
+    hideOptions();
+    saveAnswerOnAjax();
+}
+
 function waitAndShowAnswer(elem) {
     let roles = document.getElementById("roles").value;
     console.log("roles is " + roles);
     if (!roles.includes("ROLE_MODERATOR")) {
+        if (!isAnswerSelected && isMultiSelect() && getQuestionType() === 'MULTIPLE_CHOICE') {
+            toggleChoice(elem);
+            return;
+        }
         if (!isAnswerSelected && keepQuestionOpen(elem)) return;
         if (!isAnswerSelected) {
             realWaitAndShowAnswer(elem);
@@ -311,14 +396,8 @@ function realWaitAndShowAnswer(elem) {
         return;
     }
 
-    // split with comma
-    let answers = correctAnswer.split(",");
-    let correct = false;
-    for (let i = 0; i < answers.length; i++) {
-        if (selectedAnswer === answers[i]) {
-            correct = true;
-        }
-    }
+    // in multiplayer the right answer is unknown here; the verdict is settled once it is revealed
+    let correct = optionList(correctAnswer).includes(selectedAnswer);
     if (correct) {
         if (practicePicks.length > 1) document.getElementById('selectedAnswer').value = practicePicks.join(',');
         document.getElementById('selectedOptions').value = "correct";
@@ -435,49 +514,28 @@ function validateTypeAnswerOnServer(userAnswer) {
 }
 
 function hideOptions() {
-    let optionA = document.getElementById("optionA");
-    //optionA.setAttribute('style','display:none');
-    optionA.setAttribute('style', 'opacity: 0.7');
-    optionA.children[0].setAttribute('style', 'background: #CCC');
-    optionA.children[0].setAttribute('style', 'cursor:default');
-    let optionB = document.getElementById("optionB");
-    //optionB.setAttribute('style','display:none');
-    optionB.setAttribute('style', 'opacity: 0.7');
-    optionB.children[0].setAttribute('style', 'background: #CCC');
-    optionB.children[0].setAttribute('style', 'cursor:default');
-    let optionC = document.getElementById("optionC");
-    if (optionC != null) {
-        //optionC.setAttribute('style','display:none');
-        optionC.setAttribute('style', 'opacity: 0.7');
-        optionC.children[0].setAttribute('style', 'background: #CCC');
-        optionC.children[0].setAttribute('style', 'cursor:default');
-    }
-    let optionD = document.getElementById("optionD");
-    if (optionD != null) {
-        //optionD.setAttribute('style','display:none');
-        optionD.setAttribute('style', 'opacity: 0.7');
-        optionD.children[0].setAttribute('style', 'background: #CCC');
-        optionD.children[0].setAttribute('style', 'cursor:default');
-    }
+    ['optionA', 'optionB', 'optionC', 'optionD'].forEach(function (id) {
+        let option = document.getElementById(id);
+        if (option) {
+            option.setAttribute('style', 'opacity: 0.7');
+            option.children[0].setAttribute('style', 'background: #CCC; cursor: default;');
+        }
+    });
     let answerSpace = document.getElementById("answerSpace");
-    //<div class="spinner-grow" style="width: 3rem; height: 3rem;" role="status">
-    //  <span class="sr-only">Loading...</span>
-    //</div>
     let spinner = document.createElement('div');
     spinner.id = 'spinner';
-    spinner.class = 'spinner-grow';
-    spinner.style = "width: 3rem; height: 3rem;"
-    spinner.role = "status"
+    spinner.className = 'spinner-grow';
+    spinner.setAttribute('style', 'width: 3rem; height: 3rem;');
+    spinner.setAttribute('role', 'status');
     let loader = document.createElement('span');
-    loader.class = "sr-only";
+    loader.className = 'sr-only';
     spinner.appendChild(loader);
     answerSpace.appendChild(spinner);
-
 }
 
 // The server derives player, correctness and timing; the client only reports the chosen option.
 // Sent on click, and again on timeout (which the server ignores if the player already answered).
-function saveAnswerOnAjax() {
+function saveAnswerOnAjax(afterSave) {
     let selectedAnswer = document.getElementById("selectedAnswer").value;
     let xhr = new XMLHttpRequest();
     xhr.open('POST', "/answer/");
@@ -496,6 +554,7 @@ function saveAnswerOnAjax() {
                     waitingMessage.style.display = 'block';
                 }
             }
+            if (afterSave) afterSave();
         } else if (xhr.status !== 200) {
             console.log('Request failed.  Returned status of ' + xhr.status);
         }
@@ -592,13 +651,32 @@ function showPauseOverlay() {
     if (overlay) {
         overlay.style.display = 'flex';
     }
-    // Update button text
-    let pauseBtn = document.getElementById('pauseButton');
-    if (pauseBtn) {
-        pauseBtn.textContent = 'Resume';
-        pauseBtn.classList.remove('btn-warning');
-        pauseBtn.classList.add('btn-success');
+    pauseQuestionAudio();
+    showPauseButtonState(true);
+}
+
+let audioPendingOnPause = false;
+
+function pauseQuestionAudio() {
+    if (questionAudioTimer) {
+        clearTimeout(questionAudioTimer);
+        questionAudioTimer = null;
+        audioPendingOnPause = true;
     }
+    const audio = document.getElementById('questionAudio');
+    if (audio && typeof audio.pause === 'function') audio.pause();
+}
+
+// Swap icon and the translated label, keeping the button's markup
+function showPauseButtonState(paused) {
+    let pauseBtn = document.getElementById('pauseButton');
+    if (!pauseBtn || !pauseBtn.querySelector) return;
+    const icon = pauseBtn.querySelector('i');
+    const pauseLabel = pauseBtn.querySelector('.pause-label');
+    const resumeLabel = pauseBtn.querySelector('.resume-label');
+    if (icon) icon.className = paused ? 'fas fa-play' : 'fas fa-pause';
+    if (pauseLabel) pauseLabel.hidden = paused;
+    if (resumeLabel) resumeLabel.hidden = !paused;
 }
 
 function hidePauseOverlay() {
@@ -612,12 +690,10 @@ function hidePauseOverlay() {
     if (typeof timer !== 'undefined' && timer) {
         timer.start();
     }
-    // Update button text
-    let pauseBtn = document.getElementById('pauseButton');
-    if (pauseBtn) {
-        pauseBtn.textContent = 'Pause';
-        pauseBtn.classList.remove('btn-success');
-        pauseBtn.classList.add('btn-warning');
+    showPauseButtonState(false);
+    if (audioPendingOnPause) {
+        audioPendingOnPause = false;
+        startQuestionAudio(true);
     }
 }
 

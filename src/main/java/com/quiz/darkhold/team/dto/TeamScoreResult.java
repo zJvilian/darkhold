@@ -14,6 +14,7 @@ public class TeamScoreResult {
     private Integer previousRank;
     private Integer rankChange;
     private List<ScoreResult> individualScores;
+    private Integer memberCount;
 
     public TeamScoreResult() {
         this.individualScores = new ArrayList<>();
@@ -116,7 +117,16 @@ public class TeamScoreResult {
         return rankChange != null && rankChange < 0;
     }
 
+    /**
+     * Everyone on the team, also members who have not scored; falls back to the scored players.
+     *
+     * @return member count
+     */
     public int getMemberCount() {
-        return individualScores.size();
+        return memberCount != null ? memberCount : individualScores.size();
+    }
+
+    public void setMemberCount(final Integer memberCount) {
+        this.memberCount = memberCount;
     }
 }

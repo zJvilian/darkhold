@@ -6,6 +6,7 @@ import com.quiz.darkhold.analytics.entity.QuestionResult;
 import com.quiz.darkhold.analytics.repository.GameResultRepository;
 import com.quiz.darkhold.challenge.entity.QuestionSet;
 import com.quiz.darkhold.game.entity.Game;
+import com.quiz.darkhold.game.model.GameMode;
 import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.preview.repository.CurrentGame;
 import com.quiz.darkhold.team.entity.TeamResult;
@@ -14,6 +15,7 @@ import com.quiz.darkhold.team.repository.TeamResultRepository;
 import com.quiz.darkhold.team.service.TeamService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -77,7 +80,7 @@ public class ResultService {
 
         GameResult gameResult = createGameResult(pin, challengeName, game);
         boolean teamMode = Boolean.TRUE.equals(game.getTeamMode());
-        addParticipantResults(gameResult, pin, teamMode);
+        addParticipantResults(gameResult, pin, teamMode, isPractice(game.getGameMode()));
         addQuestionResults(gameResult, pin);
 
         GameResult saved = gameResultRepository.save(gameResult);
@@ -87,6 +90,20 @@ public class ResultService {
         }
         logger.info("Game result saved with ID: {}", saved.getId());
         return saved;
+    }
+
+    private static boolean isPractice(final String gameMode) {
+        return GameMode.PRACTICE.name().equals(gameMode);
+    }
+
+    /**
+     * Registered accounts are keyed as "Name#id"; people only see the name.
+     *
+     * @param username the stored player key
+     * @return the name without the account id
+     */
+    public static String displayName(final String username) {
+        return username == null ? null : username.replaceFirst("#\\d+$", "");
     }
 
     @SuppressWarnings("PMD.ExcessiveMethodLength")
@@ -103,8 +120,12 @@ public class ResultService {
         gameResult.setTotalQuestions(questions.size());
 
         List<String> participants = currentGame.getActiveUsersInGame(pin);
-        gameResult.setParticipantCount(participants != null
-                ? participants.size() - MODERATOR_RANK_OFFSET : 0);
+        if (isPractice(game.getGameMode())) {
+            gameResult.setParticipantCount(1); // the host is the only player
+        } else {
+            gameResult.setParticipantCount(participants != null
+                    ? Math.max(0, participants.size() - MODERATOR_RANK_OFFSET) : 0);
+        }
 
         gameResult.setStartedAt(game.getCreatedOn());
         gameResult.setCompletedAt(LocalDateTime.now(ZoneId.systemDefault()));
@@ -117,7 +138,7 @@ public class ResultService {
 
     @SuppressWarnings("PMD.ExcessiveMethodLength")
     private void addParticipantResults(final GameResult gameResult, final String pin,
-                                       final boolean isTeamMode) {
+                                       final boolean isTeamMode, final boolean practice) {
         Map<String, Integer> scores = currentGame.getCurrentScore(pin);
         if (scores == null || scores.isEmpty()) {
             logger.warn("No scores found for game: {}", pin);
@@ -139,13 +160,13 @@ public class ResultService {
 
         for (Map.Entry<String, Integer> entry : sortedScores) {
             String username = entry.getKey();
-            if (username.equals(moderator)) {
-                continue; // Skip moderator
+            if (!practice && username.equals(moderator)) {
+                continue; // the moderator does not play in a live game, but is the player in practice
             }
 
             ParticipantResult participantResult = new ParticipantResult();
             participantResult.setGameResult(gameResult);
-            participantResult.setUsername(username);
+            participantResult.setUsername(displayName(username));
             participantResult.setFinalScore(entry.getValue());
             position++;
             // competition ranking: equal scores share a rank, the next rank skips ahead
@@ -155,8 +176,10 @@ public class ResultService {
             previousScore = entry.getValue();
             participantResult.setFinalRank(rank);
 
-            int streak = currentGame.getStreak(pin, username);
-            participantResult.setMaxStreak(streak);
+            int maxStreak = Math.max(
+                    currentGame.getPlayerMaxStreak(pin, username),
+                    currentGame.getStreak(pin, username));
+            participantResult.setMaxStreak(maxStreak);
 
             if (isTeamMode && teams != null) {
                 String teamName = teamService.getPlayerTeam(pin, username);
@@ -171,14 +194,14 @@ public class ResultService {
                 }
             }
 
-            participantResult.setCorrectAnswers(0);
-            participantResult.setIncorrectAnswers(0);
-            participantResult.setAverageAnswerTimeSeconds(0);
+            participantResult.setCorrectAnswers(currentGame.getPlayerCorrectCount(pin, username));
+            participantResult.setIncorrectAnswers(currentGame.getPlayerIncorrectCount(pin, username));
+            participantResult.setAverageAnswerTimeSeconds(currentGame.getPlayerAvgAnswerTimeSeconds(pin, username));
 
             gameResult.getParticipantResults().add(participantResult);
 
             if (position == 1) {
-                gameResult.setWinnerUsername(username);
+                gameResult.setWinnerUsername(displayName(username));
                 gameResult.setWinnerScore(entry.getValue());
             }
         }
@@ -191,24 +214,56 @@ public class ResultService {
             return;
         }
 
-        int questionNumber = 1;
-        for (QuestionSet question : questions) {
+        int participants = gameResult.getParticipantCount() != null ? gameResult.getParticipantCount() : 0;
+        for (int index = 0; index < questions.size(); index++) {
+            QuestionSet question = questions.get(index);
             QuestionResult questionResult = new QuestionResult();
             questionResult.setGameResult(gameResult);
-            questionResult.setQuestionNumber(questionNumber);
+            questionResult.setQuestionNumber(index + 1);
             questionResult.setQuestionText(question.getQuestion());
             questionResult.setQuestionType(question.getQuestionType() != null
                     ? question.getQuestionType().name() : "MULTIPLE_CHOICE");
 
-            questionResult.setCorrectCount(0);
-            questionResult.setIncorrectCount(0);
-            questionResult.setTimeoutCount(0);
-            questionResult.setAverageAnswerTimeSeconds(0);
-            questionResult.setFastestAnswerTimeSeconds(0);
+            int correct = currentGame.getQuestionCorrectCount(pin, index);
+            int incorrect = currentGame.getQuestionIncorrectCount(pin, index);
+            questionResult.setCorrectCount(correct);
+            questionResult.setIncorrectCount(incorrect);
+            questionResult.setTimeoutCount(Math.max(0, participants - correct - incorrect));
+            questionResult.setAverageAnswerTimeSeconds(currentGame.getQuestionAvgAnswerTimeSeconds(pin, index));
+            questionResult.setFastestAnswerTimeSeconds(currentGame.getQuestionFastestAnswerTimeSeconds(pin, index));
 
             gameResult.getQuestionResults().add(questionResult);
-            questionNumber++;
         }
+    }
+
+    /**
+     * Get every saved game result, newest first (for admins).
+     *
+     * @return all game results
+     */
+    public List<GameResult> getAllGameResults() {
+        return gameResultRepository.findAll(Sort.by(Sort.Direction.DESC, "completedAt"));
+    }
+
+    /**
+     * Delete a saved game result with its participant, question and team rows.
+     *
+     * @param id game result ID
+     */
+    @Transactional
+    public void deleteGameResult(final Long id) {
+        teamResultRepository.deleteAll(teamResultRepository.findByGameResultId(id));
+        gameResultRepository.deleteById(id);
+    }
+
+    /**
+     * Get the saved team standings of a game, best team first.
+     *
+     * @param id game result ID
+     * @return team results, empty when the game had no teams
+     */
+    public List<TeamResult> getTeamResults(final Long id) {
+        return teamResultRepository.findByGameResultIdOrderByFinalRankAsc(id);
     }
 
     /**
@@ -255,27 +310,18 @@ public class ResultService {
      * @param pin        game PIN
      */
     private void addTeamResults(final GameResult gameResult, final String pin) {
-        List<TeamInfo> teams = teamService.getTeams(pin);
+        List<TeamInfo> teams = new ArrayList<>(teamService.getTeams(pin));
         Map<String, Integer> teamScores = teamService.calculateTeamScores(pin);
-
-        List<Map.Entry<String, Integer>> sortedTeams = new ArrayList<>(teamScores.entrySet());
-        sortedTeams.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
+        // a team that scored nothing is still a team in the standings
+        teams.sort(Comparator.comparing((TeamInfo t) -> teamScores.getOrDefault(t.getName(), 0)).reversed());
 
         int position = 0;
         int rank = 0;
         Integer previousScore = null;
-        for (Map.Entry<String, Integer> entry : sortedTeams) {
-            String teamName = entry.getKey();
-            Integer teamScore = entry.getValue();
+        for (TeamInfo teamInfo : teams) {
+            String teamName = teamInfo.getName();
+            Integer teamScore = teamScores.getOrDefault(teamName, 0);
 
-            TeamInfo teamInfo = teams.stream()
-                    .filter(t -> t.getName().equals(teamName))
-                    .findFirst()
-                    .orElse(null);
-
-            if (teamInfo == null) {
-                continue;
-            }
             position++;
             if (!teamScore.equals(previousScore)) {
                 rank = position;

@@ -80,6 +80,13 @@ public class QuestionRequest {
                 answer5, answer6, answer7, answer8, answer9, answer10);
     }
 
+    @AssertTrue(message = "Answers A and B are required")
+    public boolean isChoiceAnswersValid() {
+        boolean choice = questionType == null || questionType == QuestionType.MULTIPLE_CHOICE
+                || questionType == QuestionType.POLL;
+        return !choice || answer1 != null && !answer1.isBlank() && answer2 != null && !answer2.isBlank();
+    }
+
     @AssertTrue(message = "Audio media is only allowed for Multiple Choice, True/False, and Type Answer questions")
     public boolean isAudioMediaValid() {
         return !ImageProcessingService.isAudioUrl(imageUrl)

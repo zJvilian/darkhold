@@ -17,8 +17,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.session.FindByIndexNameSessionRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,6 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -107,6 +111,36 @@ class UserServiceImplTest {
             verify(userRepository).save(newUser);
             assertNotNull(result);
         }
+
+        @Test
+        @DisplayName("Should throw UserNotFoundException when updating missing user id")
+        void shouldThrowUserNotFoundWhenUpdatingMissingId() {
+            User updating = createUser(99L, "missing@test.com", "");
+            when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThrows(UserNotFoundException.class, () -> userService.save(updating));
+        }
+
+        @Test
+        @DisplayName("Should preserve existing password when update password is null")
+        void shouldPreserveExistingPasswordWhenNull() {
+            User existing = createUser(1L, "test@test.com", "existingEncoded");
+            User updating = createUser(1L, "test@test.com", null);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(existing));
+            when(userRepository.save(any(User.class))).thenReturn(updating);
+
+            userService.save(updating);
+
+            assertEquals("existingEncoded", updating.getPassword());
+        }
+
+        @Test
+        @DisplayName("Should reject new user with null password")
+        void shouldRejectNewUserWithNullPassword() {
+            User newUser = createUser(null, "test@test.com", null);
+
+            assertThrows(IllegalArgumentException.class, () -> userService.save(newUser));
+        }
     }
 
     @Nested
@@ -142,6 +176,17 @@ class UserServiceImplTest {
             verify(userRepository).findAll(captor.capture());
             assertEquals(0, captor.getValue().getPageNumber());
             assertEquals(UserServiceImpl.USERS_PER_PAGE, captor.getValue().getPageSize());
+        }
+
+        @Test
+        @DisplayName("Should search users when keyword is non-blank")
+        void shouldSearchUsersWhenKeywordPresent() {
+            Page<User> page = new PageImpl<>(List.of());
+            when(userRepository.search(eq("alice"), any(Pageable.class))).thenReturn(page);
+
+            userService.searchUsers(1, "  alice  ");
+
+            verify(userRepository).search(eq("alice"), any(Pageable.class));
         }
     }
 
@@ -277,6 +322,22 @@ class UserServiceImplTest {
             userService.updateUserEnabledStatus(1L, true);
 
             verify(userRepository).updateEnabledStatus(1L, true);
+        }
+
+        @Test
+        @DisplayName("Should invalidate active sessions when disabling a user")
+        void shouldInvalidateSessionsWhenDisabling() {
+            @SuppressWarnings("unchecked")
+            FindByIndexNameSessionRepository<org.springframework.session.Session> sessions =
+                    mock(FindByIndexNameSessionRepository.class);
+            when(sessions.findByPrincipalName("7")).thenReturn(Map.of("sess-1", mock()));
+            var serviceWithSessions = new UserServiceImpl(userRepository, roleRepository, encoder,
+                    Optional.of(sessions));
+
+            serviceWithSessions.updateUserEnabledStatus(7L, false);
+
+            verify(userRepository).updateEnabledStatus(7L, false);
+            verify(sessions).deleteById("sess-1");
         }
     }
 

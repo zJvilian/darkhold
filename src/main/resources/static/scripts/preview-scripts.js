@@ -1,9 +1,3 @@
-function logOut() {
-    document.forms[0].method = "get";
-    document.forms[0].action = "/";
-    document.forms[0].submit();
-}
-
 function toChallenges() {
     document.forms[0].action = "/viewChallenge";
     document.forms[0].submit();

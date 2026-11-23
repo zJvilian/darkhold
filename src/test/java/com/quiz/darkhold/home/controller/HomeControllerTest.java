@@ -344,4 +344,32 @@ class HomeControllerTest {
         verify(homeService, never()).validateGamePin(anyString());
         verify(securityService, never()).autoLogin(anyString(), anyString());
     }
+
+    @Test
+    void testEnterGame_LiveRoomCodeIsFlagged() throws Exception {
+        when(homeService.validateGamePin("123456")).thenReturn(false);
+        when(homeService.isLiveRoom("123456")).thenReturn(true);
+
+        mockMvc.perform(post("/enterGame").param("gamePin", "123456").remoteAddress("127.0.0.1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.liveRoom").value(true));
+    }
+
+    @Test
+    void testJoinGame_SignedInAccountKeepsItsLogin() throws Exception {
+        var account = new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                "Julia#4", "n/a",
+                List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("USER")));
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(account);
+        try {
+            when(homeService.participantsInActiveQuiz(testPin)).thenReturn(new ArrayList<>());
+            mockMvc.perform(post("/joinGame").param("gamePin", testPin).param("name", "Somebody")
+                            .session(new MockHttpSession()))
+                    .andExpect(view().name("game/gamewait"));
+            verify(securityService, never()).autoLogin(anyString(), anyString());
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        }
+    }
 }

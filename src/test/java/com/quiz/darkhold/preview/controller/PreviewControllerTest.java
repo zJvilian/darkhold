@@ -312,4 +312,29 @@ class PreviewControllerTest {
                         .param("challenge_id", testChallengeId))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void lobbyReopensTheHostsWaitingGame() throws Exception {
+        var game = new com.quiz.darkhold.game.entity.Game();
+        game.setPin(testPin);
+        game.setGameStatus("WAITING");
+        game.setModerator(moderatorEmail);
+        when(previewService.hostedGame(testPin, moderatorEmail, false)).thenReturn(game);
+        when(previewService.playersInGame(testPin)).thenReturn(java.util.List.of("Bob"));
+        MockHttpSession session = new MockHttpSession();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/lobby/" + testPin)
+                        .principal(() -> moderatorEmail).session(session))
+                .andExpect(view().name("challenge/publish"))
+                .andExpect(model().attribute("quizPin", testPin))
+                .andExpect(model().attribute("players", java.util.List.of("Bob")));
+        org.junit.jupiter.api.Assertions.assertEquals(testPin, session.getAttribute("gamePin"));
+    }
+
+    @Test
+    void lobbyOfSomeoneElsesGameGoesBackToTheDashboard() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/lobby/" + testPin)
+                        .principal(() -> "intruder"))
+                .andExpect(view().name("redirect:/my-active-games"));
+    }
 }

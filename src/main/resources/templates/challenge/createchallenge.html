@@ -109,17 +109,17 @@
                                             <tr>
                                                 <td>0</td>
                                                 <td th:text="#{excel.question}">Question</td>
-                                                <td th:text="#{excel.maxChars120}">Max 120 characters</td>
+                                                <td th:text="#{excel.maxChars425}">Max 425 characters</td>
                                             </tr>
                                             <tr>
                                                 <td>1-4</td>
                                                 <td th:text="#{excel.answer1to4}">Answer 1-4</td>
-                                                <td th:text="#{excel.maxChars75}">Max 75 characters each</td>
+                                                <td th:text="#{excel.maxChars255}">Max 255 characters each</td>
                                             </tr>
                                             <tr>
                                                 <td>5</td>
                                                 <td th:text="#{excel.correctOptions}">Correct Options</td>
-                                                <td th:text="#{excel.correctOptionsDesc}">Comma-separated: A, B, C, D</td>
+                                                <td th:text="#{excel.correctOptionsDescFull}">Letters A–J, comma-separated. True/False: TRUE or FALSE. Word Cloud: EXACT or FUZZY</td>
                                             </tr>
                                             <tr>
                                                 <td>6</td>
@@ -158,6 +158,7 @@
                                             </tr>
                                         </tbody>
                                     </table>
+                                    <p class="form-hint" th:text="#{excel.headerRowNote}">A header row (Question, Answer1, …) is skipped automatically.</p>
                                 </div>
                             </div>
                         </div>
@@ -186,6 +187,36 @@
                             <span th:text="#{button.cancel}">Cancel</span>
                         </button>
                     </div>
+                </form>
+            </div>
+
+            <!-- Import a quiz from a Kahvoid JSON export -->
+            <div class="create-challenge-card">
+                <form method="POST" id="jsonImportForm" enctype="multipart/form-data" class="create-challenge-body"
+                      onsubmit="importJson(); return false;">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <section class="form-section">
+                        <div class="section-header">
+                            <div class="section-icon">
+                                <i class="fas fa-file-code"></i>
+                            </div>
+                            <div>
+                                <h2 class="section-title" th:text="#{challenge.create.importJson}">Import from JSON</h2>
+                                <p class="section-description" th:text="#{challenge.create.importJsonDescription}">Restore a quiz from a JSON export. Title, description and questions come from the file.</p>
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label for="jsonUpload" class="form-label" th:text="#{challenge.create.jsonFile}">JSON file</label>
+                            <input class="form-file" type="file" name="file" id="jsonUpload" accept=".json,application/json" />
+                        </div>
+                        <div id="jsonResultMessage" class="result-message"></div>
+                        <div class="form-actions">
+                            <button class="btn-primary-create" type="submit" id="btnImportJson">
+                                <i class="fas fa-file-import"></i>
+                                <span th:text="#{challenge.create.importJsonButton}">Import quiz</span>
+                            </button>
+                        </div>
+                    </section>
                 </form>
             </div>
 

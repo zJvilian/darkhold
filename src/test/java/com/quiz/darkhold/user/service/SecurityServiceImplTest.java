@@ -61,12 +61,12 @@ class SecurityServiceImplTest {
     class FindLoggedInUsernameTests {
 
         @Test
-        @DisplayName("Should return username from UserDetails")
+        @DisplayName("Should return username from UserDetails principal")
         void shouldReturnUsernameFromUserDetails() {
             UserDetails userDetails = new User("admin@test.com", "pass",
                     List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
             Authentication auth = mock(Authentication.class);
-            when(auth.getDetails()).thenReturn(userDetails);
+            when(auth.getPrincipal()).thenReturn(userDetails);
             SecurityContext context = mock(SecurityContext.class);
             when(context.getAuthentication()).thenReturn(auth);
             SecurityContextHolder.setContext(context);
@@ -77,10 +77,10 @@ class SecurityServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should return null when not UserDetails")
+        @DisplayName("Should return null when principal is not UserDetails")
         void shouldReturnNullWhenNotUserDetails() {
             Authentication auth = mock(Authentication.class);
-            when(auth.getDetails()).thenReturn("not-user-details");
+            when(auth.getPrincipal()).thenReturn("not-user-details");
             SecurityContext context = mock(SecurityContext.class);
             when(context.getAuthentication()).thenReturn(auth);
             SecurityContextHolder.setContext(context);
@@ -88,6 +88,16 @@ class SecurityServiceImplTest {
             String result = securityService.findLoggedInUsername();
 
             assertNull(result);
+        }
+
+        @Test
+        @DisplayName("Should return null when authentication is null")
+        void shouldReturnNullWhenAuthenticationIsNull() {
+            SecurityContext context = mock(SecurityContext.class);
+            when(context.getAuthentication()).thenReturn(null);
+            SecurityContextHolder.setContext(context);
+
+            assertNull(securityService.findLoggedInUsername());
         }
     }
 
@@ -156,6 +166,20 @@ class SecurityServiceImplTest {
 
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             assertTrue(auth.isAuthenticated());
+        }
+
+        @Test
+        @DisplayName("Should support List-backed authorities without ClassCastException")
+        void shouldSupportListAuthoritiesWithoutClassCastException() {
+            UserDetails userDetails = mock(UserDetails.class);
+            when(userDetails.getAuthorities()).thenAnswer(inv -> List.of(new SimpleGrantedAuthority("ADMIN")));
+            when(userDetailsService.loadUserByUsername("admin@test.com")).thenReturn(userDetails);
+            when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            securityService.autoLogin("admin@test.com", "password");
+
+            assertTrue(SecurityContextHolder.getContext().getAuthentication().isAuthenticated());
         }
     }
 

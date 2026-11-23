@@ -133,7 +133,6 @@ public class User implements Serializable {
                 .add("firstname='" + firstName + "'")
                 .add("lastname='" + lastName + "'")
                 .add("email='" + email + "'")
-                .add("password='" + password + "'")
                 .add("photo='" + photo + "'")
                 .add("enabled='" + enabled + "'")
                 .add("roles=" + roles)

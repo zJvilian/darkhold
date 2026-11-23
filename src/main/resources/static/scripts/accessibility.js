@@ -74,21 +74,19 @@ const A11y = (function() {
         });
 
         // Add keyboard support to onclick divs
-        document.addEventListener('DOMContentLoaded', function() {
-            const clickableDivs = document.querySelectorAll('[onclick]:not(button):not(a)');
-            clickableDivs.forEach(function(element) {
-                // Make keyboard focusable
-                if (!element.hasAttribute('tabindex')) {
-                    element.setAttribute('tabindex', '0');
-                }
+        const clickableDivs = document.querySelectorAll('[onclick]:not(button):not(a)');
+        clickableDivs.forEach(function(element) {
+            // Make keyboard focusable
+            if (!element.hasAttribute('tabindex')) {
+                element.setAttribute('tabindex', '0');
+            }
 
-                // Add keyboard event handlers
-                element.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32) {
-                        e.preventDefault();
-                        element.click();
-                    }
-                });
+            // Add keyboard event handlers
+            element.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32) {
+                    e.preventDefault();
+                    element.click();
+                }
             });
         });
     }
@@ -127,50 +125,48 @@ const A11y = (function() {
      * Setup skip navigation links
      */
     function setupSkipLinks() {
-        document.addEventListener('DOMContentLoaded', function() {
-            // Check if skip link already exists
-            if (document.getElementById('skip-to-main')) {
-                return;
-            }
+        // Check if skip link already exists
+        if (document.getElementById('skip-to-main')) {
+            return;
+        }
 
-            // Create skip link
-            const skipLink = document.createElement('a');
-            skipLink.id = 'skip-to-main';
-            skipLink.href = '#main-content';
-            skipLink.textContent = 'Skip to main content';
-            skipLink.className = 'sr-only sr-only-focusable';
-            skipLink.style.cssText = `
-                position: absolute;
-                top: -40px;
-                left: 0;
-                background: var(--color-primary);
-                color: var(--color-text-inverse);
-                padding: 8px 16px;
-                z-index: 10000;
-                text-decoration: none;
-            `;
+        // Create skip link
+        const skipLink = document.createElement('a');
+        skipLink.id = 'skip-to-main';
+        skipLink.href = '#main-content';
+        skipLink.textContent = 'Skip to main content';
+        skipLink.className = 'sr-only sr-only-focusable';
+        skipLink.style.cssText = `
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--color-primary);
+            color: var(--color-text-inverse);
+            padding: 8px 16px;
+            z-index: 10000;
+            text-decoration: none;
+        `;
 
-            // Show on focus
-            skipLink.addEventListener('focus', function() {
-                this.style.top = '0';
-            });
-
-            skipLink.addEventListener('blur', function() {
-                this.style.top = '-40px';
-            });
-
-            // Handle click
-            skipLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                const main = document.querySelector('main, [role="main"], #main-content');
-                if (main) {
-                    main.setAttribute('tabindex', '-1');
-                    main.focus();
-                }
-            });
-
-            document.body.insertBefore(skipLink, document.body.firstChild);
+        // Show on focus
+        skipLink.addEventListener('focus', function() {
+            this.style.top = '0';
         });
+
+        skipLink.addEventListener('blur', function() {
+            this.style.top = '-40px';
+        });
+
+        // Handle click
+        skipLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            const main = document.querySelector('main, [role="main"], #main-content');
+            if (main) {
+                main.setAttribute('tabindex', '-1');
+                main.focus();
+            }
+        });
+
+        document.body.insertBefore(skipLink, document.body.firstChild);
     }
 
     /**
@@ -240,7 +236,7 @@ const A11y = (function() {
         const container = document.querySelector(containerSelector);
         if (!container) return;
 
-        const answers = container.querySelectorAll('[data-answer], .answer-option, .option');
+        const answers = container.querySelectorAll('[data-answer], .answer-option, .answer-option-card, .option');
         if (answers.length === 0) return;
 
         let currentIndex = 0;

@@ -23,9 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 @Controller
 public class ChallengeController {
+    private static final int MAX_TITLE_LENGTH = 100;
+    private static final int MAX_DESCRIPTION_LENGTH = 250;
     private final Logger logger = LogManager.getLogger(ChallengeController.class);
     private final ChallengeService challengeService;
 
@@ -55,16 +58,41 @@ public class ChallengeController {
     public ResponseEntity<ChallengeWithResponse> handleFileUpload(
             final MultipartFile upload, final String title, final String description,
             final RedirectAttributes redirectAttributes) {
+        String invalid = validateUpload(upload, title, description);
+        if (invalid != null) {
+            return rejected(invalid);
+        }
         logParams(upload, title, description);
         try {
-            Long challengeId = challengeService.readProcessAndSaveChallenge(upload, title, description);
-            String responseText = "Successfully created " + CommonUtils.sanitizedString(title) + " !!!";
-            return ResponseEntity.ok(new ChallengeWithResponse(challengeId, responseText));
+            Long challengeId = challengeService.readProcessAndSaveChallenge(upload, title.trim(), trimmed(description));
+            return ResponseEntity.ok(new ChallengeWithResponse(challengeId,
+                    "Successfully created " + CommonUtils.sanitizedString(title) + " !!!"));
         } catch (ChallengeException challengeException) {
             logger.error("Failed to process challenge: {}", challengeException.getErrorMessage());
-            return ResponseEntity.badRequest()
-                    .body(new ChallengeWithResponse(0L, challengeException.getErrorMessage()));
+            return rejected(challengeException.getErrorMessage());
         }
+    }
+
+    private static String trimmed(final String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private static ResponseEntity<ChallengeWithResponse> rejected(final String message) {
+        return ResponseEntity.badRequest().body(new ChallengeWithResponse(0L, message));
+    }
+
+    private String validateUpload(final MultipartFile upload, final String title, final String description) {
+        if (upload == null || upload.isEmpty() || upload.getOriginalFilename() == null
+                || !upload.getOriginalFilename().toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
+            return "Please choose an .xlsx file.";
+        }
+        if (title == null || title.isBlank() || title.trim().length() > MAX_TITLE_LENGTH) {
+            return "Title is required and can be at most " + MAX_TITLE_LENGTH + " characters.";
+        }
+        if (description != null && description.trim().length() > MAX_DESCRIPTION_LENGTH) {
+            return "Description can be at most " + MAX_DESCRIPTION_LENGTH + " characters.";
+        }
+        return null;
     }
 
     private void logParams(final MultipartFile upload,
@@ -110,10 +138,15 @@ public class ChallengeController {
             @RequestParam @Size(max = 250) final String description) {
         String sanitizedTitle = CommonUtils.sanitizedString(title);
         logger.info("Creating new challenge: title={}", sanitizedTitle);
-        com.quiz.darkhold.challenge.entity.Challenge challenge =
-                challengeService.createEmptyChallenge(title, description);
-        return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
-                "Successfully created " + sanitizedTitle + " !!!"));
+        try {
+            com.quiz.darkhold.challenge.entity.Challenge challenge =
+                    challengeService.createEmptyChallenge(title.trim(), description);
+            return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
+                    "Successfully created " + sanitizedTitle + " !!!"));
+        } catch (ChallengeException challengeException) {
+            return ResponseEntity.badRequest()
+                    .body(new ChallengeWithResponse(0L, challengeException.getErrorMessage()));
+        }
     }
 
     @GetMapping("/edit_challenge/{id}")
@@ -136,15 +169,16 @@ public class ChallengeController {
             @PathVariable final Long id,
             @RequestParam @NotBlank @Size(max = 100) final String title,
             @RequestParam @Size(max = 250) final String description) {
-        String sanitizedTitle = CommonUtils.sanitizedString(title);
-        logger.info("Updating challenge {}: title={}", id, sanitizedTitle);
-        com.quiz.darkhold.challenge.entity.Challenge challenge =
-                challengeService.updateChallenge(id, title, description);
-        if (challenge == null) {
-            return ResponseEntity.notFound().build();
+        logger.info("Updating challenge {}: title={}", id, CommonUtils.sanitizedString(title));
+        try {
+            com.quiz.darkhold.challenge.entity.Challenge challenge =
+                    challengeService.updateChallenge(id, title.trim(), description);
+            return challenge == null ? ResponseEntity.notFound().build()
+                    : ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
+                    "Successfully updated " + CommonUtils.sanitizedString(title) + " !!!"));
+        } catch (ChallengeException challengeException) {
+            return rejected(challengeException.getErrorMessage());
         }
-        return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
-                "Successfully updated " + sanitizedTitle + " !!!"));
     }
 
     /**
@@ -272,7 +306,7 @@ public class ChallengeController {
         if (value == null) {
             return "";
         }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
             return "\"" + value.replace("\"", "\"\"") + "\"";
         }
         return value;
@@ -288,10 +322,11 @@ public class ChallengeController {
             com.quiz.darkhold.challenge.entity.Challenge challenge = challengeService.importFromJson(dto);
             return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                     "Successfully imported " + challenge.getTitle() + " !!!"));
+        } catch (ChallengeException challengeException) {
+            return rejected(challengeException.getErrorMessage());
         } catch (java.io.IOException | tools.jackson.core.JacksonException ioException) {
             logger.error("Error importing challenge", ioException);
-            return ResponseEntity.badRequest()
-                    .body(new ChallengeWithResponse(0L, "Failed to import: the file is not a valid quiz export."));
+            return rejected("Failed to import: the file is not a valid quiz export.");
         }
     }
 }

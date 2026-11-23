@@ -416,6 +416,129 @@ class ResultServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("practice, names, teams and deletion")
+    class PracticeNamesTeamsAndDeletionTests {
+
+        private GameResult save(final Game game) {
+            when(gameResultRepository.save(any(GameResult.class))).thenAnswer(inv -> inv.getArgument(0));
+            return resultService.saveGameResult(game.getPin(), "Quiz");
+        }
+
+        @Test
+        @DisplayName("A practice game has one participant, the host, who keeps their score")
+        void practiceCountsTheHostAsThePlayer() {
+            Game game = createTestGame("12345", "Julian#7", false);
+            game.setGameMode("PRACTICE");
+            when(gameRepository.findByPin("12345")).thenReturn(game);
+            when(currentGame.getQuestionsOnAPin("12345")).thenReturn(new ArrayList<>());
+            when(currentGame.getActiveUsersInGame("12345")).thenReturn(List.of("Julian#7"));
+            when(currentGame.getCurrentScore("12345")).thenReturn(Map.of("Julian#7", 900));
+            when(currentGame.findModerator("12345")).thenReturn("Julian#7");
+
+            GameResult result = save(game);
+
+            assertEquals(1, result.getParticipantCount());
+            assertEquals(1, result.getParticipantResults().size());
+            assertEquals("Julian", result.getParticipantResults().get(0).getUsername());
+            assertEquals("Julian", result.getWinnerUsername());
+            assertEquals(900, result.getWinnerScore());
+            assertEquals("Julian#7", result.getModerator(), "the owner key stays intact for lookups");
+        }
+
+        @Test
+        @DisplayName("The participant count never goes below zero and account ids are not shown")
+        void participantCountIsClampedAndNamesAreStripped() {
+            Game game = createTestGame("12345", "host#1", false);
+            when(gameRepository.findByPin("12345")).thenReturn(game);
+            when(currentGame.getQuestionsOnAPin("12345")).thenReturn(new ArrayList<>());
+            when(currentGame.getActiveUsersInGame("12345")).thenReturn(List.of());
+            when(currentGame.getCurrentScore("12345")).thenReturn(Map.of("Anna#12", 5, "host#1", 0));
+            when(currentGame.findModerator("12345")).thenReturn("host#1");
+
+            GameResult result = save(game);
+
+            assertEquals(0, result.getParticipantCount());
+            assertEquals("Anna", result.getWinnerUsername());
+            assertEquals("Anna", ResultService.displayName("Anna#12"));
+            assertEquals("Nick#x", ResultService.displayName("Nick#x"));
+        }
+
+        @Test
+        @DisplayName("A team that scored nothing is still saved in the standings")
+        void zeroScoreTeamsAreSaved() {
+            Game game = createTestGame("12345", "host", true);
+            setupBasicMocks("12345", game);
+            TeamInfo red = new TeamInfo("Red", "red");
+            TeamInfo blue = new TeamInfo("Blue", "blue");
+            when(teamService.getTeams("12345")).thenReturn(List.of(blue, red));
+            when(teamService.calculateTeamScores("12345")).thenReturn(Map.of("Red", 300));
+
+            ArgumentCaptor<com.quiz.darkhold.team.entity.TeamResult> captor =
+                    ArgumentCaptor.forClass(com.quiz.darkhold.team.entity.TeamResult.class);
+            save(game);
+            verify(teamResultRepository, org.mockito.Mockito.times(2)).save(captor.capture());
+            assertEquals(List.of("Red", "Blue"), captor.getAllValues().stream().map(t -> t.getTeamName()).toList());
+            assertEquals(List.of(1, 2), captor.getAllValues().stream().map(t -> t.getFinalRank()).toList());
+            assertEquals(0, captor.getAllValues().get(1).getFinalScore());
+            assertEquals("Red", captor.getAllValues().get(0).getGameResult().getWinningTeamName());
+        }
+
+        @Test
+        @DisplayName("Deleting a result removes its team rows first")
+        void deleteRemovesTeamRowsThenTheGame() {
+            var teamRow = new com.quiz.darkhold.team.entity.TeamResult();
+            when(teamResultRepository.findByGameResultId(4L)).thenReturn(List.of(teamRow));
+
+            resultService.deleteGameResult(4L);
+
+            var order = org.mockito.Mockito.inOrder(teamResultRepository, gameResultRepository);
+            order.verify(teamResultRepository).deleteAll(List.of(teamRow));
+            order.verify(gameResultRepository).deleteById(4L);
+        }
+
+        @Test
+        @DisplayName("Admins can list every result, newest first")
+        void allResultsAreSortedNewestFirst() {
+            GameResult newest = new GameResult();
+            when(gameResultRepository.findAll(any(org.springframework.data.domain.Sort.class)))
+                    .thenReturn(List.of(newest));
+
+            assertEquals(List.of(newest), resultService.getAllGameResults());
+        }
+
+        @Test
+        @DisplayName("Should copy player and question answer stats from CurrentGame")
+        void shouldCopyAnswerStatsFromCurrentGame() {
+            Game game = createTestGame("12345", "host", false);
+            setupGameWithScores("12345", game);
+            when(currentGame.getQuestionsOnAPin("12345")).thenReturn(createTestQuestions(1));
+            when(currentGame.getPlayerCorrectCount("12345", "player1")).thenReturn(3);
+            when(currentGame.getPlayerIncorrectCount("12345", "player1")).thenReturn(1);
+            when(currentGame.getPlayerMaxStreak("12345", "player1")).thenReturn(2);
+            when(currentGame.getPlayerAvgAnswerTimeSeconds("12345", "player1")).thenReturn(4);
+            when(currentGame.getQuestionCorrectCount("12345", 0)).thenReturn(1);
+            when(currentGame.getQuestionIncorrectCount("12345", 0)).thenReturn(0);
+            when(currentGame.getQuestionAvgAnswerTimeSeconds("12345", 0)).thenReturn(5);
+            when(currentGame.getQuestionFastestAnswerTimeSeconds("12345", 0)).thenReturn(2);
+
+            GameResult saved = save(game);
+
+            ParticipantResult p1 = saved.getParticipantResults().get(0);
+            assertEquals(3, p1.getCorrectAnswers());
+            assertEquals(1, p1.getIncorrectAnswers());
+            assertEquals(2, p1.getMaxStreak());
+            assertEquals(4, p1.getAverageAnswerTimeSeconds());
+
+            QuestionResult q1 = saved.getQuestionResults().get(0);
+            assertEquals(1, q1.getCorrectCount());
+            assertEquals(0, q1.getIncorrectCount());
+            assertEquals(1, q1.getTimeoutCount());
+            assertEquals(5, q1.getAverageAnswerTimeSeconds());
+            assertEquals(2, q1.getFastestAnswerTimeSeconds());
+        }
+    }
+
     // Helper methods
 
     private Game createTestGame(final String pin, final String moderator, final boolean teamMode) {

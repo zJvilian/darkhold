@@ -68,6 +68,10 @@
                                     <i class="fas fa-hashtag"></i>
                                     <span th:text="${game.pin}">12345</span>
                                 </span>
+                                <span class="game-meta-item" th:if="${admin}">
+                                    <i class="fas fa-user"></i>
+                                    <span th:text="${game.moderator.replaceFirst('#[0-9]+$', '')}">Host</span>
+                                </span>
                             </div>
                         </div>
                         <span class="game-mode-badge"
@@ -106,7 +110,7 @@
                                     <i class="fas fa-trophy"></i>
                                 </div>
                                 <div class="winner-info">
-                                    <span class="winner-name" th:text="${game.winnerUsername}">John Doe</span>
+                                    <span class="winner-name" th:text="${game.winnerUsername.replaceFirst('#[0-9]+$', '')}">John Doe</span>
                                     <span class="winner-score" th:text="${game.winnerScore} + ' pts'">8500 pts</span>
                                 </div>
                             </div>
@@ -126,6 +130,14 @@
                             <i class="fas fa-download"></i>
                             <span th:text="#{pastgames.exportCsv}">Export CSV</span>
                         </a>
+                        <form th:action="@{/game-result/{id}/delete(id=${game.id})}" method="post" style="display: contents;"
+                              th:attr="data-confirm=#{pastgames.deleteConfirm}"
+                              onsubmit="return confirm(this.dataset.confirm);">
+                            <button type="submit" class="game-action-btn game-action-btn--secondary">
+                                <i class="fas fa-trash"></i>
+                                <span th:text="#{button.delete}">Delete</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

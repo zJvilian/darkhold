@@ -56,8 +56,8 @@ public class AnswerValidationService {
     }
 
     /**
-     * Validate a single chosen option (A-D, TRUE or FALSE) as posted by the click-to-answer flow.
-     * With several correct options, picking any one of them is correct. Typed and sorting answers
+     * Validate the chosen option(s) (A-D, comma-separated, or TRUE/FALSE) as posted by the click-to-answer flow.
+     * With several correct options, the player must pick exactly all of them. Typed and sorting answers
      * are validated through {@link #validateAnswer} instead, so they never match here.
      *
      * @param question the question being answered
@@ -71,8 +71,7 @@ public class AnswerValidationService {
         QuestionType questionType = question.getQuestionType() == null
                 ? QuestionType.MULTIPLE_CHOICE : question.getQuestionType();
         return switch (questionType) {
-            case MULTIPLE_CHOICE -> question.getCorrectOptions() != null
-                    && validateChoices(question.getCorrectOptions(), selected);
+            case MULTIPLE_CHOICE -> validateMultipleChoice(question, selected);
             case TRUE_FALSE -> validateTrueFalse(question, selected);
             default -> false;
         };
@@ -175,13 +174,6 @@ public class AnswerValidationService {
             return false;
         }
         return optionSet(correctOptions).equals(optionSet(userAnswer));
-    }
-
-    // One option counts if it is right (live games take a single click); several must be exactly all right ones
-    private boolean validateChoices(final String correctOptions, final String selected) {
-        java.util.Set<String> correct = optionSet(correctOptions);
-        java.util.Set<String> chosen = optionSet(selected);
-        return chosen.size() == 1 ? correct.containsAll(chosen) : chosen.equals(correct);
     }
 
     private java.util.Set<String> optionSet(final String options) {

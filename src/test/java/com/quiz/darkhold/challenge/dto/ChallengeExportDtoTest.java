@@ -32,6 +32,16 @@ class ChallengeExportDtoTest {
     }
 
     @Test
+    @DisplayName("Should export the cover image URL")
+    void shouldExportCoverImageUrl() {
+        var challenge = new Challenge();
+        challenge.setCoverImageUrl("/question-images/3/cover/cover_1.png");
+
+        assertEquals("/question-images/3/cover/cover_1.png",
+                ChallengeExportDto.fromEntity(challenge).getCoverImageUrl());
+    }
+
+    @Test
     @DisplayName("Should map question answer fields")
     void shouldMapAnswerFields() {
         var qs = createTestQuestionSet();

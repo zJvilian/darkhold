@@ -8,6 +8,7 @@ import com.quiz.darkhold.team.service.TeamService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -54,7 +55,7 @@ class TeamControllerTest {
         // Create controller with mocked dependencies
         currentGame = mock(CurrentGame.class);
         when(currentGame.findModerator(testPin)).thenReturn("mod");
-        teamController = new TeamController(teamService, currentGame);
+        teamController = new TeamController(teamService, currentGame, mock(SimpMessagingTemplate.class));
 
         // Build standalone MockMvc
         mockMvc = MockMvcBuilders.standaloneSetup(teamController).build();

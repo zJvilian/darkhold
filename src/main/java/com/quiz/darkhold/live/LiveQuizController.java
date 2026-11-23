@@ -58,7 +58,7 @@ public class LiveQuizController {
 
     @GetMapping("/join")
     public String joinPage(@RequestParam(defaultValue = "") final String pin, final Model model) {
-        model.addAttribute("pin", pin.matches("[0-9]{4,6}") ? pin : "");
+        model.addAttribute("pin", pin.matches("[0-9]{6}") ? pin : "");
         model.addAttribute("avatars", LiveQuizService.AVATARS);
         return "live/join";
     }
@@ -86,7 +86,7 @@ public class LiveQuizController {
             }
             flash.addFlashAttribute("joinError", ex.getReason());
             flash.addFlashAttribute("nickname", name);
-            return "redirect:/join?pin=" + (pin.matches("[0-9]{4,6}") ? pin : "");
+            return "redirect:/join?pin=" + (pin.matches("[0-9]{6}") ? pin : "");
         }
     }
 

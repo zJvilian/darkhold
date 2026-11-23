@@ -48,8 +48,22 @@
             <i class="fas fa-check-circle"></i>
             <span>[[${message}]]</span>
         </div>
-        <!-- Users Table -->
+        <!-- Error Message -->
         <div th:if="${errorMessage != null}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+        <!-- Search Bar -->
+        <form method="get" th:action="@{/userManagement}" class="admin-toolbar">
+            <div class="admin-search-box">
+                <i class="fas fa-search admin-search-icon" aria-hidden="true"></i>
+                <input type="search" name="q" class="admin-search-input" th:value="${query}"
+                       th:placeholder="#{quizList.search}" th:aria-label="#{quizList.search}" />
+            </div>
+            <div class="admin-filter-group">
+                <button type="submit" class="btn btn-primary btn-sm" th:text="#{quizList.search}">Search</button>
+                <a th:if="${query != null and !query.isEmpty()}" th:href="@{/userManagement}"
+                   class="btn btn-secondary btn-sm" th:text="#{button.cancel}">Cancel</a>
+            </div>
+        </form>
+        <!-- Users Table -->
         <div class="admin-card">
             <div class="admin-table-container">
                 <table class="admin-table">
@@ -136,26 +150,38 @@
                         </span>
                         <span th:unless="${totalItems > 0}" th:text="#{user.noUsersFound}">No users found</span>
                     </div>
-                    <div class="admin-pagination-controls">
-                        <a th:href="@{/user/page/1}"
-                           th:class="${currentPage > 1 ? 'pagination-btn' : 'pagination-btn'}"
-                           th:classappend="${currentPage <= 1 ? 'disabled' : ''}"
+                    <div class="admin-pagination-controls" th:if="${totalPages > 0}">
+                        <a th:if="${currentPage > 1}"
+                           th:href="@{/user/page/1(q=${#strings.isEmpty(query) ? null : query})}"
+                           class="pagination-btn"
                            th:text="#{user.first}">First</a>
-                        <a th:href="@{'/user/page/' + ${currentPage - 1}}"
-                           th:class="${currentPage > 1 ? 'pagination-btn' : 'pagination-btn'}"
-                           th:classappend="${currentPage <= 1 ? 'disabled' : ''}"
+                        <span th:unless="${currentPage > 1}"
+                              class="pagination-btn disabled" aria-disabled="true"
+                              th:text="#{user.first}">First</span>
+                        <a th:if="${currentPage > 1}"
+                           th:href="@{/user/page/{p}(p=${currentPage - 1},q=${#strings.isEmpty(query) ? null : query})}"
+                           class="pagination-btn"
                            th:text="#{user.previous}">Previous</a>
+                        <span th:unless="${currentPage > 1}"
+                              class="pagination-btn disabled" aria-disabled="true"
+                              th:text="#{user.previous}">Previous</span>
                         <a th:each="i : ${#numbers.sequence(1, totalPages)}"
-                           th:href="@{'/user/page/' + ${i}}"
+                           th:href="@{/user/page/{p}(p=${i},q=${#strings.isEmpty(query) ? null : query})}"
                            th:class="${currentPage == i ? 'pagination-btn active' : 'pagination-btn'}">[[${i}]]</a>
-                        <a th:href="@{'/user/page/' + ${currentPage + 1}}"
-                           th:class="${currentPage < totalPages ? 'pagination-btn' : 'pagination-btn'}"
-                           th:classappend="${currentPage >= totalPages ? 'disabled' : ''}"
+                        <a th:if="${currentPage < totalPages}"
+                           th:href="@{/user/page/{p}(p=${currentPage + 1},q=${#strings.isEmpty(query) ? null : query})}"
+                           class="pagination-btn"
                            th:text="#{user.next}">Next</a>
-                        <a th:href="@{'/user/page/' + ${totalPages}}"
-                           th:class="${currentPage < totalPages ? 'pagination-btn' : 'pagination-btn'}"
-                           th:classappend="${currentPage >= totalPages ? 'disabled' : ''}"
+                        <span th:unless="${currentPage < totalPages}"
+                              class="pagination-btn disabled" aria-disabled="true"
+                              th:text="#{user.next}">Next</span>
+                        <a th:if="${currentPage < totalPages}"
+                           th:href="@{/user/page/{p}(p=${totalPages},q=${#strings.isEmpty(query) ? null : query})}"
+                           class="pagination-btn"
                            th:text="#{user.last}">Last</a>
+                        <span th:unless="${currentPage < totalPages}"
+                              class="pagination-btn disabled" aria-disabled="true"
+                              th:text="#{user.last}">Last</span>
                     </div>
                 </div>
             </div>
@@ -193,7 +219,7 @@
     }
 
     // Delete confirmation modal
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', function() {
         var deleteLinks = document.querySelectorAll('.admin-action-btn--delete');
 
         deleteLinks.forEach(function(link) {
@@ -209,7 +235,7 @@
                 document.getElementById('deleteUserForm').action = this.dataset.deleteUrl;
             });
         });
-    };
+    });
 </script>
 </body>
 </html>

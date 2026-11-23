@@ -1,10 +1,8 @@
 package com.quiz.darkhold.options.controller;
 
-import com.quiz.darkhold.game.service.GameService;
 import com.quiz.darkhold.game.service.GameSettingsService;
 import com.quiz.darkhold.init.GameConfig;
 import com.quiz.darkhold.options.service.OptionsService;
-import com.quiz.darkhold.preview.service.PreviewService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,25 +12,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.Collections;
-
 @Controller
 public class OptionsController {
     private final Log log = LogFactory.getLog(OptionsController.class);
     private final OptionsService optionsService;
-    private final PreviewService previewService;
-    private final GameService gameService;
     private final GameSettingsService gameSettingsService;
     private final GameConfig gameConfig;
 
     public OptionsController(final OptionsService optionsService,
-                             final PreviewService previewService,
-                             final GameService gameService,
                              final GameSettingsService gameSettingsService,
                              final GameConfig gameConfig) {
         this.optionsService = optionsService;
-        this.previewService = previewService;
-        this.gameService = gameService;
         this.gameSettingsService = gameSettingsService;
         this.gameConfig = gameConfig;
     }
@@ -71,28 +61,15 @@ public class OptionsController {
     }
 
     /**
-     * Show the currently running challenge with all participants.
+     * Old entry point that showed the PIN of whatever game was running, whoever hosted it.
+     * Hosts now find their own games in the active games list.
      *
-     * @param model model to populate with challenge data
-     * @return publish page
+     * @return redirect to the host's own active games
      */
     @PostMapping("/activeChallenge")
-    public String activeChallenges(final Model model) {
-        log.info("Into the activeChallenge method");
-        com.quiz.darkhold.preview.model.PublishInfo publishInfo = previewService.getActiveChallenge();
-        if (publishInfo != null && publishInfo.getPin() != null) {
-            model.addAttribute("quizPin", publishInfo.getPin());
-            model.addAttribute("user", publishInfo.getModerator());
-            // Get all participants for the active game
-            java.util.List<String> participants = gameService.getAllParticipants(publishInfo.getPin());
-            model.addAttribute("participants", participants != null ? participants : Collections.emptyList());
-            log.info("activeChallenges method, quizPin: " + publishInfo.getPin()
-                    + ", participants: " + (participants != null ? participants.size() : 0));
-        }
-        return "challenge/publish";
+    public String activeChallenges() {
+        return "redirect:/my-active-games";
     }
-
-
 
     /**
      * Game defaults page. Access is limited to ADMIN and GAME_MANAGER in SecurityConfig.

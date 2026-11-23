@@ -1,9 +1,11 @@
 package com.quiz.darkhold.user.controller;
 
 import com.quiz.darkhold.home.model.GameInfo;
+import com.quiz.darkhold.init.RateLimitingService;
 import com.quiz.darkhold.user.entity.Role;
 import com.quiz.darkhold.user.entity.User;
 import com.quiz.darkhold.user.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -12,9 +14,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.ui.Model;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
@@ -28,7 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -43,13 +48,19 @@ class RegistrationControllerTest {
     private UserService userService;
 
     @Mock
+    private RateLimitingService rateLimitingService;
+
+    @Mock
     private Model model;
 
+    private HttpServletRequest request;
     private RegistrationController registrationController;
 
     @BeforeEach
     void setUp() {
-        registrationController = new RegistrationController(userService);
+        request = new MockHttpServletRequest();
+        lenient().when(rateLimitingService.isAllowed(anyString())).thenReturn(true);
+        registrationController = new RegistrationController(userService, rateLimitingService);
     }
 
     @Nested
@@ -84,38 +95,11 @@ class RegistrationControllerTest {
     class RegistrationGetMethodTests {
 
         @Test
-        @DisplayName("should return registration view name")
+        @DisplayName("should return registration view name without unused userForm attribute")
         void testRegistrationGet_ShouldReturnRegistrationViewName() {
-            // When
             String result = registrationController.registration(model);
-
-            // Then
             assertEquals("registration", result);
-        }
-
-        @Test
-        @DisplayName("should add userForm attribute to model")
-        void testRegistrationGet_ShouldAddUserFormToModel() {
-            // When
-            registrationController.registration(model);
-
-            // Then
-            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-            verify(model).addAttribute(eq("userForm"), userCaptor.capture());
-            assertNotNull(userCaptor.getValue());
-        }
-
-        @Test
-        @DisplayName("should add new User instance to model")
-        void testRegistrationGet_ShouldAddNewUserInstanceToModel() {
-            // When
-            registrationController.registration(model);
-
-            // Then
-            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
-            verify(model).addAttribute(eq("userForm"), userCaptor.capture());
-            User capturedUser = userCaptor.getValue();
-            assertEquals(User.class, capturedUser.getClass());
+            verify(model, never()).addAttribute(eq("userForm"), any());
         }
     }
 
@@ -129,23 +113,18 @@ class RegistrationControllerTest {
         @BeforeEach
         void setUpPost() {
             bindingResult = mock(BindingResult.class);
-            user = new User();
-            user.setFirstName("John");
-            user.setEmail("john@example.com");
+            user = createValidUser("John", "Doe", "john@example.com");
         }
 
         @Test
         @DisplayName("should return registration view when binding result has errors")
         void testRegistrationPost_WhenBindingResultHasErrors_ShouldReturnRegistrationView() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(true);
             ObjectError error = mock(ObjectError.class);
             when(bindingResult.getAllErrors()).thenReturn(List.of(error));
 
-            // When
-            String result = registrationController.registration(model, user, bindingResult);
+            String result = registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             assertEquals("registration", result);
             verify(userService, never()).save(any());
             verify(model, never()).addAttribute(eq("gameinfo"), any());
@@ -154,15 +133,12 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should save user with GUEST role when no binding errors")
         void testRegistrationPost_WhenNoErrors_ShouldSaveUserWithGuestRole() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userService).save(userCaptor.capture());
             User savedUser = userCaptor.getValue();
@@ -173,30 +149,24 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should return index view when registration succeeds")
         void testRegistrationPost_WhenNoErrors_ShouldReturnIndexView() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            String result = registrationController.registration(model, user, bindingResult);
+            String result = registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             assertEquals("index", result);
         }
 
         @Test
         @DisplayName("should add success message to model when registration succeeds")
         void testRegistrationPost_WhenNoErrors_ShouldAddGameInfoToModel() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             ArgumentCaptor<GameInfo> gameInfoCaptor = ArgumentCaptor.forClass(GameInfo.class);
             verify(model).addAttribute(eq("gameinfo"), gameInfoCaptor.capture());
             GameInfo gameInfo = gameInfoCaptor.getValue();
@@ -206,16 +176,13 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should set user enabled to true")
         void testRegistrationPost_ShouldSetUserEnabledToTrue() {
-            // Given
             user.setEnabled(false);
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userService).save(userCaptor.capture());
             assertEquals(true, userCaptor.getValue().getEnabled());
@@ -224,17 +191,14 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should handle multiple roles and find GUEST role")
         void testRegistrationPost_WhenMultipleRoles_ShouldFindAndAssignGuestRole() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role adminRole = createMockRole("ADMIN");
             Role guestRole = createMockRole("GUEST");
             Role userRole = createMockRole("USER");
             when(userService.listRoles()).thenReturn(List.of(adminRole, userRole, guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userService).save(userCaptor.capture());
             User savedUser = userCaptor.getValue();
@@ -245,79 +209,62 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should not set roles when GUEST role not found")
         void testRegistrationPost_WhenGuestRoleNotFound_ShouldNotSetRoles() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role adminRole = createMockRole("ADMIN");
             when(userService.listRoles()).thenReturn(List.of(adminRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userService).save(userCaptor.capture());
-            User savedUser = userCaptor.getValue();
-            // Verify user was saved and roles should not be set if GUEST role is not found
-            assertNotNull(savedUser);
+            assertNotNull(userCaptor.getValue());
         }
 
         @Test
         @DisplayName("should call userService.save exactly once on successful registration")
         void testRegistrationPost_ShouldCallSaveExactlyOnce() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             verify(userService, times(1)).save(any());
         }
 
         @Test
         @DisplayName("should call userService.listRoles exactly once")
         void testRegistrationPost_ShouldCallListRolesExactlyOnce() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             verify(userService, times(1)).listRoles();
         }
 
         @Test
         @DisplayName("should add gameinfo attribute only once on success")
         void testRegistrationPost_ShouldAddGameInfoAttributeOnlyOnce() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             verify(model, times(1)).addAttribute(eq("gameinfo"), any(GameInfo.class));
         }
 
         @Test
         @DisplayName("should not call userService methods when binding result has errors")
         void testRegistrationPost_WhenErrors_ShouldNotCallUserService() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(true);
             ObjectError error = mock(ObjectError.class);
             when(bindingResult.getAllErrors()).thenReturn(List.of(error));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             verify(userService, never()).listRoles();
             verify(userService, never()).save(any());
         }
@@ -325,14 +272,11 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should handle empty roles list gracefully")
         void testRegistrationPost_WhenNoRolesAvailable_ShouldHandleGracefully() {
-            // Given
             when(bindingResult.hasErrors()).thenReturn(false);
             when(userService.listRoles()).thenReturn(new ArrayList<>());
 
-            // When
-            String result = registrationController.registration(model, user, bindingResult);
+            String result = registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             assertEquals("index", result);
             verify(userService).save(any());
         }
@@ -340,7 +284,6 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should preserve user data when saving with GUEST role")
         void testRegistrationPost_ShouldPreserveUserDataWhenSaving() {
-            // Given
             String firstName = "Alice";
             String email = "alice@example.com";
             user.setFirstName(firstName);
@@ -349,10 +292,8 @@ class RegistrationControllerTest {
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            registrationController.registration(model, user, bindingResult);
+            registrationController.registration(model, user, bindingResult, request);
 
-            // Then
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userService).save(userCaptor.capture());
             User savedUser = userCaptor.getValue();
@@ -363,22 +304,49 @@ class RegistrationControllerTest {
 
     @Test
     void concurrentDuplicateEmailReturnsRegistrationForm() {
-        User user = registrationController.user();
-        user.setEmail("duplicate@example.invalid");
+        User user = createValidUser("Dup", "User", "duplicate@example.invalid");
         var errors = new BeanPropertyBindingResult(user, "user");
         when(userService.findByUsername(user.getEmail())).thenReturn(null, new User());
         when(userService.save(user)).thenThrow(new DataIntegrityViolationException("duplicate email"));
-        assertEquals("registration", registrationController.registration(model, user, errors));
+        assertEquals("registration", registrationController.registration(model, user, errors, request));
         assertTrue(errors.hasFieldErrors("email"));
     }
 
     @Test
     void otherDatabaseFailuresAreNotReportedAsDuplicateEmail() {
-        User user = registrationController.user();
+        User user = createValidUser("Other", "User", "other@example.invalid");
         var errors = new BeanPropertyBindingResult(user, "user");
         when(userService.save(user)).thenThrow(new DataIntegrityViolationException("other constraint"));
         assertThrows(DataIntegrityViolationException.class,
-                () -> registrationController.registration(model, user, errors));
+                () -> registrationController.registration(model, user, errors, request));
+    }
+
+    @Test
+    void rejectsInvalidNamesEmailAndPassword() {
+        User invalid = new User();
+        invalid.setFirstName("A");
+        invalid.setLastName(" ");
+        invalid.setEmail("bad-email");
+        invalid.setPassword("short");
+        var errors = new BeanPropertyBindingResult(invalid, "user");
+
+        assertEquals("registration", registrationController.registration(model, invalid, errors, request));
+        assertTrue(errors.hasFieldErrors("firstName"));
+        assertTrue(errors.hasFieldErrors("lastName"));
+        assertTrue(errors.hasFieldErrors("email"));
+        assertTrue(errors.hasFieldErrors("password"));
+        verify(userService, never()).save(any());
+    }
+
+    @Test
+    void blocksRateLimitedRegistration() {
+        when(rateLimitingService.isAllowed(anyString())).thenReturn(false);
+        User user = createValidUser("Alice", "Smith", "alice@example.invalid");
+        var errors = new BeanPropertyBindingResult(user, "user");
+
+        assertEquals("registration", registrationController.registration(model, user, errors, request));
+        assertTrue(errors.hasGlobalErrors());
+        verify(userService, never()).save(any());
     }
 
     @Nested
@@ -388,19 +356,14 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should complete full registration flow successfully")
         void testCompleteRegistrationFlow() {
-            // Given
-            User newUser = new User();
-            newUser.setFirstName("Alice");
-            newUser.setEmail("alice@example.com");
+            User newUser = createValidUser("Alice", "Smith", "alice@example.com");
             BindingResult bindingResult = mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(false);
             Role guestRole = createMockRole("GUEST");
             when(userService.listRoles()).thenReturn(List.of(guestRole));
 
-            // When
-            String result = registrationController.registration(model, newUser, bindingResult);
+            String result = registrationController.registration(model, newUser, bindingResult, request);
 
-            // Then
             assertEquals("index", result);
             verify(userService).listRoles();
             verify(userService).save(any(User.class));
@@ -410,17 +373,14 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should handle registration with validation errors")
         void testRegistrationWithValidationErrors() {
-            // Given
             User newUser = new User();
             BindingResult bindingResult = mock(BindingResult.class);
             when(bindingResult.hasErrors()).thenReturn(true);
             ObjectError error = new ObjectError("user", "Invalid email format");
             when(bindingResult.getAllErrors()).thenReturn(List.of(error));
 
-            // When
-            String result = registrationController.registration(model, newUser, bindingResult);
+            String result = registrationController.registration(model, newUser, bindingResult, request);
 
-            // Then
             assertEquals("registration", result);
             verify(userService, never()).listRoles();
             verify(userService, never()).save(any());
@@ -429,12 +389,18 @@ class RegistrationControllerTest {
         @Test
         @DisplayName("should call user model attribute factory method")
         void testUserModelAttributeMethod() {
-            // When
             User user = registrationController.user();
-
-            // Then
             assertNotNull(user);
         }
+    }
+
+    private User createValidUser(final String first, final String last, final String email) {
+        User user = new User();
+        user.setFirstName(first);
+        user.setLastName(last);
+        user.setEmail(email);
+        user.setPassword("ValidPass123!");
+        return user;
     }
 
     // ======================== Helper Methods ========================

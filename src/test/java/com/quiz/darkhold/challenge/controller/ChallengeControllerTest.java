@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -136,22 +137,32 @@ class ChallengeControllerTest {
         }
 
         @Test
-        @DisplayName("Should handle empty title")
-        void shouldHandleEmptyTitle() throws ChallengeException {
-            String emptyTitle = "";
-            Long expectedChallengeId = 789L;
-            when(challengeService.readProcessAndSaveChallenge(mockFile, emptyTitle, testDescription))
-                    .thenReturn(expectedChallengeId);
+        @DisplayName("Should reject an empty or missing title without saving anything")
+        void shouldRejectEmptyTitle() throws ChallengeException {
+            for (String title : new String[] {"", "   ", null}) {
+                var responseEntity = challengeController.handleFileUpload(mockFile, title, testDescription,
+                        redirectAttributes);
+                assertEquals(HttpStatus.BAD_REQUEST, responseEntity.getStatusCode());
+            }
+            verify(challengeService, never()).readProcessAndSaveChallenge(any(), any(), any());
+        }
 
-            ResponseEntity<ChallengeController.ChallengeWithResponse> responseEntity =
-                    challengeController.handleFileUpload(mockFile, emptyTitle, testDescription, redirectAttributes);
-
-            assertNotNull(responseEntity);
-            assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-            var response = responseEntity.getBody();
-            assertNotNull(response);
-            assertEquals(expectedChallengeId, response.challengeId());
-            verify(challengeService).readProcessAndSaveChallenge(mockFile, emptyTitle, testDescription);
+        @Test
+        @DisplayName("Should reject a missing, unnamed or non-xlsx file and over-long text")
+        void shouldRejectBadUploads() throws ChallengeException {
+            var unnamed = new MockMultipartFile("upload", null, "application/octet-stream", "data".getBytes(UTF_8));
+            var csv = new MockMultipartFile("upload", "q.csv", "text/csv", "data".getBytes(UTF_8));
+            assertEquals(HttpStatus.BAD_REQUEST, challengeController
+                    .handleFileUpload(null, testTitle, testDescription, redirectAttributes).getStatusCode());
+            assertEquals(HttpStatus.BAD_REQUEST, challengeController
+                    .handleFileUpload(unnamed, testTitle, testDescription, redirectAttributes).getStatusCode());
+            assertEquals(HttpStatus.BAD_REQUEST, challengeController
+                    .handleFileUpload(csv, testTitle, testDescription, redirectAttributes).getStatusCode());
+            assertEquals(HttpStatus.BAD_REQUEST, challengeController
+                    .handleFileUpload(mockFile, "t".repeat(101), testDescription, redirectAttributes).getStatusCode());
+            assertEquals(HttpStatus.BAD_REQUEST, challengeController
+                    .handleFileUpload(mockFile, testTitle, "d".repeat(251), redirectAttributes).getStatusCode());
+            verify(challengeService, never()).readProcessAndSaveChallenge(any(), any(), any());
         }
 
         @Test
@@ -172,35 +183,16 @@ class ChallengeControllerTest {
 
 
         @Test
-        @DisplayName("Should handle null title")
-        void shouldHandleNullTitle() throws ChallengeException {
-            when(challengeService.readProcessAndSaveChallenge(mockFile, null, testDescription))
-                    .thenReturn(111L);
-
-            ResponseEntity<ChallengeController.ChallengeWithResponse> responseEntity =
-                    challengeController.handleFileUpload(mockFile, null, testDescription, redirectAttributes);
-
-            assertNotNull(responseEntity);
-            assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-            var response = responseEntity.getBody();
-            assertNotNull(response);
-            assertEquals(111L, response.challengeId());
-        }
-
-        @Test
-        @DisplayName("Should handle null description")
+        @DisplayName("Should treat a missing description as empty")
         void shouldHandleNullDescription() throws ChallengeException {
-            when(challengeService.readProcessAndSaveChallenge(mockFile, testTitle, null))
+            when(challengeService.readProcessAndSaveChallenge(mockFile, testTitle, ""))
                     .thenReturn(222L);
 
             ResponseEntity<ChallengeController.ChallengeWithResponse> responseEntity =
                     challengeController.handleFileUpload(mockFile, testTitle, null, redirectAttributes);
 
-            assertNotNull(responseEntity);
             assertEquals(HttpStatus.OK, responseEntity.getStatusCode());
-            var response = responseEntity.getBody();
-            assertNotNull(response);
-            assertEquals(222L, response.challengeId());
+            assertEquals(222L, responseEntity.getBody().challengeId());
         }
     }
 

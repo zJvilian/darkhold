@@ -1,6 +1,5 @@
 function logMeIn() {
-    document.forms[0].action = "/logmein";
-    document.forms[0].submit();
+    window.location.href = "/login";
 }
 
 function toOptions() {
@@ -8,8 +7,24 @@ function toOptions() {
 }
 
 function logOut() {
-    document.forms[0].action = "/logout";
-    document.forms[0].submit();
+    var form = document.getElementById("darkholdLogoutForm");
+    if (form) {
+        form.submit();
+        return;
+    }
+    form = document.createElement("form");
+    form.method = "post";
+    form.action = "/logout";
+    var token = typeof CsrfManager !== "undefined" ? CsrfManager.getToken() : null;
+    if (token) {
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "_csrf";
+        input.value = token;
+        form.appendChild(input);
+    }
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function toHome() {
@@ -38,7 +53,7 @@ function toggleTheme() {
  * Update theme icon based on current theme (both auth and anon icons)
  */
 function updateThemeIcon(theme) {
-    var icons = ['theme-icon', 'theme-icon-anon'];
+    var icons = ['theme-icon', 'theme-icon-anon', 'theme-icon-mobile'];
     var className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
     icons.forEach(function(id) {
         var el = document.getElementById(id);
@@ -89,10 +104,14 @@ function updateLanguageDisplay(lang) {
  * Update sound icon based on enabled state
  */
 function updateSoundIcon(enabled) {
-    const soundIcon = document.getElementById('sound-icon');
-    if (soundIcon) {
-        soundIcon.className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-    }
+    var icons = ['sound-icon', 'sound-icon-mobile'];
+    var className = enabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+    icons.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.className = className;
+        }
+    });
 }
 
 /**
@@ -130,6 +149,11 @@ function initializeUI() {
     // Listen for theme changes
     window.addEventListener('themechange', function(e) {
         updateThemeIcon(e.detail.theme);
+    });
+
+    // Listen for sound changes
+    window.addEventListener('soundchange', function(e) {
+        updateSoundIcon(e.detail.enabled);
     });
 
     // Update sound icon based on current state

@@ -190,4 +190,25 @@ class UserManagementSecurityTest {
                 .andExpect(status().is3xxRedirection());
         assertTrue(users.existsById(guest.getId()));
     }
+
+    @Test
+    void adminCannotDisableOrDeleteOwnAccountAndPaginationHasNoPageZero() throws Exception {
+        Long adminId = users.findByEmail("admin@admin.com").getId();
+        mvc.perform(post("/users/" + adminId + "/enabled/false").with(admin()).with(csrf()))
+                .andExpect(redirectedUrl("/userManagement"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash()
+                        .attributeExists("errorMessage"));
+        mvc.perform(post("/user/delete/" + adminId).with(admin()).with(csrf()))
+                .andExpect(redirectedUrl("/userManagement"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash()
+                        .attributeExists("errorMessage"));
+        assertTrue(users.findById(adminId).orElseThrow().getEnabled());
+        mvc.perform(get("/userManagement").with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("/user/page/0"))))
+                .andExpect(content().string(containsString("id=\"darkholdLogoutForm\"")));
+        mvc.perform(get("/userManagement").param("q", guest.getEmail()).with(admin()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(guest.getEmail())));
+    }
 }

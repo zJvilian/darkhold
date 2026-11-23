@@ -5,6 +5,7 @@ import com.quiz.darkhold.game.entity.Game;
 import com.quiz.darkhold.game.entity.GameStatus;
 import com.quiz.darkhold.game.repository.GameRepository;
 import com.quiz.darkhold.init.GameConfig;
+import com.quiz.darkhold.live.LiveRoomRepository;
 import com.quiz.darkhold.preview.model.PreviewInfo;
 import com.quiz.darkhold.preview.model.PublishInfo;
 import com.quiz.darkhold.preview.repository.CurrentGame;
@@ -24,15 +25,18 @@ public class PreviewService {
     private final GameRepository gameRepository;
     private final CurrentGame currentGame;
     private final GameConfig gameConfig;
+    private final LiveRoomRepository liveRoomRepository;
 
     public PreviewService(final ChallengeRepository challengeRepository,
                           final GameRepository gameRepository,
                           final CurrentGame currentGame,
-                          final GameConfig gameConfig) {
+                          final GameConfig gameConfig,
+                          final LiveRoomRepository liveRoomRepository) {
         this.challengeRepository = challengeRepository;
         this.gameRepository = gameRepository;
         this.currentGame = currentGame;
         this.gameConfig = gameConfig;
+        this.liveRoomRepository = liveRoomRepository;
     }
 
     /**
@@ -113,7 +117,7 @@ public class PreviewService {
      * @return game info
      */
     public PublishInfo generateQuizPin(final String challengeId, final String currentUser) {
-        ownedChallenge(challengeId);
+        playableChallenge(challengeId);
         String uniquePin = generateUniquePin();
         Game game = createAndSaveGame(uniquePin, challengeId, currentUser, false);
         return createPublishInfo(game, currentUser);
@@ -129,17 +133,25 @@ public class PreviewService {
      */
     public PublishInfo generateQuizPin(final String challengeId, final String currentUser,
                                        final boolean teamMode) {
-        ownedChallenge(challengeId);
+        playableChallenge(challengeId);
         String uniquePin = generateUniquePin();
         Game game = createAndSaveGame(uniquePin, challengeId, currentUser, teamMode);
         return createPublishInfo(game, currentUser);
+    }
+
+    private void playableChallenge(final String challengeId) {
+        com.quiz.darkhold.challenge.entity.Challenge challenge = ownedChallenge(challengeId);
+        if (challenge.getQuestionSets() == null || challenge.getQuestionSets().isEmpty()) {
+            throw new IllegalArgumentException("Quiz has no questions: " + challengeId);
+        }
     }
 
     private String generateUniquePin() {
         int maxAttempts = 10;
         for (int attempts = 0; attempts < maxAttempts; attempts++) {
             String pin = RandomStringUtils.secure().nextNumeric(gameConfig.getPinLength());
-            if (!gameRepository.existsByPin(pin)) {
+            // live rooms share the join box, so their codes are taken too
+            if (!gameRepository.existsByPin(pin) && !liveRoomRepository.existsById(pin)) {
                 return pin;
             }
         }
@@ -220,6 +232,44 @@ public class PreviewService {
     public List<Game> getActiveGamesForModerator(final String moderator) {
         return gameRepository.findByModeratorAndGameStatusNotOrderByCreatedOnDesc(
                 moderator, GameStatus.FINISHED.name());
+    }
+
+    /**
+     * Every game that is not finished, for admins.
+     *
+     * @return active games, newest first
+     */
+    public List<Game> getAllActiveGames() {
+        List<Game> games = new java.util.ArrayList<>(gameRepository.findByGameStatusNot(GameStatus.FINISHED.name()));
+        games.sort(java.util.Comparator.comparing(Game::getCreatedOn,
+                java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        return games;
+    }
+
+    /**
+     * An unfinished game, if the caller hosts it or is an admin.
+     *
+     * @param pin     game PIN
+     * @param user    caller
+     * @param isAdmin whether the caller is an admin
+     * @return the game, or null if missing, finished or not the caller's
+     */
+    public Game hostedGame(final String pin, final String user, final boolean isAdmin) {
+        Game game = gameRepository.findByPin(pin);
+        boolean allowed = game != null && !GameStatus.FINISHED.name().equals(game.getGameStatus())
+                && (isAdmin || (game.getModerator() != null && game.getModerator().equals(user)));
+        return allowed ? game : null;
+    }
+
+    /**
+     * Players in a game, without its moderator.
+     *
+     * @param pin game PIN
+     * @return player names
+     */
+    public List<String> playersInGame(final String pin) {
+        String moderator = currentGame.findModerator(pin);
+        return currentGame.getActiveUsersInGame(pin).stream().filter(user -> !user.equals(moderator)).toList();
     }
 
     /**

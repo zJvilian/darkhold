@@ -98,7 +98,7 @@
                             </div>
                             <div th:each="member : ${team.individualScores}"
                                  th:class="'team-member-score' + (${memberStat.index == 0} ? ' top-contributor' : '')">
-                                <span th:text="${member.username}">Player</span>
+                                <span th:text="${#strings.substringBefore(member.username + '#', '#')}">Player</span>
                                 <span th:text="${member.currentScore}">0</span>
                             </div>
                             <div th:if="${team.individualScores == null or team.individualScores.isEmpty()}" class="no-members" th:text="#{scoreboard.noScoresYet}">
@@ -127,7 +127,7 @@
                                     <span th:if="${result.rankDown}" class="rank-down">&#9660;</span>
                                 </td>
                                 <td class="username-cell">
-                                    [[${result.username}]]
+                                    [[${#strings.substringBefore(result.username + '#', '#')}]]
                                     <span th:if="${result.hasStreak()}" class="streak-badge">
                                         <i class="fas fa-fire"></i>
                                         <span th:text="${result.streakDisplay}">3</span>

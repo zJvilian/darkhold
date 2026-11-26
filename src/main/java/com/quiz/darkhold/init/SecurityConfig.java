@@ -191,7 +191,7 @@ public class SecurityConfig {
     }
 
     private String[] matchingPaths() {
-        return new String[]{"/", "/logmein", "/error",
+        return new String[]{"/", "/login", "/logmein", "/error",
                 "/home", "/resources/**", "/actuator/health",
                 "/registration", "/images/**", "/question-images/**",
                 "/scripts/**", "/styles/**", "/sounds/**",

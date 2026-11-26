@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -43,6 +44,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -192,6 +194,19 @@ class OidcSecurityIntegrationTest {
         me.setPassword(encoder.encode("Local-password-123!"));
         users.save(me);
         mvc.perform(formLogin().user(me.getEmail()).password("Local-password-123!")).andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    void loginPageShowsSsoButtonAndRendersErrorVariantsAnonymously() throws Exception {
+        mvc.perform(get("/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("/oauth2/authorization/oidc")));
+        for (String error : new String[]{"", "oidc", "disabled", "oidc_conflict"}) {
+            mvc.perform(get("/login").queryParam("error", error))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("/oauth2/authorization/oidc")))
+                    .andExpect(content().string(containsString("login-error")));
+        }
     }
 
     @Test

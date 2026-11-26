@@ -44,12 +44,8 @@ can lock the lobby or remove a player. Scores, deadlines, and one-answer-per-que
 enforced on the server. Multiple rooms run independently. True/false, multiple choice (including
 multiple correct answers), typed answers, and polls use the existing question editor.
 
-**Joining from phones:** `localhost` only works on the device opening it. On the same Wi-Fi,
-open the host screen using your computer's LAN address, e.g. `http://192.168.1.20:8181`.
-The invite and QR code then use that address. Alternatively, copy `.env.example` to `.env`,
-set `DARKHOLD_PUBLIC_BASE_URL` to the reachable LAN or public HTTPS address (no trailing slash),
-and run `docker compose up -d`. This also makes QR codes work when the host opens localhost.
-For a public deployment, use your existing HTTPS reverse proxy URL.
+**Joining from phones:** `localhost` only works on the device opening it. By default Compose binds `127.0.0.1:8181` (for a reverse proxy). On local Wi-Fi without a proxy, set `DARKHOLD_BIND_ADDRESS=0.0.0.0` and `DARKHOLD_PUBLIC_BASE_URL` to your computer's LAN address (e.g. `http://192.168.1.20:8181`, no trailing slash) in `.env`, then run `docker compose up -d`. This also makes QR codes work when the host opens localhost.
+For a public deployment, keep the default loopback bind and put Kahvoid behind an HTTPS reverse proxy with `DARKHOLD_PUBLIC_BASE_URL=https://...`.
 
 The classic live flow persists rooms and results in PostgreSQL for 24 hours, including container
 restarts. Return via **Active Games** to resume hosting or view a podium. Expired rooms are removed

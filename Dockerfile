@@ -9,7 +9,9 @@ RUN chmod +x gradlew && ./gradlew --no-daemon bootJar
 FROM eclipse-temurin:25-jre-noble
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --user-group --no-create-home --shell /usr/sbin/nologin kahvoid \
+    && install -d -o kahvoid -g kahvoid logs question-images user-photos
 COPY --from=build /app/build/libs/darkhold-*.jar app.jar
 COPY start.sh ./start.sh
 EXPOSE 8181

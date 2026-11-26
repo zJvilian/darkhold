@@ -89,6 +89,7 @@ public class OptionsService {
         summary.setDescription(challenge.getDescription());
         summary.setCreatedOn(challenge.getCreatedOn());
         summary.setQuestionCount(challenge.getQuestionSets() == null ? 0 : challenge.getQuestionSets().size());
+        summary.setDraft(challenge.isDraft());
         return summary;
     }
 

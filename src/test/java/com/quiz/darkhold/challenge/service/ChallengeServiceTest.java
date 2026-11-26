@@ -975,4 +975,36 @@ class ChallengeServiceTest {
         var error = assertThrows(ChallengeException.class, () -> challengeService.importFromJson(dto));
         assertTrue(error.getErrorMessage().startsWith("Question 1:"));
     }
+
+    @Test
+    void csvImportParsesHeaderQuotedFieldsAndAnswerImageUrl() throws Exception {
+        String csv = "\uFEFFQuestion,Answer1,Answer2,Answer3,Answer4,CorrectOptions,Type,TimeLimit,Points,"
+                + "AcceptableAnswers,ImageUrl,VideoUrl,Answer5,Answer6,Answer7,Answer8,Answer9,Answer10,"
+                + "AnswerImageUrl\n"
+                + "\"Who is this, really?\",Ada Lovelace,Alan Turing,Grace Hopper,Linus Torvalds,A,"
+                + "MULTIPLE_CHOICE,20,1000,,/question-images/1/1/closeup.jpg,,,,,,,,"
+                + "/question-images/1/1/full_ada.jpg\n"
+                + "Is water wet?,True,False,,,TRUE,TRUE_FALSE,15,500,,,,,,,,,,https://example.com/reveal.png\n";
+        var upload = new org.springframework.mock.web.MockMultipartFile(
+                "upload", "quiz.csv", "text/csv", csv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        when(challengeRepository.save(any(Challenge.class))).thenAnswer(inv -> {
+            Challenge saved = inv.getArgument(0);
+            saved.setId(88L);
+            return saved;
+        });
+
+        Long id = challengeService.readProcessAndSaveChallenge(upload, "CSV Quiz", "Imported from CSV");
+
+        assertEquals(88L, id);
+        var captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(questionSetRepository).saveAll(captor.capture());
+        List<QuestionSet> saved = new ArrayList<>();
+        captor.getValue().forEach(q -> saved.add((QuestionSet) q));
+        assertEquals(2, saved.size());
+        assertEquals("Who is this, really?", saved.get(0).getQuestion());
+        assertEquals("/question-images/1/1/closeup.jpg", saved.get(0).getImageUrl());
+        assertEquals("/question-images/1/1/full_ada.jpg", saved.get(0).getAnswerImageUrl());
+        assertEquals("TRUE", saved.get(1).getCorrectOptions());
+        assertEquals("https://example.com/reveal.png", saved.get(1).getAnswerImageUrl());
+    }
 }

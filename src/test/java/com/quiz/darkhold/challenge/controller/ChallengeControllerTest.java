@@ -148,21 +148,33 @@ class ChallengeControllerTest {
         }
 
         @Test
-        @DisplayName("Should reject a missing, unnamed or non-xlsx file and over-long text")
+        @DisplayName("Should reject a missing, unnamed or unsupported file and over-long text")
         void shouldRejectBadUploads() throws ChallengeException {
             var unnamed = new MockMultipartFile("upload", null, "application/octet-stream", "data".getBytes(UTF_8));
-            var csv = new MockMultipartFile("upload", "q.csv", "text/csv", "data".getBytes(UTF_8));
+            var text = new MockMultipartFile("upload", "q.txt", "text/plain", "data".getBytes(UTF_8));
             assertEquals(HttpStatus.BAD_REQUEST, challengeController
                     .handleFileUpload(null, testTitle, testDescription, redirectAttributes).getStatusCode());
             assertEquals(HttpStatus.BAD_REQUEST, challengeController
                     .handleFileUpload(unnamed, testTitle, testDescription, redirectAttributes).getStatusCode());
             assertEquals(HttpStatus.BAD_REQUEST, challengeController
-                    .handleFileUpload(csv, testTitle, testDescription, redirectAttributes).getStatusCode());
+                    .handleFileUpload(text, testTitle, testDescription, redirectAttributes).getStatusCode());
             assertEquals(HttpStatus.BAD_REQUEST, challengeController
                     .handleFileUpload(mockFile, "t".repeat(101), testDescription, redirectAttributes).getStatusCode());
             assertEquals(HttpStatus.BAD_REQUEST, challengeController
                     .handleFileUpload(mockFile, testTitle, "d".repeat(251), redirectAttributes).getStatusCode());
             verify(challengeService, never()).readProcessAndSaveChallenge(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should accept CSV uploads")
+        void shouldAcceptCsvUploads() throws ChallengeException {
+            var csv = new MockMultipartFile("upload", "questions.csv", "text/csv", "Q,A,B,,,A\n".getBytes(UTF_8));
+            when(challengeService.readProcessAndSaveChallenge(csv, testTitle, testDescription)).thenReturn(9L);
+
+            var response = challengeController.handleFileUpload(csv, testTitle, testDescription, redirectAttributes);
+
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertEquals(9L, response.getBody().challengeId());
         }
 
         @Test

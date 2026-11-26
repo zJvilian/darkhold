@@ -82,9 +82,10 @@ public class ChallengeController {
     }
 
     private String validateUpload(final MultipartFile upload, final String title, final String description) {
-        if (upload == null || upload.isEmpty() || upload.getOriginalFilename() == null
-                || !upload.getOriginalFilename().toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
-            return "Please choose an .xlsx file.";
+        String name = upload == null || upload.getOriginalFilename() == null
+                ? "" : upload.getOriginalFilename().toLowerCase(Locale.ROOT);
+        if (upload == null || upload.isEmpty() || (!name.endsWith(".xlsx") && !name.endsWith(".csv"))) {
+            return "Please choose an .xlsx or .csv file.";
         }
         if (title == null || title.isBlank() || title.trim().length() > MAX_TITLE_LENGTH) {
             return "Title is required and can be at most " + MAX_TITLE_LENGTH + " characters.";
@@ -182,6 +183,22 @@ public class ChallengeController {
     }
 
     /**
+     * Finish a draft: it becomes a regular quiz that can be hosted and practised.
+     */
+    @PostMapping("/challenge/{id}/finish")
+    public ResponseEntity<ChallengeWithResponse> finishChallenge(@PathVariable final Long id) {
+        logger.info("Finishing draft challenge {}", id);
+        try {
+            com.quiz.darkhold.challenge.entity.Challenge challenge = challengeService.finishChallenge(id);
+            return challenge == null ? ResponseEntity.notFound().build()
+                    : ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
+                    "Finished " + CommonUtils.sanitizedString(challenge.getTitle())));
+        } catch (ChallengeException challengeException) {
+            return rejected(challengeException.getErrorMessage());
+        }
+    }
+
+    /**
      * Upload or replace the cover (preview) picture of a challenge.
      */
     @PostMapping("/challenge/{id}/cover-image")
@@ -267,7 +284,7 @@ public class ChallengeController {
     private String buildCsvContent(final com.quiz.darkhold.challenge.entity.Challenge challenge) {
         String header = "Question,Answer1,Answer2,Answer3,Answer4,CorrectOptions,"
                 + "Type,TimeLimit,Points,AcceptableAnswers,ImageUrl,VideoUrl,"
-                + "Answer5,Answer6,Answer7,Answer8,Answer9,Answer10\n";
+                + "Answer5,Answer6,Answer7,Answer8,Answer9,Answer10,AnswerImageUrl\n";
         StringBuilder sb = new StringBuilder(header);
         if (challenge.getQuestionSets() != null) {
             challenge.getQuestionSets().forEach(q -> appendCsvRow(sb, q));
@@ -299,6 +316,7 @@ public class ChallengeController {
         for (int index = 4; index < answers.length; index++) {
             sb.append(',').append(escapeCsv(answers[index]));
         }
+        sb.append(',').append(escapeCsv(question.getAnswerImageUrl()));
         sb.append('\n');
     }
 
@@ -314,19 +332,49 @@ public class ChallengeController {
 
     @PostMapping("/import_challenge/json")
     public ResponseEntity<ChallengeWithResponse> importChallengeFromJson(
-            @RequestParam("file") final MultipartFile file) {
+            @RequestParam("file") final MultipartFile file,
+            @RequestParam(value = "title", required = false) final String title,
+            @RequestParam(value = "description", required = false) final String description) {
         logger.info("Importing challenge from JSON");
+        if (tooLong(title, MAX_TITLE_LENGTH) || tooLong(description, MAX_DESCRIPTION_LENGTH)) {
+            return rejected("Title can be at most " + MAX_TITLE_LENGTH + " and description at most "
+                    + MAX_DESCRIPTION_LENGTH + " characters.");
+        }
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            ChallengeExportDto dto = mapper.readValue(file.getInputStream(), ChallengeExportDto.class);
-            com.quiz.darkhold.challenge.entity.Challenge challenge = challengeService.importFromJson(dto);
+            com.quiz.darkhold.challenge.entity.Challenge challenge =
+                    challengeService.importFromJson(readExport(file, title, description));
             return ResponseEntity.ok(new ChallengeWithResponse(challenge.getId(),
                     "Successfully imported " + challenge.getTitle() + " !!!"));
         } catch (ChallengeException challengeException) {
             return rejected(challengeException.getErrorMessage());
+        }
+    }
+
+    private static boolean tooLong(final String value, final int max) {
+        return value != null && value.trim().length() > max;
+    }
+
+    /**
+     * Parse an export file; a title or description typed on the create page wins over the one in the file.
+     */
+    private ChallengeExportDto readExport(final MultipartFile file, final String title, final String description)
+            throws ChallengeException {
+        ChallengeExportDto dto = parseExport(file);
+        if (dto != null && title != null && !title.isBlank()) {
+            dto.setTitle(title.trim());
+        }
+        if (dto != null && description != null && !description.isBlank()) {
+            dto.setDescription(description.trim());
+        }
+        return dto;
+    }
+
+    private ChallengeExportDto parseExport(final MultipartFile file) throws ChallengeException {
+        try {
+            return new ObjectMapper().readValue(file.getInputStream(), ChallengeExportDto.class);
         } catch (java.io.IOException | tools.jackson.core.JacksonException ioException) {
             logger.error("Error importing challenge", ioException);
-            return rejected("Failed to import: the file is not a valid quiz export.");
+            throw new ChallengeException("Failed to import: the file is not a valid quiz export.");
         }
     }
 }

@@ -37,7 +37,9 @@
 .create-challenge-subtitle {
     font-size: 1rem;
     color: var(--color-text-tertiary);
-    margin: 0;
+    margin: 0 auto;
+    max-width: 560px;
+    line-height: 1.6;
 }
 
 /* ----------------------------------------
@@ -49,6 +51,7 @@
     border-radius: var(--radius-xl);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 40px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    margin-bottom: 1.25rem;
 }
 
 [data-theme="dark"] .create-challenge-card {
@@ -56,7 +59,7 @@
 }
 
 .create-challenge-body {
-    padding: 2.5rem;
+    padding: 2rem 2.25rem;
 }
 
 /* ----------------------------------------
@@ -85,7 +88,7 @@
     justify-content: center;
     font-size: 0.95rem;
     color: var(--color-primary);
-    background: rgba(var(--color-primary-rgb, 0, 98, 204), 0.08);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
     border-radius: var(--radius-md);
     flex-shrink: 0;
 }
@@ -100,7 +103,7 @@
 .section-description {
     font-size: 0.9rem;
     color: var(--color-text-tertiary);
-    margin: 0.5rem 0 0;
+    margin: 0.25rem 0 0;
     line-height: 1.6;
 }
 
@@ -315,7 +318,216 @@
    Result Message
    ---------------------------------------- */
 .result-message {
-    margin: 1.5rem 0;
+    margin: 1rem 0;
+}
+
+.result-message:empty {
+    margin: 0;
+}
+
+/* ----------------------------------------
+   Label row + character counter
+   ---------------------------------------- */
+.form-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.char-counter {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+}
+
+.char-counter.is-near-limit {
+    color: var(--color-warning);
+    font-weight: 600;
+}
+
+/* ----------------------------------------
+   Question source cards
+   ---------------------------------------- */
+.source-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.source-option {
+    position: relative;
+    display: block;
+    margin: 0;
+    cursor: pointer;
+}
+
+.source-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.source-option-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    height: 100%;
+    padding: 1.15rem 1.1rem 1.1rem;
+    border: 1.5px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-primary);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.source-option:hover .source-option-card {
+    border-color: var(--color-border-medium);
+    transform: translateY(-1px);
+}
+
+.source-option input:focus-visible + .source-option-card {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+.source-option input:checked + .source-option-card {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+    background: color-mix(in srgb, var(--color-primary) 3%, var(--color-bg-primary));
+}
+
+.source-option-icon {
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.35rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+    transition: all 0.15s ease;
+}
+
+.source-option input:checked + .source-option-card .source-option-icon {
+    color: var(--color-btn-primary-text);
+    background: var(--color-btn-primary-bg);
+}
+
+.source-option-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.source-option-text {
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: var(--color-text-tertiary);
+}
+
+.source-option-check {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    font-size: 1.05rem;
+    color: var(--color-primary);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: all 0.15s ease;
+}
+
+.source-option input:checked + .source-option-card .source-option-check {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* ----------------------------------------
+   File drop zone
+   ---------------------------------------- */
+.source-panel {
+    margin-top: 1.25rem;
+    animation: sourcePanelIn 0.2s ease;
+}
+
+@keyframes sourcePanelIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+.dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 1.75rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    border: 2px dashed var(--color-border-medium);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-secondary);
+    transition: all 0.15s ease;
+}
+
+.dropzone:hover,
+.dropzone.is-dragging {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-bg-secondary));
+}
+
+.dropzone.has-file {
+    border-style: solid;
+    border-color: var(--color-success);
+}
+
+.dropzone-icon {
+    font-size: 1.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.dropzone-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.dropzone-hint {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.dropzone-file {
+    margin-top: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-success);
+    background: color-mix(in srgb, var(--color-success) 12%, transparent);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.excel-guide {
+    margin-top: 1rem;
+}
+
+.excel-guide-content {
+    overflow-x: auto;
+}
+
+/* Actions sit below the cards, right aligned, primary last */
+.form-actions--sticky {
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+    padding-top: 0;
+    border-top: none;
 }
 
 /* ============================================
@@ -341,7 +553,15 @@
     }
 
     .form-actions {
-        flex-direction: column;
+        flex-direction: column-reverse;
+    }
+
+    .source-options {
+        grid-template-columns: 1fr;
+    }
+
+    .source-option-card {
+        padding-right: 2.5rem;
     }
 
     .btn-primary-create,

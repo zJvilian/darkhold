@@ -91,6 +91,7 @@ public class LiveQuizService {
                 HttpStatus.FORBIDDEN, "live.error.ownerOnly");
         require(challenge.getQuestionSets() != null && !challenge.getQuestionSets().isEmpty(),
                 HttpStatus.BAD_REQUEST, "live.error.noQuestions");
+        require(!challenge.isDraft(), HttpStatus.BAD_REQUEST, "live.error.draft");
         LiveState state = new LiveState();
         state.challengeId = challengeId;
         state.title = challenge.getTitle();

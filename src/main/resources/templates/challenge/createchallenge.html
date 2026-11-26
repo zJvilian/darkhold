@@ -10,6 +10,7 @@
     <link rel="shortcut icon" href="/images/favicon.png">
     <link href="/styles/darkhold-styles.css" rel="stylesheet" />
     <link href="/styles/create-challenge.css" rel="stylesheet" />
+    <link href="/styles/create-flow.css" rel="stylesheet" />
     <script type="text/javascript" src="/scripts/theme-manager.js"></script>
     <script type="text/javascript" src="/scripts/audio-manager.js"></script>
     <script type="text/javascript" src="/scripts/language-manager.js"></script>
@@ -27,75 +28,120 @@
 
             <!-- Page Header -->
             <header class="create-challenge-header">
-                <h1 class="create-challenge-title" th:text="#{challenge.create.header}">Create Challenge</h1>
-                <p class="create-challenge-subtitle" th:text="#{challenge.create.subtitle}">Build an engaging quiz with custom questions or import from Excel</p>
+                <h1 class="create-challenge-title" th:text="#{challenge.create.header}">Create Quiz</h1>
+                <p class="create-challenge-subtitle" th:text="#{challenge.create.lead}">Name your quiz and choose how to add questions.</p>
             </header>
 
-            <!-- Main Form Card -->
-            <div class="create-challenge-card">
-                <form method="POST" id="fileUploadForm" enctype="multipart/form-data" class="create-challenge-body">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <!-- Creation steps: this page is step 1, the editor is step 2 -->
+            <div th:replace="~{fragments/create-steps :: steps(1)}"></div>
 
-                    <!-- Section 1: Basic Information -->
-                    <section class="form-section">
+            <form method="POST" id="fileUploadForm" enctype="multipart/form-data" novalidate
+                  onsubmit="uploadPDF(); return false;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <!-- Card 1: quiz details -->
+                <section class="create-challenge-card">
+                    <div class="create-challenge-body">
                         <div class="section-header">
-                            <div class="section-icon">
-                                <i class="fas fa-info-circle"></i>
-                            </div>
+                            <div class="section-icon"><i class="fas fa-pen-nib" aria-hidden="true"></i></div>
                             <div>
-                                <h2 class="section-title" th:text="#{challenge.create.basic}">Basic Information</h2>
-                                <p class="section-description" th:text="#{challenge.create.basicDescription}">Give your challenge a name and description to help players understand what to expect</p>
+                                <h2 class="section-title" th:text="#{challenge.create.detailsTitle}">Quiz details</h2>
+                                <p class="section-description" th:text="#{challenge.create.detailsDescription}">A clear title and a short description help players know what to expect.</p>
                             </div>
                         </div>
 
                         <div class="form-field">
-                            <label for="title" class="form-label form-label-required" th:text="#{challenge.create.titleLabel}">Challenge Title</label>
+                            <div class="form-label-row">
+                                <label for="title" class="form-label form-label-required" id="titleLabel"
+                                       th:text="#{challenge.create.titleLabel}">Quiz Title</label>
+                                <span class="char-counter" data-counter-for="title" aria-hidden="true">0 / 100</span>
+                            </div>
                             <input type="text" id="title" class="form-input" name="title"
-                                   maxlength="100" required
+                                   maxlength="100" required autocomplete="off" autofocus
                                    th:placeholder="#{challenge.create.titlePlaceholder}"
                                    placeholder="e.g., World Geography Quiz">
-                            <span class="form-hint" th:text="#{challenge.create.titleHint}">Required, maximum 100 characters</span>
+                            <span class="form-hint" id="titleHint" th:text="#{challenge.create.titleHint}">Required, maximum 100 characters</span>
+                            <span class="form-hint" id="jsonTitleHint" hidden th:text="#{challenge.create.jsonTitleHint}">Optional for JSON imports</span>
                         </div>
 
                         <div class="form-field">
-                            <label for="description" class="form-label" th:text="#{challenge.create.description}">Description</label>
+                            <div class="form-label-row">
+                                <label for="description" class="form-label" th:text="#{challenge.create.description}">Description</label>
+                                <span class="char-counter" data-counter-for="description" aria-hidden="true">0 / 250</span>
+                            </div>
                             <textarea id="description" class="form-textarea" name="description"
                                       rows="3" maxlength="250"
                                       th:placeholder="#{challenge.create.descriptionPlaceholder}"
                                       placeholder="Provide a brief overview of this quiz (optional)"></textarea>
-                            <span class="form-hint" th:text="#{challenge.create.descriptionHint}">Optional, maximum 250 characters</span>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    <!-- Section 2: Question Import -->
-                    <section class="form-section">
+                <!-- Card 2: where the questions come from -->
+                <section class="create-challenge-card">
+                    <div class="create-challenge-body">
                         <div class="section-header">
-                            <div class="section-icon">
-                                <i class="fas fa-file-excel"></i>
-                            </div>
+                            <div class="section-icon"><i class="fas fa-layer-group" aria-hidden="true"></i></div>
                             <div>
-                                <h2 class="section-title" th:text="#{challenge.create.uploadQuestions}">Upload Questions (Optional)</h2>
-                                <p class="section-description" th:text="#{challenge.create.uploadDescription}">Import questions from an Excel file, or skip to add them manually later</p>
+                                <h2 class="section-title" id="sourceTitle" th:text="#{challenge.create.sourceTitle}">How do you want to add questions?</h2>
+                                <p class="section-description" th:text="#{challenge.create.sourceDescription}">You can always add, edit and reorder questions in the editor afterwards.</p>
                             </div>
                         </div>
 
-                        <div class="form-field">
-                            <label for="upload" class="form-label" th:text="#{challenge.create.excelFile}">Excel File</label>
-                            <input class="form-file" type="file" name="upload" id="upload" accept=".xlsx" />
-                            <span class="form-hint" th:text="#{challenge.create.uploadHint}">
-                                Upload an Excel file to bulk-add questions, or leave empty to add questions manually later.
-                            </span>
+                        <div class="source-options" role="radiogroup" aria-labelledby="sourceTitle">
+                            <label class="source-option">
+                                <input type="radio" name="source" value="empty" checked onchange="selectSource(this.value)"/>
+                                <span class="source-option-card">
+                                    <span class="source-option-icon"><i class="fas fa-pencil-alt" aria-hidden="true"></i></span>
+                                    <span class="source-option-title" th:text="#{challenge.create.sourceEmpty}">Start from scratch</span>
+                                    <span class="source-option-text" th:text="#{challenge.create.sourceEmptyDesc}">Write your questions one by one in the editor.</span>
+                                    <i class="fas fa-check-circle source-option-check" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <label class="source-option">
+                                <input type="radio" name="source" value="file" onchange="selectSource(this.value)"/>
+                                <span class="source-option-card">
+                                    <span class="source-option-icon"><i class="fas fa-file-excel" aria-hidden="true"></i></span>
+                                    <span class="source-option-title" th:text="#{challenge.create.sourceFile}">Import Excel / CSV</span>
+                                    <span class="source-option-text" th:text="#{challenge.create.sourceFileDesc}">Bulk-add questions from a spreadsheet.</span>
+                                    <i class="fas fa-check-circle source-option-check" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <label class="source-option">
+                                <input type="radio" name="source" value="json" onchange="selectSource(this.value)"/>
+                                <span class="source-option-card">
+                                    <span class="source-option-icon"><i class="fas fa-file-code" aria-hidden="true"></i></span>
+                                    <span class="source-option-title" th:text="#{challenge.create.sourceJson}">Import JSON export</span>
+                                    <span class="source-option-text" th:text="#{challenge.create.sourceJsonDesc}">Restore a quiz exported from Kahvoid.</span>
+                                    <i class="fas fa-check-circle source-option-check" aria-hidden="true"></i>
+                                </span>
+                            </label>
                         </div>
 
-                        <!-- Excel Format Guide -->
-                        <div class="form-field">
-                            <button class="excel-guide-toggle" type="button" data-bs-toggle="collapse"
-                                    data-bs-target="#excelFormatHelp" aria-expanded="false" aria-controls="excelFormatHelp">
-                                <i class="fas fa-question-circle"></i>
-                                <span th:text="#{challenge.create.showExcelFormat}">Show Excel Format Guide</span>
-                            </button>
-                            <div class="collapse" id="excelFormatHelp">
-                                <div class="excel-guide-content">
+                        <!-- File picker for the two import options -->
+                        <div class="source-panel" id="filePanel" hidden>
+                            <label class="dropzone" id="dropzone" for="upload">
+                                <i class="fas fa-cloud-upload-alt dropzone-icon" aria-hidden="true"></i>
+                                <span class="dropzone-title" th:text="#{challenge.create.dropFile}">Drop your file here or click to browse</span>
+                                <span class="dropzone-hint" id="dropzoneHint"
+                                      th:attr="data-xlsx=#{challenge.create.dropFileXlsx},data-json=#{challenge.create.dropFileJson}"
+                                      th:text="#{challenge.create.dropFileXlsx}">Accepted: .xlsx, .csv</span>
+                                <span class="dropzone-file" id="dropzoneFile" hidden>
+                                    <i class="fas fa-file-alt" aria-hidden="true"></i> <span id="dropzoneFileName"></span>
+                                </span>
+                            </label>
+                            <input class="visually-hidden" type="file" name="upload" id="upload" accept=".xlsx,.csv"
+                                   onchange="showChosenFile()"/>
+
+                            <!-- Excel / CSV format guide -->
+                            <div class="excel-guide" id="excelGuide">
+                                <button class="excel-guide-toggle" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#excelFormatHelp" aria-expanded="false" aria-controls="excelFormatHelp">
+                                    <i class="fas fa-question-circle" aria-hidden="true"></i>
+                                    <span th:text="#{challenge.create.showExcelFormat}">Show Excel Format Guide</span>
+                                </button>
+                                <div class="collapse" id="excelFormatHelp">
+                                    <div class="excel-guide-content">
                                     <h3 class="excel-guide-title" th:text="#{challenge.create.excelFormatTitle}">Excel Format Requirements:</h3>
                                     <table class="excel-format-table">
                                         <thead>
@@ -156,70 +202,42 @@
                                                 <td>Answer5–Answer10</td>
                                                 <td th:text="#{excel.sortingAnswers}">Answer E–J (sorting only)</td>
                                             </tr>
+                                            <tr>
+                                                <td>18</td>
+                                                <td>AnswerImageUrl</td>
+                                                <td th:text="#{excel.answerImageUrlDesc}">Result / reveal image shown after answering (optional)</td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                     <p class="form-hint" th:text="#{excel.headerRowNote}">A header row (Question, Answer1, …) is skipped automatically.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </section>
-
-                    <!-- Progress Bar -->
-                    <div id="progressdiv" class="progress-wrapper" style="display: none;">
-                        <div class="progress-bar-container">
-                            <div id="progress" class="progress-bar-fill"
-                                 role="progressbar" style="width: 0%;"
-                                 aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
                     </div>
+                </section>
 
-                    <!-- Result Message -->
-                    <div id="resultMessage" class="result-message"></div>
-
-                    <!-- Action Buttons -->
-                    <div class="form-actions">
-                        <button class="btn-primary-create" type="button" id="btnSubmit" onclick="uploadPDF()">
-                            <i class="fas fa-plus-circle"></i>
-                            <span th:text="#{challenge.create.createButton}">Create Challenge</span>
-                        </button>
-                        <button type="button" class="btn-secondary-cancel" onclick="toOptions()">
-                            <i class="fas fa-times"></i>
-                            <span th:text="#{button.cancel}">Cancel</span>
-                        </button>
+                <!-- Progress + messages -->
+                <div id="progressdiv" class="progress-wrapper" style="display: none;">
+                    <div class="progress-bar-container">
+                        <div id="progress" class="progress-bar-fill"
+                             role="progressbar" style="width: 0%;"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
-                </form>
-            </div>
+                </div>
+                <div id="resultMessage" class="result-message" aria-live="polite"></div>
 
-            <!-- Import a quiz from a Kahvoid JSON export -->
-            <div class="create-challenge-card">
-                <form method="POST" id="jsonImportForm" enctype="multipart/form-data" class="create-challenge-body"
-                      onsubmit="importJson(); return false;">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                    <section class="form-section">
-                        <div class="section-header">
-                            <div class="section-icon">
-                                <i class="fas fa-file-code"></i>
-                            </div>
-                            <div>
-                                <h2 class="section-title" th:text="#{challenge.create.importJson}">Import from JSON</h2>
-                                <p class="section-description" th:text="#{challenge.create.importJsonDescription}">Restore a quiz from a JSON export. Title, description and questions come from the file.</p>
-                            </div>
-                        </div>
-                        <div class="form-field">
-                            <label for="jsonUpload" class="form-label" th:text="#{challenge.create.jsonFile}">JSON file</label>
-                            <input class="form-file" type="file" name="file" id="jsonUpload" accept=".json,application/json" />
-                        </div>
-                        <div id="jsonResultMessage" class="result-message"></div>
-                        <div class="form-actions">
-                            <button class="btn-primary-create" type="submit" id="btnImportJson">
-                                <i class="fas fa-file-import"></i>
-                                <span th:text="#{challenge.create.importJsonButton}">Import quiz</span>
-                            </button>
-                        </div>
-                    </section>
-                </form>
-            </div>
-
+                <!-- Actions -->
+                <div class="form-actions form-actions--sticky">
+                    <button type="button" class="btn-secondary-cancel" onclick="toOptions()">
+                        <span th:text="#{button.cancel}">Cancel</span>
+                    </button>
+                    <button class="btn-primary-create" type="submit" id="btnSubmit">
+                        <span th:text="#{challenge.create.continue}">Create and add questions</span>
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </form>
         </div>
     </main>
 

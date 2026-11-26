@@ -50,6 +50,10 @@ public class Challenge implements Serializable {
     @Column(name = "cover_image_url", length = 500)
     private String coverImageUrl;
 
+    /** Still in the creation flow: editable, but cannot be hosted or practised until finished. */
+    @Column(name = "draft")
+    private Boolean draft = Boolean.FALSE;
+
     @CreatedDate
     @Column(name = "createdOn")
     private LocalDateTime createdOn;
@@ -116,6 +120,14 @@ public class Challenge implements Serializable {
 
     public void setCoverImageUrl(final String coverImageUrl) {
         this.coverImageUrl = coverImageUrl;
+    }
+
+    public boolean isDraft() {
+        return Boolean.TRUE.equals(draft);
+    }
+
+    public void setDraft(final boolean draft) {
+        this.draft = draft;
     }
 
     public LocalDateTime getCreatedOn() {

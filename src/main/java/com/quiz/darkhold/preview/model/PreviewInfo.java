@@ -8,6 +8,15 @@ public class PreviewInfo {
     private String challengeId;
     private String challengeName;
     private Deque<QuestionSet> questionSets;
+    private boolean draft;
+
+    public boolean isDraft() {
+        return draft;
+    }
+
+    public void setDraft(final boolean draft) {
+        this.draft = draft;
+    }
 
     public String getChallengeId() {
         return challengeId;

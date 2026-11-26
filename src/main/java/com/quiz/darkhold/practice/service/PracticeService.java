@@ -73,6 +73,9 @@ public class PracticeService {
         if (challenge.getQuestionSets() == null || challenge.getQuestionSets().isEmpty()) {
             throw new IllegalArgumentException("Quiz has no questions: " + challengeId);
         }
+        if (challenge.isDraft()) {
+            throw new IllegalArgumentException("Quiz is still a draft: " + challengeId);
+        }
 
         List<QuestionSet> questionsList = new ArrayList<>(challenge.getQuestionSets());
 

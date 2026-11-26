@@ -58,6 +58,10 @@ public class PreviewController {
         String sanitizedChallenges = CommonUtils.sanitizedString(challenges);
         log.info("Into the preconfigure method : {}", sanitizedChallenges);
         com.quiz.darkhold.preview.model.PreviewInfo previewInfo = previewService.fetchQuestions(challenges);
+        if (previewInfo != null && previewInfo.isDraft()) {
+            // drafts are still being set up: send the owner back to finish them in the editor
+            return "redirect:/edit_challenge/" + previewInfo.getChallengeId();
+        }
         model.addAttribute("previewInfo", previewInfo);
         return "challenge/preview";
     }

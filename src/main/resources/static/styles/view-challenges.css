@@ -332,3 +332,24 @@
 .quiz-no-matches[hidden] {
     display: none;
 }
+
+/* Phones: the global touch-target rule (animations.css) enlarges <button>s but not the <a> links,
+   so the actions came out in two sizes. Give all of them the same 44px tile, spread over the row. */
+@media (max-width: 768px) {
+    .challenge-card-actions {
+        width: 100%;
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .challenge-card-actions .challenge-action-btn {
+        width: 100%;
+        height: 44px;
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+        font-size: 1rem;
+    }
+}

@@ -1,0 +1,18 @@
+<!DOCTYPE HTML>
+<html xmlns:th="https://www.thymeleaf.org">
+<body>
+<!-- Quiz creation progress: 1 details (create page), 2 questions (editor while draft), 3 finish -->
+<ol th:fragment="steps(current)" class="create-steps">
+    <li th:each="step, it : ${ {'stepDetails', 'stepQuestions', 'stepFinish'} }"
+        th:with="n=${it.count}"
+        th:class="'create-step' + (${n < current} ? ' is-done' : '') + (${n == current} ? ' is-current' : '')"
+        th:attr="aria-current=${n == current} ? 'step' : null">
+        <span class="create-step-dot" aria-hidden="true">
+            <i th:if="${n < current}" class="fas fa-check"></i>
+            <span th:unless="${n < current}" th:text="${n}">1</span>
+        </span>
+        <span class="create-step-label" th:text="#{'challenge.create.' + ${step}}">Details</span>
+    </li>
+</ol>
+</body>
+</html>

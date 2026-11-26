@@ -37,7 +37,7 @@ const output = process.env.DARKHOLD_TEST_OUTPUT || '/tmp/darkhold-german';
         await selectLanguage(host, 'en');
         await selectLanguage(host, 'de');
         await host.goto(base + '/challenge/create');
-        await host.getByRole('heading',{name:'Grundinformationen'}).waitFor();
+        await host.getByRole('heading',{name:'Quiz-Details'}).waitFor();
         await host.locator('#title').fill('German smoke '+Date.now());
         await host.locator('#description').fill('Unveränderter Quizinhalt');
         await host.locator('#btnSubmit').click();

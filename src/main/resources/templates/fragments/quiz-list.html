@@ -36,8 +36,9 @@
     </div>
 
     <div class="quiz-list" id="quizRows">
-        <div th:each="ch : ${quizzes}" th:id="${ch.challengeId}" class="quiz-row"
-             th:attr="data-title=${ch.challengeName},data-description=${ch.description},data-owner=${ch.ownerName},data-owned=${ch.owned},data-created=${ch.createdOn},data-questions=${ch.questionCount}">
+        <div th:each="ch : ${quizzes}" th:id="${ch.challengeId}"
+             th:class="'quiz-row' + (${ch.draft} ? ' quiz-row--draft' : '')"
+             th:attr="data-draft=${ch.draft},data-title=${ch.challengeName},data-description=${ch.description},data-owner=${ch.ownerName},data-owned=${ch.owned},data-created=${ch.createdOn},data-questions=${ch.questionCount}">
             <div class="quiz-row-main" th:attr="data-selectable=${manage} ? 'true'">
                 <img th:if="${ch.coverImageUrl}" th:src="${ch.coverImageUrl}" class="quiz-row-thumb"
                      alt="" loading="lazy"/>
@@ -45,7 +46,10 @@
                     <i class="fas fa-clipboard-list"></i>
                 </span>
                 <div class="quiz-row-body">
-                    <h3 class="challenge-card-title" th:text="${ch.challengeName}">Sample Quiz</h3>
+                    <h3 class="challenge-card-title">
+                        <span th:text="${ch.challengeName}">Sample Quiz</span>
+                        <span th:if="${ch.draft}" class="draft-badge" th:text="#{quizList.draft}">Draft</span>
+                    </h3>
                     <p class="quiz-row-description" th:if="${ch.description}" th:text="${ch.description}">About</p>
                     <p class="quiz-row-meta">
                         <span><i class="fas fa-question-circle" aria-hidden="true"></i>
@@ -54,6 +58,8 @@
                             <span th:text="#{quizList.created(${#temporals.format(ch.createdOn, 'yyyy-MM-dd')})}">Created: 2026-01-01</span></span>
                         <span th:unless="${ch.owned}"><i class="fas fa-user" aria-hidden="true"></i>
                             <span th:text="#{challenge.view.ownedBy(${ch.ownerName})}">by Alice</span></span>
+                        <span th:if="${ch.draft}" class="quiz-row-draft-hint"><i class="fas fa-pencil-ruler" aria-hidden="true"></i>
+                            <span th:text="#{quizList.continueDraft}">Continue setting up</span></span>
                     </p>
                 </div>
             </div>

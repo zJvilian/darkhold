@@ -10,6 +10,7 @@
     <link rel="shortcut icon" href="/images/favicon.png">
     <link href="/styles/darkhold-styles.css" rel="stylesheet" />
     <link href="/styles/edit-challenge.css" rel="stylesheet" />
+    <link href="/styles/create-flow.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="/styles/icon-styles.css">
     <script type="text/javascript" src="/scripts/theme-manager.js"></script>
@@ -28,17 +29,43 @@
     <input type="hidden" id="challengeId" th:value="${challenge.id}"/>
     <input type="hidden" name="challenge_id" th:value="${challenge.id}"/>
 
+    <!-- Draft: still in the creation flow (step 2 of 3) -->
+    <th:block th:if="${challenge.draft}">
+        <div th:replace="~{fragments/create-steps :: steps(2)}"></div>
+        <section class="draft-banner" aria-labelledby="draftBannerTitle"
+                 th:with="hasQuestions=${challenge.questionSets != null and !challenge.questionSets.empty}">
+            <span class="draft-banner-icon" aria-hidden="true"><i class="fas fa-pencil-ruler"></i></span>
+            <div class="draft-banner-body">
+                <h2 class="draft-banner-title" id="draftBannerTitle" th:text="#{challenge.edit.draftTitle}">Almost there: this quiz is still a draft</h2>
+                <p class="draft-banner-text" th:text="#{challenge.edit.draftText}">Add and check your questions, then finish the quiz to make it playable.</p>
+                <span class="draft-banner-hint" th:unless="${hasQuestions}" th:text="#{challenge.edit.draftNeedsQuestion}">Add at least one question to finish the quiz.</span>
+            </div>
+            <div class="draft-banner-actions">
+                <a href="/viewChallenge" class="btn btn-outline-primary" th:text="#{challenge.edit.saveDraft}">Save draft and exit</a>
+                <button type="button" class="btn btn-primary" id="finishDraftBtn" onclick="finishDraft()"
+                        th:disabled="${!hasQuestions}">
+                    <i class="bi bi-check2-circle"></i>
+                    <span th:text="#{challenge.edit.finish}">Finish quiz</span>
+                </button>
+            </div>
+        </section>
+        <p id="finishError" class="alert alert-danger" role="alert" hidden></p>
+    </th:block>
+
     <!-- Challenge Info -->
     <div class="challenge-info-card">
         <div class="challenge-info-header">
-            <h1 class="challenge-info-title" th:text="${challenge.title}">Challenge Title</h1>
+            <h1 class="challenge-info-title">
+                <span th:text="${challenge.title}">Challenge Title</span>
+                <span th:if="${challenge.draft}" class="draft-badge" th:text="#{challenge.edit.draftBadge}">Draft</span>
+            </h1>
             <div class="challenge-info-actions">
-                <button type="submit" class="btn btn-primary" formnovalidate th:text="#{live.hostQuiz}">Host live quiz</button>
+                <button type="submit" class="btn btn-primary" formnovalidate th:unless="${challenge.draft}" th:text="#{live.hostQuiz}">Host live quiz</button>
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editInfoModal">
                     <i class="bi bi-pencil"></i>
                     <span th:text="#{challenge.edit.editInfo}">Edit Info</span>
                 </button>
-                <a href="/options" class="btn btn-success">
+                <a href="/options" class="btn btn-success" th:unless="${challenge.draft}">
                     <i class="bi bi-check-circle"></i>
                     <span th:text="#{challenge.edit.done}">Done</span>
                 </a>
@@ -107,6 +134,9 @@
                             <i th:class="${#strings.toLowerCase(q.imageUrl).matches('.*[.](mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)$')} ? 'bi bi-music-note-beamed' : 'bi bi-image'"
                                th:title="${#strings.toLowerCase(q.imageUrl).matches('.*[.](mp3|wav|ogg|m4a|aac|flac|webm|opus|oga)$')} ? #{challenge.edit.audio} : #{challenge.edit.questionImage}"></i>
                         </span>
+                        <span th:if="${q.answerImageUrl != null and !q.answerImageUrl.isEmpty()}" class="question-time-badge">
+                            <i class="bi bi-card-image" th:title="#{challenge.edit.answerImage}"></i>
+                        </span>
                         <span th:if="${q.videoUrl != null and !q.videoUrl.isEmpty()}" class="question-time-badge">
                             <i class="bi bi-play-btn" th:title="#{challenge.edit.youtubeUrl}"></i>
                         </span>
@@ -154,6 +184,10 @@
     <div id="emptyState" class="empty-state" th:if="${challenge.questionSets == null || challenge.questionSets.empty}">
         <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3; margin-bottom: 1rem;"></i>
         <p th:text="#{challenge.edit.noQuestions}">No questions yet. Click "Add Question" to get started.</p>
+        <button type="button" class="btn btn-primary mt-2" onclick="showQuestionModal()">
+            <i class="bi bi-plus"></i>
+            <span th:text="#{challenge.edit.addQuestion}">Add Question</span>
+        </button>
     </div>
 </div>
 
@@ -328,6 +362,15 @@
                     </div>
                 </div>
                 <div class="mb-3">
+                    <label class="form-label" for="answerImageInput" th:text="#{challenge.edit.answerImage}">Result / Reveal Image</label>
+                    <input type="file" id="answerImageInput" class="form-control" accept="image/jpeg,image/jpg,image/png,image/gif">
+                    <small class="text-muted" th:text="#{challenge.edit.answerImageHint}">Optional image shown after the answer is revealed (e.g. full photo for a close-up question). Max 2MB: JPEG, PNG or GIF.</small>
+                    <div id="answerImagePreviewContainer" style="margin-top: 10px; display: none;">
+                        <img id="answerImagePreview" th:alt="#{challenge.edit.answerImage}" alt="Result / Reveal Image" style="max-width: 200px; max-height: 150px; border-radius: 4px; border: 1px solid #ddd;">
+                        <button type="button" id="removeAnswerImageBtn" class="btn btn-sm btn-danger ms-2" onclick="removeAnswerImage()" th:text="#{challenge.edit.remove}">Remove</button>
+                    </div>
+                </div>
+                <div class="mb-3">
                     <label class="form-label" for="videoUrl" th:text="#{challenge.edit.youtubeUrl}">YouTube Video URL</label>
                     <input type="text" id="videoUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=..." onchange="previewYouTubeVideo()">
                     <small class="text-muted" th:text="#{challenge.edit.youtubeHint}">Enter a YouTube video URL to embed in the question</small>
@@ -416,11 +459,16 @@ function showQuestionModal(id = null) {
     ['A','B','C','D'].forEach(x => document.getElementById('correct'+x).checked = false);
     // Reset media fields
     document.getElementById('questionImageInput').value = '';
+    const answerImageInput = document.getElementById('answerImageInput');
+    if (answerImageInput) answerImageInput.value = '';
     document.getElementById('videoUrl').value = '';
     document.getElementById('audioPreview').src = '';
     document.getElementById('imagePreviewContainer').style.display = 'none';
+    const answerPreviewContainer = document.getElementById('answerImagePreviewContainer');
+    if (answerPreviewContainer) answerPreviewContainer.style.display = 'none';
     document.getElementById('videoPreviewContainer').style.display = 'none';
     window.currentImageUrl = null;
+    window.currentAnswerImageUrl = null;
     onQuestionTypeChange();
     questionModal.show();
 }
@@ -538,6 +586,19 @@ function editQuestion(id) {
                 document.getElementById('imagePreviewContainer').style.display = 'none';
             }
 
+            window.currentAnswerImageUrl = q.answerImageUrl || null;
+            const answerImgInput = document.getElementById('answerImageInput');
+            if (answerImgInput) answerImgInput.value = '';
+            const answerContainer = document.getElementById('answerImagePreviewContainer');
+            if (answerContainer) {
+                if (q.answerImageUrl) {
+                    document.getElementById('answerImagePreview').src = q.answerImageUrl;
+                    answerContainer.style.display = 'block';
+                } else {
+                    answerContainer.style.display = 'none';
+                }
+            }
+
             document.getElementById('videoUrl').value = q.videoUrl || '';
             if (q.videoUrl) {
                 previewYouTubeVideo();
@@ -631,6 +692,7 @@ function saveQuestion() {
         correctOptions: correct,
         acceptableAnswers: acceptableAnswers,
         imageUrl: window.currentImageUrl || null,
+        answerImageUrl: window.currentAnswerImageUrl || null,
         videoUrl: videoUrlVal || null
     };
 
@@ -648,19 +710,28 @@ function saveQuestion() {
         // a retry after a failed upload must update this question, not create a second one
         document.getElementById('editingQuestionId').value = savedQuestion.id;
 
-        // If there's a new image selected, upload it
+        const uploads = [];
         const imageInput = document.getElementById('questionImageInput');
-        if (imageInput.files && imageInput.files[0]) {
+        if (imageInput && imageInput.files && imageInput.files[0]) {
             const formData = new FormData();
             formData.append('image', imageInput.files[0]);
-            return RequestClient.json('/api/question/' + savedQuestion.id + '/upload-image', {
+            uploads.push(() => RequestClient.json('/api/question/' + savedQuestion.id + '/upload-image', {
                 method: 'POST',
                 headers: CsrfManager.addTokenToFetch(),
                 body: formData
-            }).then(() => location.reload());
-        } else {
-            location.reload();
+            }));
         }
+        const answerInput = document.getElementById('answerImageInput');
+        if (answerInput && answerInput.files && answerInput.files[0]) {
+            const formData = new FormData();
+            formData.append('image', answerInput.files[0]);
+            uploads.push(() => RequestClient.json('/api/question/' + savedQuestion.id + '/upload-answer-image', {
+                method: 'POST',
+                headers: CsrfManager.addTokenToFetch(),
+                body: formData
+            }));
+        }
+        return uploads.reduce((chain, step) => chain.then(step), Promise.resolve()).then(() => location.reload());
     }).catch(error => alert(error.message));
 }
 
@@ -693,6 +764,24 @@ function bulkDeleteQuestions() {
 function duplicateQuestion(id) {
     RequestClient.json('/api/question/' + id + '/duplicate', {method: 'POST', headers: CsrfManager.addTokenToFetch()})
         .then(() => location.reload()).catch(error => alert(error.message));
+}
+
+// Step 3 of the creation flow: the draft becomes a playable quiz, then go pick a game mode
+function finishDraft() {
+    const button = document.getElementById('finishDraftBtn');
+    const error = document.getElementById('finishError');
+    const label = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ' + LanguageManager.text('client.edit.finishing');
+    error.hidden = true;
+    RequestClient.json('/challenge/' + challengeId + '/finish', {method: 'POST', headers: CsrfManager.addTokenToFetch()})
+        .then(() => { window.location.href = '/preconfigure?challenges=' + challengeId; })
+        .catch(err => {
+            error.textContent = err.message;
+            error.hidden = false;
+            button.disabled = false;
+            button.innerHTML = label;
+        });
 }
 
 function updateChallengeInfo() {
@@ -770,6 +859,40 @@ function removeImage() {
         document.getElementById('audioPreview').src = '';
         document.getElementById('imagePreviewContainer').style.display = 'none';
         document.getElementById('questionImageInput').value = '';
+    }
+}
+
+document.getElementById('answerImageInput')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+        alert(LanguageManager.text('client.editor.imageSize'));
+        e.target.value = '';
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        document.getElementById('answerImagePreview').src = event.target.result;
+        document.getElementById('answerImagePreviewContainer').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+});
+
+function removeAnswerImage() {
+    const editId = document.getElementById('editingQuestionId').value;
+    const clear = () => {
+        window.currentAnswerImageUrl = null;
+        document.getElementById('answerImagePreview').src = '';
+        document.getElementById('answerImagePreviewContainer').style.display = 'none';
+        document.getElementById('answerImageInput').value = '';
+    };
+    if (editId && window.currentAnswerImageUrl) {
+        if (confirm(LanguageManager.text('client.editor.removeImage'))) {
+            RequestClient.json('/api/question/' + editId + '/delete-answer-image', {method: 'DELETE', headers: CsrfManager.addTokenToFetch()})
+                .then(clear).catch(error => alert(error.message));
+        }
+    } else {
+        clear();
     }
 }
 

@@ -12,6 +12,15 @@ public class ChallengeSummary {
     private String description;
     private LocalDateTime createdOn;
     private int questionCount;
+    private boolean draft;
+
+    public boolean isDraft() {
+        return draft;
+    }
+
+    public void setDraft(final boolean draft) {
+        this.draft = draft;
+    }
 
     public int getChallengeId() {
         return challengeId;

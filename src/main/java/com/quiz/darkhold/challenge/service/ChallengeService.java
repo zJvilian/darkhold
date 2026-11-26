@@ -24,9 +24,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -76,6 +81,7 @@ public class ChallengeService {
         challenge.setDescription(description);
         challenge.setQuestionSets(questionSets.stream().toList());
         challenge.setChallengeOwner(currentUserId());
+        challenge.setDraft(true);
         final Challenge savedChallenge = challengeRepository.save(challenge);
         questionSets.forEach(q -> q.setChallenge(savedChallenge));
         questionSetRepository.saveAll(questionSets);
@@ -119,6 +125,27 @@ public class ChallengeService {
         challenge.setTitle(title);
         challenge.setDescription(description);
         challenge.setChallengeOwner(currentUserId());
+        challenge.setDraft(true);
+        return challengeRepository.save(challenge);
+    }
+
+    /**
+     * Finish the creation flow: a draft becomes a playable quiz once it has at least one question.
+     *
+     * @param challengeId the challenge ID
+     * @return the finished challenge, or null if not found/not editable
+     * @throws ChallengeException when the quiz has no questions yet
+     */
+    @Transactional
+    public Challenge finishChallenge(final Long challengeId) throws ChallengeException {
+        Challenge challenge = getChallengeForEdit(challengeId);
+        if (challenge == null) {
+            return null;
+        }
+        if (challenge.getQuestionSets() == null || challenge.getQuestionSets().isEmpty()) {
+            throw new ChallengeException("Add at least one question before finishing the quiz.");
+        }
+        challenge.setDraft(false);
         return challengeRepository.save(challenge);
     }
 
@@ -194,6 +221,7 @@ public class ChallengeService {
         newChallenge.setDescription(original.getDescription());
         newChallenge.setWordCloudFuzzy(original.isWordCloudFuzzy());
         newChallenge.setChallengeOwner(currentUserId());
+        newChallenge.setDraft(original.isDraft());
         Challenge savedChallenge = challengeRepository.save(newChallenge);
         // the copy gets its own picture files, so deleting one quiz never breaks the other
         savedChallenge.setCoverImageUrl(imageProcessingService.copyMedia(
@@ -288,6 +316,7 @@ public class ChallengeService {
         challenge.setDescription(dto.getDescription() == null
                 ? "" : clip(dto.getDescription(), MAX_DESCRIPTION_LENGTH));
         challenge.setChallengeOwner(currentUserId());
+        challenge.setDraft(true);
         Challenge savedChallenge = challengeRepository.save(challenge);
         savedChallenge.setCoverImageUrl(imageProcessingService.copyMedia(
                 safeMediaUrl(dto.getCoverImageUrl()), savedChallenge.getId()));
@@ -340,6 +369,7 @@ public class ChallengeService {
         dest.setAcceptableAnswers(src.getAcceptableAnswers());
         dest.setVideoUrl(src.getVideoUrl());
         dest.setImageUrl(imageProcessingService.copyMedia(src.getImageUrl(), newChallengeId));
+        dest.setAnswerImageUrl(imageProcessingService.copyMedia(src.getAnswerImageUrl(), newChallengeId));
         return dest;
     }
 
@@ -366,6 +396,7 @@ public class ChallengeService {
         dest.setAcceptableAnswers(src.getAcceptableAnswers());
         dest.setVideoUrl(safeMediaUrl(src.getVideoUrl()));
         dest.setImageUrl(imageProcessingService.copyMedia(safeMediaUrl(src.getImageUrl()), newChallengeId));
+        dest.setAnswerImageUrl(imageProcessingService.copyMedia(safeMediaUrl(src.getAnswerImageUrl()), newChallengeId));
         return dest;
     }
 
@@ -384,6 +415,14 @@ public class ChallengeService {
 
     //replace LinkedList with ArrayDeque as the return type
     private Deque<QuestionSet> readAndProcessChallenge(final MultipartFile upload) throws ChallengeException {
+        String filename = upload.getOriginalFilename();
+        if (filename != null && filename.toLowerCase(Locale.ROOT).endsWith(".csv")) {
+            return readCsvChallenge(upload);
+        }
+        return readExcelChallenge(upload);
+    }
+
+    private Deque<QuestionSet> readExcelChallenge(final MultipartFile upload) throws ChallengeException {
         Deque<QuestionSet> questionSets = new ArrayDeque<>();
         try (XSSFWorkbook workbook = new XSSFWorkbook(upload.getInputStream());) {
             if (workbook.getNumberOfSheets() == 0) {
@@ -408,19 +447,122 @@ public class ChallengeService {
         } catch (IOException | IllegalArgumentException | POIXMLException exception) {
             // POI throws unchecked exceptions on corrupt files
             logger.error("Unable to read the uploaded Excel file", exception);
-            throw new ChallengeException("Unable to read the file. Please upload a valid .xlsx file.");
+            throw new ChallengeException("Unable to read the file. Please upload a valid .xlsx or .csv file.");
         }
         return questionSets;
     }
 
+    private Deque<QuestionSet> readCsvChallenge(final MultipartFile upload) throws ChallengeException {
+        Deque<QuestionSet> questionSets = new ArrayDeque<>();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(upload.getInputStream(), StandardCharsets.UTF_8))) {
+            int rowNum = 0;
+            int order = 0;
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (rowNum == 0 && !line.isEmpty() && line.charAt(0) == '\uFEFF') {
+                    line = line.substring(1); // strip UTF-8 BOM from Excel-exported CSVs
+                }
+                rowNum++;
+                if (line.isBlank()) {
+                    continue;
+                }
+                List<String> cols = parseCsvLine(line);
+                String first = csvCell(cols, 0);
+                if (first == null || (rowNum == 1 && looksLikeHeader(first, csvCell(cols, 5)))) {
+                    continue;
+                }
+                try {
+                    QuestionSet questionSet = populateQuestionSetFromCells(cols);
+                    questionSet.setDisplayOrder(order++);
+                    questionSets.add(questionSet);
+                } catch (ChallengeException rowError) {
+                    throw new ChallengeException("Row " + rowNum + ": " + rowError.getErrorMessage());
+                }
+            }
+        } catch (IOException exception) {
+            logger.error("Unable to read the uploaded CSV file", exception);
+            throw new ChallengeException("Unable to read the file. Please upload a valid .xlsx or .csv file.");
+        }
+        return questionSets;
+    }
+
+    private static List<String> parseCsvLine(final String line) {
+        List<String> cells = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (inQuotes) {
+                if (ch == '"' && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    current.append('"');
+                    i++;
+                } else if (ch == '"') {
+                    inQuotes = false;
+                } else {
+                    current.append(ch);
+                }
+            } else if (ch == '"') {
+                inQuotes = true;
+            } else if (ch == ',') {
+                cells.add(current.toString());
+                current.setLength(0);
+            } else {
+                current.append(ch);
+            }
+        }
+        cells.add(current.toString());
+        return cells;
+    }
+
+    private static String csvCell(final List<String> cols, final int index) {
+        if (index >= cols.size()) {
+            return null;
+        }
+        String trimmed = cols.get(index).trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     // Exports and hand-made sheets often start with column titles such as Question / CorrectOptions
     private boolean looksLikeHeader(final Row row) {
-        return HEADER_NAMES.contains(headerKey(fetchCellValue(row.getCell(0))))
-                || "correctoptions".equals(headerKey(fetchCellValue(row.getCell(5))));
+        return looksLikeHeader(fetchCellValue(row.getCell(0)), fetchCellValue(row.getCell(5)));
+    }
+
+    private boolean looksLikeHeader(final String first, final String sixth) {
+        return HEADER_NAMES.contains(headerKey(first)) || "correctoptions".equals(headerKey(sixth));
     }
 
     private static String headerKey(final String value) {
         return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[\\s_]", "");
+    }
+
+    @SuppressWarnings("checkstyle:MethodLength")
+    private QuestionSet populateQuestionSetFromCells(final List<String> cols) throws ChallengeException {
+        QuestionSet questionSet = new QuestionSet();
+        questionSet.setQuestion(csvCell(cols, 0));
+        questionSet.setAnswer1(csvCell(cols, 1));
+        questionSet.setAnswer2(csvCell(cols, 2));
+        questionSet.setAnswer3(csvCell(cols, 3));
+        questionSet.setAnswer4(csvCell(cols, 4));
+        questionSet.setQuestionType(parseQuestionTypeString(csvCell(cols, 6)));
+        questionSet.setTimeLimit(parseTimeLimitString(csvCell(cols, 7)));
+        questionSet.setPoints(parsePointsString(csvCell(cols, 8)));
+        questionSet.setAcceptableAnswers(csvCell(cols, 9));
+        questionSet.setImageUrl(safeMediaUrl(csvCell(cols, 10)));
+        questionSet.setVideoUrl(safeMediaUrl(csvCell(cols, 11)));
+        questionSet.setAnswer5(csvCell(cols, 12));
+        questionSet.setAnswer6(csvCell(cols, 13));
+        questionSet.setAnswer7(csvCell(cols, 14));
+        questionSet.setAnswer8(csvCell(cols, 15));
+        questionSet.setAnswer9(csvCell(cols, 16));
+        questionSet.setAnswer10(csvCell(cols, 17));
+        questionSet.setAnswerImageUrl(safeMediaUrl(csvCell(cols, 18)));
+        String correctOptions = csvCell(cols, 5);
+        if (correctOptions != null) {
+            questionSet.setCorrectOptions(populateOptionsFromString(correctOptions, questionSet.getQuestionType()));
+        }
+        validateQuestion(questionSet);
+        return questionSet;
     }
 
     @SuppressWarnings("checkstyle:MethodLength")
@@ -449,6 +591,7 @@ public class ChallengeService {
                 case 15 -> questionSet.setAnswer8(fetchCellValue(currentCell));
                 case 16 -> questionSet.setAnswer9(fetchCellValue(currentCell));
                 case 17 -> questionSet.setAnswer10(fetchCellValue(currentCell));
+                case 18 -> questionSet.setAnswerImageUrl(safeMediaUrl(fetchCellValue(currentCell)));
                 default -> logger.debug("Extra column at {}", currentCell.getColumnIndex());
             }
         }
@@ -479,7 +622,10 @@ public class ChallengeService {
     }
 
     private QuestionType parseQuestionType(final Cell cell) {
-        String value = fetchCellValue(cell);
+        return parseQuestionTypeString(fetchCellValue(cell));
+    }
+
+    private QuestionType parseQuestionTypeString(final String value) {
         if (value == null || value.isBlank()) {
             return QuestionType.MULTIPLE_CHOICE;
         }
@@ -493,23 +639,32 @@ public class ChallengeService {
 
     /** Seconds, or null (the game default) when blank, invalid or not above zero. */
     private Integer parseTimeLimit(final Cell cell) {
-        Integer seconds = null;
         if (cell.getCellType() == CellType.NUMERIC) {
-            seconds = (int) cell.getNumericCellValue();
-        } else {
-            String value = fetchCellValue(cell);
-            try {
-                seconds = value == null ? null : Integer.parseInt(value.trim());
-            } catch (NumberFormatException ex) {
-                logger.warn("Invalid time limit: {}", value);
-            }
+            int seconds = (int) cell.getNumericCellValue();
+            return seconds > 0 ? seconds : null;
         }
-        return seconds != null && seconds > 0 ? seconds : null;
+        return parseTimeLimitString(fetchCellValue(cell));
+    }
+
+    private Integer parseTimeLimitString(final String value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            int seconds = Integer.parseInt(value.trim());
+            return seconds > 0 ? seconds : null;
+        } catch (NumberFormatException ex) {
+            logger.warn("Invalid time limit: {}", value);
+            return null;
+        }
     }
 
     // out-of-range values are rejected later by validateQuestion
     private Integer parsePoints(final Cell cell) {
-        String value = fetchCellValue(cell);
+        return parsePointsString(fetchCellValue(cell));
+    }
+
+    private Integer parsePointsString(final String value) {
         if (value == null) {
             return DEFAULT_POINTS;
         }

@@ -1,0 +1,205 @@
+/* ============================================
+   QUIZ CREATION FLOW (shared by create page and draft editor)
+   Step indicator + draft banner
+   ============================================ */
+
+.create-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    list-style: none;
+    margin: 0 auto 2rem;
+    padding: 0;
+    max-width: 520px;
+    counter-reset: none;
+}
+
+.create-step {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex: 1 1 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+/* connector line between steps */
+.create-step:not(:last-child)::after {
+    content: '';
+    flex: 1;
+    height: 2px;
+    margin: 0 0.75rem;
+    border-radius: 2px;
+    background: var(--color-border-light);
+}
+
+.create-step.is-done:not(:last-child)::after {
+    background: var(--color-success);
+}
+
+.create-step:last-child {
+    flex: 0 0 auto;
+}
+
+.create-step-dot {
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    background: var(--color-bg-primary);
+    border: 2px solid var(--color-border-medium);
+    transition: all 0.2s ease;
+}
+
+.create-step.is-current {
+    color: var(--color-text-primary);
+}
+
+.create-step.is-current .create-step-dot {
+    color: var(--color-btn-primary-text);
+    background: var(--color-btn-primary-bg);
+    border-color: var(--color-btn-primary-bg);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-btn-primary-bg) 18%, transparent);
+}
+
+.create-step.is-done {
+    color: var(--color-text-secondary);
+}
+
+.create-step.is-done .create-step-dot {
+    color: #fff;
+    background: var(--color-success);
+    border-color: var(--color-success);
+}
+
+/* ----------------------------------------
+   Draft banner (editor)
+   ---------------------------------------- */
+.draft-banner {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-xl, 16px);
+    border: 1px solid color-mix(in srgb, var(--color-warning) 45%, transparent);
+    background: color-mix(in srgb, var(--color-warning) 10%, var(--color-bg-primary));
+}
+
+.draft-banner-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    color: var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+}
+
+.draft-banner-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.draft-banner-title {
+    margin: 0 0 0.2rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.draft-banner-text {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+}
+
+.draft-banner-hint {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-warning);
+}
+
+.draft-banner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.draft-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    color: var(--color-warning);
+    background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+}
+
+@media (max-width: 768px) {
+    .draft-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .draft-banner-actions {
+        width: 100%;
+    }
+
+    .draft-banner-actions .btn {
+        flex: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .create-step-label {
+        display: none;
+    }
+
+    .create-step.is-current .create-step-label {
+        display: inline;
+    }
+}
+
+/* ----------------------------------------
+   Drafts in the quiz list
+   ---------------------------------------- */
+.quiz-row--draft {
+    border-style: dashed !important;
+}
+
+.quiz-row--draft .challenge-card-title .draft-badge {
+    margin-left: 0.4rem;
+}
+
+.quiz-row-draft-hint {
+    color: var(--color-warning);
+    font-weight: 600;
+}
+
+.challenge-info-title .draft-badge {
+    margin-left: 0.5rem;
+    font-size: 0.7rem;
+}

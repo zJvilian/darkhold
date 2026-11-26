@@ -54,6 +54,7 @@ public class PreviewService {
         previewInfo.setQuestionSets(dequeChallenge);
         previewInfo.setChallengeName(challenge.getTitle());
         previewInfo.setChallengeId(challengeId);
+        previewInfo.setDraft(challenge.isDraft());
         return previewInfo;
     }
 
@@ -143,6 +144,9 @@ public class PreviewService {
         com.quiz.darkhold.challenge.entity.Challenge challenge = ownedChallenge(challengeId);
         if (challenge.getQuestionSets() == null || challenge.getQuestionSets().isEmpty()) {
             throw new IllegalArgumentException("Quiz has no questions: " + challengeId);
+        }
+        if (challenge.isDraft()) {
+            throw new IllegalArgumentException("Quiz is still a draft: " + challengeId);
         }
     }
 

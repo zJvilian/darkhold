@@ -118,7 +118,7 @@
                         <i class="fas fa-chevron-down dh-user-chevron"></i>
                     </button>
                     <!--/* Not a form element: page scripts submit document.forms[0], so a navbar form would hijack them */-->
-                    <span id="darkholdLogoutCsrf" hidden th:attr="data-param=${_csrf != null ? _csrf.parameterName : '_csrf'},data-token=${_csrf != null ? _csrf.token : ''}"></span>
+                    <span id="kahvoidLogoutCsrf" hidden th:attr="data-param=${_csrf != null ? _csrf.parameterName : '_csrf'},data-token=${_csrf != null ? _csrf.token : ''}"></span>
                     <ul class="dropdown-menu dropdown-menu-end dh-user-dropdown" aria-labelledby="userMenuDropdown">
                         <li>
                             <a class="dropdown-item" href="/account">

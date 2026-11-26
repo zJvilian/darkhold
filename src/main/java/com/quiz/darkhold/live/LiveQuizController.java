@@ -165,7 +165,7 @@ public class LiveQuizController {
         }
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
-                if (cookie.getName().equals("darkhold_player_" + pin)) {
+                if (cookie.getName().equals("kahvoid_player_" + pin)) {
                     return cookie.getValue();
                 }
             }
@@ -175,7 +175,7 @@ public class LiveQuizController {
 
     private void rememberPlayer(final HttpServletResponse response, final boolean secure,
                                 final String pin, final String token) {
-        Cookie cookie = new Cookie("darkhold_player_" + pin, token);
+        Cookie cookie = new Cookie("kahvoid_player_" + pin, token);
         cookie.setHttpOnly(true);
         cookie.setSecure(secure);
         cookie.setAttribute("SameSite", "Lax");

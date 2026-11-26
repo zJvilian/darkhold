@@ -35,7 +35,7 @@ const LanguageManager = (() => {
     }
 
     function text(key, ...args) {
-        const value = window.DarkholdMessages?.[key] ?? key;
+        const value = window.KahvoidMessages?.[key] ?? key;
         return value.replace(/\{(\d+)\}/g, (match, index) => args[index] ?? match);
     }
 

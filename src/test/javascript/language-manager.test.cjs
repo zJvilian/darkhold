@@ -7,7 +7,7 @@ function setup(lang = 'en', href = 'http://localhost:8181/?filter=mine#quiz') {
     const badge = {};
     const context = vm.createContext({
         URL, console,
-        window: {location: {href}, DarkholdMessages: {'live.questionNumber': 'Frage {0} von {1}'}},
+        window: {location: {href}, KahvoidMessages: {'live.questionNumber': 'Frage {0} von {1}'}},
         localStorage: {getItem: () => 'es'}, navigator: {language: 'es-ES'},
         document: {
             documentElement: {lang}, readyState: 'complete',

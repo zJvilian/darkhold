@@ -20,7 +20,7 @@ Please update the tests to reflect your code changes. Pull requests will not be 
 
 ## 🌍 Contributing Translations
 
-Darkhold supports multiple languages, and we welcome translation contributions! Here's how you can help:
+Kahvoid supports multiple languages, and we welcome translation contributions! Here's how you can help:
 
 ### Current Translation Status
 
@@ -47,7 +47,7 @@ Darkhold supports multiple languages, and we welcome translation contributions! 
    - Use `messages.properties` (English) as the source
    - Use `messages_es.properties` (Spanish) as a reference for structure
    - **Keep keys in English**, only translate values after the `=` sign
-   - **Don't translate**: `app.name=Darkhold`, technical terms (PIN, URL, Excel, CSV)
+   - **Don't translate**: `app.name=Kahvoid`, technical terms (PIN, URL, Excel, CSV)
    - **Use formal tone**: "vous" (French), "Sie" (German), "usted" (Spanish)
 
 4. **Example**:
@@ -109,4 +109,4 @@ We're particularly looking for native speakers to help with:
 - 🇯🇵 **Japanese** (new language)
 - 🇨🇳 **Chinese** (new language)
 
-Thank you for helping make Darkhold accessible to more people! 🌍
+Thank you for helping make Kahvoid accessible to more people! 🌍

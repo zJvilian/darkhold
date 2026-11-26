@@ -1,4 +1,4 @@
-// Run with Playwright available on NODE_PATH and a running local Darkhold instance.
+// Run with Playwright available on NODE_PATH and a running local Kahvoid instance.
 // Uses the seeded demo host unless DARKHOLD_TEST_USERNAME / PASSWORD are set.
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');

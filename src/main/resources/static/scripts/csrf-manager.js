@@ -1,5 +1,5 @@
 /**
- * CSRF Token Manager for Darkhold
+ * CSRF Token Manager for Kahvoid
  * Handles CSRF token extraction and injection for AJAX requests and WebSocket connections
  */
 

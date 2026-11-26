@@ -5,7 +5,7 @@ function startGame() {
     let pin = document.getElementById('quizPin').value;
     console.log('triggering quiz with pin ' + pin);
     document.getElementById('quiz_pin').value = pin;
-    let socket = new SockJS('/darkhold-websocket');
+    let socket = new SockJS('/kahvoid-websocket');
     stompClient = Stomp.over(socket);
 
     // Add CSRF token to connection headers
@@ -48,7 +48,7 @@ function connect() {
     let teamMode = document.getElementById('teamMode')?.value === 'true';
     // players who joined before this page loaded (returning to the lobby)
     showGreeting([...document.querySelectorAll('#players td')].map(cell => cell.textContent));
-    let socket = new SockJS('/darkhold-websocket');
+    let socket = new SockJS('/kahvoid-websocket');
     stompClient = Stomp.over(socket);
 
     // Add CSRF token to connection headers

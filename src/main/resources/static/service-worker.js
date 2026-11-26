@@ -5,13 +5,13 @@
  * Provides offline support and caching for better performance
  */
 
-const CACHE_NAME = 'darkhold-quiz-v6';
+const CACHE_NAME = 'kahvoid-quiz-v7';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
     OFFLINE_URL,
-    '/styles/darkhold-styles.css',
+    '/styles/kahvoid-styles.css',
     '/styles/theme-variables.css',
     '/scripts/theme-manager.js',
     '/scripts/common-scripts.js',
@@ -88,7 +88,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Skip WebSocket / STOMP / SockJS requests
-    if (pathname.startsWith('/darkhold-websocket') || event.request.url.includes('/ws')
+    if (pathname.startsWith('/kahvoid-websocket') || event.request.url.includes('/ws')
             || event.request.url.includes('/sockjs') || event.request.url.includes('/stomp')) {
         return;
     }

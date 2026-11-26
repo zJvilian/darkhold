@@ -10,8 +10,8 @@ const ThemeManager = (function() {
     'use strict';
 
     // Configuration
-    const STORAGE_KEY = 'darkhold_theme';
-    const COLORBLIND_KEY = 'darkhold_colorblind';
+    const STORAGE_KEY = 'kahvoid_theme';
+    const COLORBLIND_KEY = 'kahvoid_colorblind';
     const COLORBLIND_MODES = ['none', 'deuteranopia', 'protanopia', 'tritanopia'];
     const THEMES = {
         LIGHT: 'light',

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Darkhold is a self-hosted real-time multiplayer quiz platform (Kahoot alternative) built with Spring Boot 4.0 and Java 21+. It uses Thymeleaf templates with Bootstrap 5 for the frontend and WebSocket/STOMP for live game updates.
+Kahvoid (fork of Darkhold) is a self-hosted real-time multiplayer quiz platform (Kahoot alternative) built with Spring Boot 4.1 and Java 21+. It uses Thymeleaf templates with Bootstrap 5 for the frontend and WebSocket/STOMP for live game updates.
 
 ## Common Commands
 

@@ -1,5 +1,5 @@
 /**
- * Home page scripts for Darkhold
+ * Home page scripts for Kahvoid
  * Handles PIN entry, name entry, and game joining
  */
 

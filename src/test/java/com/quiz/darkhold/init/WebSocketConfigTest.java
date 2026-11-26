@@ -40,7 +40,7 @@ class WebSocketConfigTest {
     }
 
     @Test
-    @DisplayName("Should register darkhold-websocket endpoint")
+    @DisplayName("Should register kahvoid-websocket endpoint")
     void shouldRegisterWebSocketEndpoint() {
         var registry = mock(StompEndpointRegistry.class);
         var registration = mock(StompWebSocketEndpointRegistration.class);
@@ -51,7 +51,7 @@ class WebSocketConfigTest {
 
         config.registerStompEndpoints(registry);
 
-        verify(registry).addEndpoint("/darkhold-websocket");
+        verify(registry).addEndpoint("/kahvoid-websocket");
     }
 
     @Test

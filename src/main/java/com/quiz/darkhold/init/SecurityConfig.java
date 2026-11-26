@@ -49,7 +49,7 @@ import java.util.Map;
 public class SecurityConfig {
     private static final String[] GUEST_GAME_PATHS = {"/interstitial", "/question", "/game", "/answer/",
         "/validate_answer/", "/scoreboard", "/final", "/team/list/**", "/team/scores/**", "/team/player/**",
-        "/darkhold-websocket/**", "/logout"};
+        "/kahvoid-websocket/**", "/logout"};
 
 
     private final UserDetailsService userDetailsService;

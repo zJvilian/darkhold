@@ -587,7 +587,7 @@ function saveAnswerOnAjax(afterSave) {
 function showScoreboard() {
     let pin = document.getElementById('quizPin').value;
     console.log('triggering scoreboard for game pin: ' + pin);
-    let socket = new SockJS('/darkhold-websocket');
+    let socket = new SockJS('/kahvoid-websocket');
     stompClient = Stomp.over(socket);
 
     // Add CSRF token to connection headers
@@ -608,7 +608,7 @@ let pausedTimeRemaining = 0;
 
 function connect() {
     let pin = document.getElementById('quizPin').value;
-    let socket = new SockJS('/darkhold-websocket');
+    let socket = new SockJS('/kahvoid-websocket');
     stompClient = Stomp.over(socket);
 
     // Add CSRF token to connection headers

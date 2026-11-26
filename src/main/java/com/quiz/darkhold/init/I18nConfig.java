@@ -11,7 +11,7 @@ import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import java.util.Locale;
 
 /**
- * Internationalization (i18n) configuration for the Darkhold application.
+ * Internationalization (i18n) configuration for the Kahvoid application.
  * Configures message sources, locale resolution, and locale change interceptor.
  */
 @Configuration
@@ -42,7 +42,7 @@ public class I18nConfig {
      */
     @Bean
     public LocaleResolver localeResolver() {
-        CookieLocaleResolver resolver = new CookieLocaleResolver("darkhold_language");
+        CookieLocaleResolver resolver = new CookieLocaleResolver("kahvoid_language");
         resolver.setCookieMaxAge(java.time.Duration.ofDays(365));
         resolver.setCookieSameSite("Lax");
         resolver.setDefaultLocale(Locale.ENGLISH);

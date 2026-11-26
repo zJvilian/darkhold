@@ -95,7 +95,7 @@ test('CsrfManager reads fresh cookie, uses X-XSRF-TOKEN for STOMP, and omits nul
 });
 
 test('ThemeManager preserves unset localStorage on init, watches system preference, and restores colorblind mode', () => {
-    const store = new Map([['darkhold_colorblind', 'deuteranopia']]);
+    const store = new Map([['kahvoid_colorblind', 'deuteranopia']]);
     const attrs = new Map();
     let mediaListener = null;
     const context = vm.createContext({
@@ -123,13 +123,13 @@ test('ThemeManager preserves unset localStorage on init, watches system preferen
     vm.runInContext(fs.readFileSync('src/main/resources/static/scripts/theme-manager.js', 'utf8'), context);
     const tm = vm.runInContext('ThemeManager', context);
     assert.equal(attrs.get('data-theme'), 'dark');
-    assert.equal(store.has('darkhold_theme'), false);
+    assert.equal(store.has('kahvoid_theme'), false);
     assert.equal(attrs.get('data-colorblind'), 'deuteranopia');
     assert.equal(typeof mediaListener, 'function');
     mediaListener({matches: false});
     assert.equal(attrs.get('data-theme'), 'light');
     tm.toggle();
-    assert.equal(store.get('darkhold_theme'), 'dark');
+    assert.equal(store.get('kahvoid_theme'), 'dark');
     tm.setColorblindMode('none');
     assert.equal(attrs.has('data-colorblind'), false);
 });
@@ -185,7 +185,7 @@ test('logOut posts its own form with the navbar CSRF token instead of hijacking 
                 created.push(el);
                 return el;
             },
-            getElementById: id => id === 'darkholdLogoutCsrf' ? {dataset: {param: '_csrf', token: 'tok123'}} : null
+            getElementById: id => id === 'kahvoidLogoutCsrf' ? {dataset: {param: '_csrf', token: 'tok123'}} : null
         }
     });
     vm.runInContext(fs.readFileSync('src/main/resources/static/scripts/common-scripts.js', 'utf8'), context);

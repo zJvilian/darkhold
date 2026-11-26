@@ -12,7 +12,7 @@ function setup(response) {
     const elements = {progress: element(), progressdiv: element()};
     const context = vm.createContext({
         FormData, console,
-        window: {location: {href: '/challenge/create'}, DarkholdMessages: Object.fromEntries(fs.readFileSync('src/main/resources/messages.properties', 'utf8').split('\n').filter(line => /^[^#=]+=/.test(line)).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]))},
+        window: {location: {href: '/challenge/create'}, KahvoidMessages: Object.fromEntries(fs.readFileSync('src/main/resources/messages.properties', 'utf8').split('\n').filter(line => /^[^#=]+=/.test(line)).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]))},
         document: {
             cookie: 'XSRF-TOKEN=test-token', readyState: 'loading',
             addEventListener() {}, createElement: element,

@@ -35,7 +35,7 @@ class GermanLanguageIntegrationTest {
                 .andExpect(content().string(containsString("lang=\"de\"")))
                 .andExpect(content().string(containsString(">DE</span>")))
                 .andExpect(content().string(containsString("Interaktive Quiz-Plattform"))).andReturn();
-        Cookie language = result.getResponse().getCookie("darkhold_language");
+        Cookie language = result.getResponse().getCookie("kahvoid_language");
         assertNotNull(language);
         assertTrue(language.getMaxAge() > 0);
         mvc.perform(get("/join").cookie(language)).andExpect(status().isOk())
@@ -50,8 +50,8 @@ class GermanLanguageIntegrationTest {
     void hostEditorAndClientMessagesUseGerman() throws Exception {
         mvc.perform(get("/challenge/create").param("lang", "de").with(user("host")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Grundinformationen")))
-                .andExpect(content().string(containsString("window.DarkholdMessages =")))
+                .andExpect(content().string(containsString("Quiz-Details")))
+                .andExpect(content().string(containsString("window.KahvoidMessages =")))
                 .andExpect(model().attribute("clientMessages",
                         hasEntry("client.editor.addQuestion", "Frage hinzufügen")))
                 .andExpect(content().string(containsString("Live-Quiz starten")))
@@ -60,7 +60,7 @@ class GermanLanguageIntegrationTest {
 
     @Test
     void explicitEnglishSelectionOverridesGermanCookie() throws Exception {
-        mvc.perform(get("/join").cookie(new Cookie("darkhold_language", "de")).param("lang", "en"))
+        mvc.perform(get("/join").cookie(new Cookie("kahvoid_language", "de")).param("lang", "en"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("lang=\"en\"")))
                 .andExpect(content().string(containsString("Pick your avatar")));

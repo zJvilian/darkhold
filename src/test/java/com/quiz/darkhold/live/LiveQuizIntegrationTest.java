@@ -416,7 +416,7 @@ class LiveQuizIntegrationTest {
         var response = mvc.perform(post("/join").with(csrf()).param("pin", pin)
                         .param("name", "Returning player").param("avatar", "fox"))
                 .andExpect(redirectedUrl("/play/" + pin)).andReturn().getResponse();
-        var cookie = response.getCookie("darkhold_player_" + pin);
+        var cookie = response.getCookie("kahvoid_player_" + pin);
         assertNotNull(cookie);
         assertTrue(cookie.isHttpOnly());
         assertEquals("Lax", cookie.getAttribute("SameSite"));

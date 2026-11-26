@@ -22,7 +22,7 @@ function connect() {
     let name_val = document.getElementById('name').value;
     let pin_val = document.getElementById('quizPin').value;
     let teamMode = document.getElementById('teamMode')?.value === 'true';
-    let socket = new SockJS('/darkhold-websocket');
+    let socket = new SockJS('/kahvoid-websocket');
     stompClient = Stomp.over(socket);
 
     // Add CSRF token to connection headers

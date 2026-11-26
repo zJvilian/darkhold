@@ -6,7 +6,7 @@ function startGame() {
 function connect() {
     let name = document.getElementById('name').value;
     let pin = document.getElementById('quizPin').value;
-    let socket = new SockJS('/darkhold-websocket');
+    let socket = new SockJS('/kahvoid-websocket');
     stompClient = Stomp.over(socket);
 
     // Add CSRF token to connection headers

@@ -10,8 +10,8 @@ const AudioManager = (function() {
     'use strict';
 
     // Configuration
-    const STORAGE_ENABLED_KEY = 'darkhold_sounds_enabled';
-    const STORAGE_VOLUME_KEY = 'darkhold_volume';
+    const STORAGE_ENABLED_KEY = 'kahvoid_sounds_enabled';
+    const STORAGE_VOLUME_KEY = 'kahvoid_volume';
     const DEFAULT_VOLUME = 0.5; // 50%
     const DEFAULT_ENABLED = true;
 

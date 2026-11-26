@@ -1,6 +1,6 @@
-# Darkhold - How-To Guide
+# Kahvoid - How-To Guide
 
-A comprehensive guide for running, developing, and deploying Darkhold - a self-hosted quiz platform.
+A comprehensive guide for running, developing, and deploying Kahvoid — a self-hosted quiz platform (fork of [Darkhold](https://github.com/surajcm/darkhold)).
 
 ## Table of Contents
 
@@ -238,7 +238,7 @@ docker-compose -f docker-compose.h2.yml logs -f
 ### Option 2: Production Deployment (PostgreSQL)
 
 ```bash
-# Start PostgreSQL and Darkhold
+# Start PostgreSQL and Kahvoid
 docker-compose up -d
 
 # Check status
@@ -391,7 +391,7 @@ java -version  # Should be 21+
 docker-compose logs -f darkhold
 
 # Or inside container
-docker exec -it darkhold cat /tmp/darkhold.log
+docker exec -it darkhold cat /app/logs/kahvoid.log
 ```
 
 ### Reset Database
@@ -443,17 +443,10 @@ CREATE DATABASE darkhold;
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/surajcm/darkhold/wiki) for guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Ensure tests pass (`./gradlew check`)
 5. Submit a pull request
-
----
-
-## Support
-
-- **Issues**: https://github.com/surajcm/darkhold/issues
-- **Wiki**: https://github.com/surajcm/darkhold/wiki

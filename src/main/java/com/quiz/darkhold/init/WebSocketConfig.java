@@ -26,7 +26,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // CSRF token will be automatically validated by Spring Security
         // Pages subscribe and then ask; handle each client's frames in that order so the answer finds its listener
         registry.setPreserveReceiveOrder(true);
-        registry.addEndpoint("/darkhold-websocket")
+        registry.addEndpoint("/kahvoid-websocket")
                 // no allowed origins set: Spring then accepts same-origin requests only
                 .withSockJS();
     }

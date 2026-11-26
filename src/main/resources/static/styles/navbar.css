@@ -1,5 +1,5 @@
 /* ============================================
-   DARKHOLD NAVBAR
+   KAHVOID NAVBAR
    Modern, minimal navigation bar
    ============================================ */
 
@@ -383,7 +383,7 @@
 
 /* ============================================
    LANGUAGE DROPDOWN (Shared)
-   Overrides from darkhold-styles.css still apply
+   Overrides from kahvoid-styles.css still apply
    ============================================ */
 .language-dropdown {
     background-color: var(--color-card-bg);

@@ -10,7 +10,7 @@ function logOut() {
     var form = document.createElement("form");
     form.method = "post";
     form.action = "/logout";
-    var csrf = document.getElementById("darkholdLogoutCsrf");
+    var csrf = document.getElementById("kahvoidLogoutCsrf");
     var token = csrf && csrf.dataset.token ? csrf.dataset.token
         : (typeof CsrfManager !== "undefined" ? CsrfManager.getToken() : null);
     if (token) {

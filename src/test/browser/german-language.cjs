@@ -20,7 +20,7 @@ const output = process.env.DARKHOLD_TEST_OUTPUT || '/tmp/darkhold-german';
     }
     try {
         await host.goto(base + '/');
-        await host.evaluate(() => localStorage.setItem('darkhold_language', 'es'));
+        await host.evaluate(() => localStorage.setItem('kahvoid_language', 'es'));
         await host.reload();
         assert.equal(await host.locator('.dh-lang-code:visible').textContent(), 'EN');
         await selectLanguage(host, 'de');

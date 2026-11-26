@@ -56,7 +56,7 @@ async function loadRoom(snapshot, host) {
             playIncorrect: () => sounds.push('incorrect'), playJoin: () => sounds.push('join'),
             playCountdown: () => sounds.push('countdown')},
         window: {setTimeout: (fn, delay) => { timers.push({fn, delay}); return timers.length; },
-            clearTimeout: () => {}, setInterval: () => {}, DarkholdMessages: {}},
+            clearTimeout: () => {}, setInterval: () => {}, KahvoidMessages: {}},
         fetch: async () => ({ok: true, status: 200, json: async () => snapshot})
     });
     vm.runInContext(fs.readFileSync('src/main/resources/static/scripts/language-manager.js', 'utf8'), context);

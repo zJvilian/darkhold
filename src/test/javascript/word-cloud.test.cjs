@@ -43,7 +43,7 @@ test('word cloud renders every answer without overlap and scales size with frequ
         URL, AbortSignal: {timeout: () => ({})}, Intl, Date, Math, JSON, console,
         window: {
             setTimeout: () => {}, setInterval: () => {}, clearTimeout: () => {},
-            DarkholdMessages: Object.fromEntries(fs.readFileSync('src/main/resources/messages.properties', 'utf8')
+            KahvoidMessages: Object.fromEntries(fs.readFileSync('src/main/resources/messages.properties', 'utf8')
                 .split('\n').filter(l => /^[^#=]+=/.test(l)).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]))
         },
         fetch: async () => ({ok: true, status: 200, json: async () => snapshot}),
@@ -96,7 +96,7 @@ test('question audio starts after 3s, repeats 3x/2x/1x by duration, and supports
                 setTimeout: (fn, delay) => { timers.push({fn, delay}); return timers.length; },
                 clearTimeout: () => {},
                 setInterval: () => {},
-                DarkholdMessages: {}
+                KahvoidMessages: {}
             },
             fetch: async () => ({ok: true, status: 200, json: async () => snapshot}),
             document: {

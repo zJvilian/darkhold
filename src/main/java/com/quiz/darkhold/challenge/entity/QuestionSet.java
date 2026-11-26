@@ -80,6 +80,9 @@ public class QuestionSet implements Serializable {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Column(name = "answer_image_url", length = 500)
+    private String answerImageUrl;
+
     @Column(name = "video_url", length = 500)
     private String videoUrl;
 
@@ -252,6 +255,14 @@ public class QuestionSet implements Serializable {
 
     public void setImageUrl(final String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getAnswerImageUrl() {
+        return answerImageUrl;
+    }
+
+    public void setAnswerImageUrl(final String answerImageUrl) {
+        this.answerImageUrl = answerImageUrl;
     }
 
     public String getVideoUrl() {

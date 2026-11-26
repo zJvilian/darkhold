@@ -159,6 +159,7 @@ function optionList(value) {
 
 // Multiplayer pages don't carry the right answer: ask for it once this player's answer is in
 function revealAnswer(questionType) {
+    revealAnswerImage();
     if (['POLL', 'WORD_CLOUD', 'TYPE_ANSWER'].includes(questionType)) return;
     const correctOptions = document.getElementById('correctOptions');
     if (correctOptions.value || typeof fetch !== 'function') {
@@ -174,6 +175,27 @@ function revealAnswer(questionType) {
         .then(answer => {
             correctOptions.value = answer;
             showRevealedAnswer(questionType);
+        })
+        .catch(() => {});
+}
+
+function revealAnswerImage() {
+    const flag = document.getElementById('hasAnswerImage');
+    const container = document.getElementById('answerRevealContainer');
+    const img = document.getElementById('answerRevealImage');
+    if (!flag || flag.value !== 'true' || !container || !img || typeof fetch !== 'function') return;
+    fetch('/answer/', {
+        method: 'POST',
+        headers: CsrfManager.addTokenToFetch({'Content-Type': 'application/x-www-form-urlencoded'}),
+        body: new URLSearchParams({revealImage: 'true'})
+    })
+        .then(response => response.ok ? response.text() : '')
+        .then(url => {
+            if (!url) return;
+            img.src = url;
+            container.style.display = 'block';
+            const qImg = document.getElementById('questionImage');
+            if (qImg) qImg.style.display = 'none';
         })
         .catch(() => {});
 }

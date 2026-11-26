@@ -65,6 +65,7 @@ create table question_set (
       answer10        varchar(255),
       correctOptions varchar(255),
       display_order  int default 0,
+      answer_image_url varchar(500),
       challenge_id   bigint
 );
 

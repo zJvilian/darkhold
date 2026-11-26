@@ -293,10 +293,18 @@
         if (result && typeof result.catch === 'function') result.catch(() => {});
     }
 
+    function safeImageUrl(url) {
+        return Boolean(url && !audioPattern.test(url) && /^(?:\/(?:images|question-images|media)\/|https?:\/\/)/.test(url));
+    }
+
     function renderMedia() {
         const image = state.question.image;
         const rawAudio = state.question.audio || (image && audioPattern.test(image) ? image : null);
-        const validImage = Boolean(image && !audioPattern.test(image) && /^\/(?:images|question-images|media)\//.test(image));
+        const revealImage = state.phase === 'RESULTS' && safeImageUrl(state.answerImage) ? state.answerImage : null;
+        show('answer-image', Boolean(revealImage));
+        if (revealImage) $('answer-image').src = revealImage;
+        else $('answer-image')?.removeAttribute('src');
+        const validImage = !revealImage && safeImageUrl(image);
         show('question-image', validImage);
         if (validImage) $('question-image').src = image;
         else $('question-image')?.removeAttribute('src');

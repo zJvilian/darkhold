@@ -34,6 +34,7 @@ public class QuestionResponse {
     private Integer points;
     private String acceptableAnswers;
     private String imageUrl;
+    private String answerImageUrl;
     private String videoUrl;
 
     /**
@@ -79,6 +80,7 @@ public class QuestionResponse {
         resp.points = qs.getPoints();
         resp.acceptableAnswers = qs.getAcceptableAnswers();
         resp.imageUrl = qs.getImageUrl();
+        resp.answerImageUrl = qs.getAnswerImageUrl();
         resp.videoUrl = qs.getVideoUrl();
     }
 
@@ -240,6 +242,14 @@ public class QuestionResponse {
 
     public void setImageUrl(final String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getAnswerImageUrl() {
+        return answerImageUrl;
+    }
+
+    public void setAnswerImageUrl(final String answerImageUrl) {
+        this.answerImageUrl = answerImageUrl;
     }
 
     public String getVideoUrl() {

@@ -479,6 +479,11 @@ public class LiveQuizService {
         }
         if ("RESULTS".equals(state.phase) || "FINISHED".equals(state.phase)) {
             result.put("correctAnswer", correctAnswer(question));
+            // Reveal image is only sent once the question is over so players cannot see it early
+            String reveal = question.getAnswerImageUrl();
+            if (reveal != null && !reveal.isBlank() && !ImageProcessingService.isAudioUrl(reveal)) {
+                result.put("answerImage", reveal);
+            }
             result.put("distribution", distribution(state, question));
             addFeedback(result, state, player, question);
         }

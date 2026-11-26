@@ -66,9 +66,12 @@ public class QuestionService {
         if (question == null) {
             return false;
         }
-        // Delete associated image if exists
+        // Delete associated images if they exist
         if (question.getImageUrl() != null) {
             imageProcessingService.deleteQuestionImage(question.getImageUrl());
+        }
+        if (question.getAnswerImageUrl() != null) {
+            imageProcessingService.deleteQuestionImage(question.getAnswerImageUrl());
         }
         questionSetRepository.delete(question);
         logger.info("Deleted question {}", questionId);
@@ -163,6 +166,36 @@ public class QuestionService {
         return true;
     }
 
+    @Transactional
+    public String uploadAnswerImage(final Long questionId, final MultipartFile file) {
+        QuestionSet question = getOwnedQuestion(questionId);
+        if (question == null) {
+            throw new ImageValidationException("Question not found or access denied");
+        }
+        if (question.getAnswerImageUrl() != null) {
+            imageProcessingService.deleteQuestionImage(question.getAnswerImageUrl());
+        }
+        Long challengeId = question.getChallenge().getId();
+        String imageUrl = imageProcessingService.saveAnswerImage(challengeId, questionId, file);
+        question.setAnswerImageUrl(imageUrl);
+        questionSetRepository.save(question);
+        logger.info("Uploaded answer image for question {}: {}", questionId, imageUrl);
+        return imageUrl;
+    }
+
+    @Transactional
+    public boolean deleteAnswerImage(final Long questionId) {
+        QuestionSet question = getOwnedQuestion(questionId);
+        if (question == null || question.getAnswerImageUrl() == null) {
+            return false;
+        }
+        imageProcessingService.deleteQuestionImage(question.getAnswerImageUrl());
+        question.setAnswerImageUrl(null);
+        questionSetRepository.save(question);
+        logger.info("Deleted answer image for question {}", questionId);
+        return true;
+    }
+
     private Challenge getOwnedChallenge(final Long challengeId) {
         java.util.Optional<Challenge> challengeOpt = challengeRepository.findById(challengeId);
         if (challengeOpt.isEmpty() || !canEdit(challengeOpt.get())) {
@@ -206,6 +239,7 @@ public class QuestionService {
         qs.setPoints(request.getPoints());
         qs.setAcceptableAnswers(request.getAcceptableAnswers());
         qs.setImageUrl(request.getImageUrl());
+        qs.setAnswerImageUrl(request.getAnswerImageUrl());
         qs.setVideoUrl(request.getVideoUrl());
         qs.setChallenge(challenge);
         return qs;
@@ -287,6 +321,7 @@ public class QuestionService {
         dest.setVideoUrl(src.getVideoUrl());
         // the copy owns a clone of the file, so deleting either question leaves the other's picture or audio alone
         dest.setImageUrl(imageProcessingService.copyMedia(src.getImageUrl(), src.getChallenge().getId()));
+        dest.setAnswerImageUrl(imageProcessingService.copyMedia(src.getAnswerImageUrl(), src.getChallenge().getId()));
     }
 
     private com.quiz.darkhold.user.entity.User currentUser() {

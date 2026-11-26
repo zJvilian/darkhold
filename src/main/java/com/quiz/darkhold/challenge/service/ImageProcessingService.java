@@ -249,6 +249,36 @@ public class ImageProcessingService {
     }
 
     /**
+     * Save an answer reveal image for a question. Audio is not accepted here.
+     *
+     * @param challengeId the challenge ID
+     * @param questionId  the question ID
+     * @param file        the image file
+     * @return the relative URL path to the saved image
+     * @throws ImageValidationException if validation or save fails
+     */
+    public String saveAnswerImage(final Long challengeId, final Long questionId,
+                                  final MultipartFile file) throws ImageValidationException {
+        if (isAudioFile(file)) {
+            throw new ImageValidationException("Invalid file type. Allowed types: JPEG, PNG, GIF");
+        }
+        validateImage(file);
+        Path uploadPath = Paths.get(questionImagesDir, challengeId.toString(), questionId.toString());
+        try {
+            byte[] processedBytes = resizeAndCompressImage(file);
+            Files.createDirectories(uploadPath);
+            String extension = getFileExtension(file.getOriginalFilename()).toLowerCase(Locale.ROOT);
+            String filename = String.format("answer_%d.%s", System.currentTimeMillis(), extension);
+            Files.write(uploadPath.resolve(filename), processedBytes);
+            String imageUrl = String.format("/question-images/%d/%d/%s", challengeId, questionId, filename);
+            logger.info("Saved answer reveal image: {}", imageUrl);
+            return imageUrl;
+        } catch (IOException ioException) {
+            throw new ImageValidationException("Failed to save image: " + ioException.getMessage());
+        }
+    }
+
+    /**
      * Save a challenge cover (preview) image. Audio is not accepted here.
      *
      * @param challengeId the challenge ID

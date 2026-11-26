@@ -553,6 +553,19 @@ class GameControllerTest {
             assertEquals("", gameController.revealAnswer(principal));
             assertEquals("A,C", gameController.revealAnswer(principal));
         }
+
+        @Test
+        @DisplayName("the answer reveal image is only returned after answering and rejects unsafe URLs")
+        void testRevealAnswerImage_OnlyAfterAnswering() {
+            question.setAnswerImageUrl("/question-images/1/2/answer_full.jpg");
+            when(gameService.hasAnswered("player1", 0)).thenReturn(false, true, true);
+
+            assertEquals("", gameController.revealAnswerImage(principal));
+            assertEquals("/question-images/1/2/answer_full.jpg", gameController.revealAnswerImage(principal));
+
+            question.setAnswerImageUrl("javascript:alert(1)");
+            assertEquals("", gameController.revealAnswerImage(principal));
+        }
     }
 
     @Nested

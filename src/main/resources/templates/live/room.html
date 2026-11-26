@@ -13,6 +13,7 @@
     <script defer src="/scripts/language-manager.js"></script>
     <script defer src="/scripts/audio-manager.js"></script>
     <script defer src="/scripts/live-quiz.js"></script>
+    <script defer src="/scripts/image-zoom.js"></script>
 </head>
 <body class="live-page" th:attr="data-pin=${pin},data-host=${host}">
 <header class="live-nav">
@@ -65,7 +66,9 @@
             <button id="submit-multiple" class="primary" type="button" hidden th:text="#{live.submitMultiple}">Submit answers</button>
         </div>
         <div id="answer-sent" class="answer-sent" role="status" hidden><span aria-hidden="true">✓</span><h2 th:text="#{live.answerSaved}">Answer locked in!</h2><p th:text="#{live.seeResult}">Let’s see how you did…</p></div>
-        <div id="round-result" class="round-result" hidden><h2 id="feedback" role="status"></h2><p id="correct-answer"></p></div>
+        <div id="round-result" class="round-result" hidden><h2 id="feedback" role="status"></h2>
+            <img id="answer-image" class="answer-reveal-image" alt="Answer reveal" th:alt="#{live.answerImageAlt}" hidden>
+            <p id="correct-answer" class="correct-answer-label"></p></div>
         <div id="round-host-actions" class="host-actions" th:if="${host}"><button id="reveal" class="secondary" type="button" th:text="#{live.reveal}">Reveal answers</button>
             <button id="next-question" class="primary" type="button" hidden th:text="#{live.next}">Next question →</button></div>
     </section>

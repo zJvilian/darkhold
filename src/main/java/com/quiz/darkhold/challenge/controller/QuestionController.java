@@ -168,6 +168,38 @@ public class QuestionController {
     }
 
     /**
+     * Upload a result/reveal image for a question (shown after the answer is revealed).
+     *
+     * @param id   the question ID
+     * @param file the image file
+     * @return the answer image URL
+     */
+    @PostMapping("/{id}/upload-answer-image")
+    public ResponseEntity<Map<String, String>> uploadAnswerImage(
+            @PathVariable final Long id,
+            @RequestParam("image") final MultipartFile file) {
+        logger.info("Uploading answer image for question: {}", id);
+        String imageUrl = questionService.uploadAnswerImage(id, file);
+        return ResponseEntity.ok(Map.of("answerImageUrl", imageUrl));
+    }
+
+    /**
+     * Delete the result/reveal image for a question.
+     *
+     * @param id the question ID
+     * @return success status
+     */
+    @DeleteMapping("/{id}/delete-answer-image")
+    public ResponseEntity<Map<String, Boolean>> deleteAnswerImage(@PathVariable final Long id) {
+        logger.info("Deleting answer image for question: {}", id);
+        boolean deleted = questionService.deleteAnswerImage(id);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("deleted", true));
+    }
+
+    /**
      * Bulk delete questions.
      *
      * @param questionIds the question IDs to delete

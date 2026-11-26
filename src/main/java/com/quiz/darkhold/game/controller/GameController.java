@@ -263,6 +263,8 @@ public class GameController {
         boolean audio = ImageProcessingService.isAudioUrl(media);
         model.addAttribute("questionImage", audio ? null : media);
         model.addAttribute("questionAudio", audio && ImageProcessingService.supportsAudio(qType) ? media : null);
+        model.addAttribute("hasAnswerImage",
+                qs.getAnswerImageUrl() != null && !qs.getAnswerImageUrl().isBlank());
     }
 
     // a question with several right options lets the player pick several
@@ -368,6 +370,26 @@ public class GameController {
             return "";
         }
         return Objects.toString(question.getCorrectOptions(), "");
+    }
+
+    /**
+     * Reveal image URL for the caller's current question, once their answer (or timeout) is recorded.
+     *
+     * @param principal the asking player or host
+     * @return safe image URL, or empty while the caller can still answer
+     */
+    @PostMapping(value = "/answer/", params = "revealImage")
+    public @ResponseBody
+    String revealAnswerImage(final Principal principal) {
+        Integer questionNo = gameService.shownQuestionNo();
+        QuestionSet question = questionNo == null ? null : gameService.questionAt(questionNo);
+        if (question == null || !gameService.hasAnswered(principal.getName(), questionNo)) {
+            return "";
+        }
+        String url = Objects.toString(question.getAnswerImageUrl(), "");
+        boolean safe = (url.startsWith("/question-images/") && !url.contains(".."))
+                || url.startsWith("https://") || url.startsWith("http://");
+        return safe && !ImageProcessingService.isAudioUrl(url) ? url : "";
     }
 
     /**

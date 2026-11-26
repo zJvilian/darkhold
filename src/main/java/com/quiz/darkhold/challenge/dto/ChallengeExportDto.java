@@ -89,6 +89,7 @@ public class ChallengeExportDto {
         private Integer points;
         private String acceptableAnswers;
         private String imageUrl;
+        private String answerImageUrl;
         private String videoUrl;
 
         @SuppressWarnings("checkstyle:MethodLength")
@@ -111,6 +112,7 @@ public class ChallengeExportDto {
             dto.setPoints(questionSet.getPoints());
             dto.setAcceptableAnswers(questionSet.getAcceptableAnswers());
             dto.setImageUrl(questionSet.getImageUrl());
+            dto.setAnswerImageUrl(questionSet.getAnswerImageUrl());
             dto.setVideoUrl(questionSet.getVideoUrl());
             return dto;
         }
@@ -249,6 +251,14 @@ public class ChallengeExportDto {
 
         public void setImageUrl(final String imageUrl) {
             this.imageUrl = imageUrl;
+        }
+
+        public String getAnswerImageUrl() {
+            return answerImageUrl;
+        }
+
+        public void setAnswerImageUrl(final String answerImageUrl) {
+            this.answerImageUrl = answerImageUrl;
         }
 
         public String getVideoUrl() {

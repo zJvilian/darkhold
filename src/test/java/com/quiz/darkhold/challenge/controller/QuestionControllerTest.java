@@ -32,4 +32,18 @@ class QuestionControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(2, response.getBody().get("deleted"));
     }
+
+    @Test
+    void uploadAndDeleteAnswerImageDelegateToService() {
+        var file = new org.springframework.mock.web.MockMultipartFile(
+                "image", "reveal.png", "image/png", new byte[]{1});
+        when(questionService.uploadAnswerImage(7L, file)).thenReturn("/question-images/1/7/answer_1.png");
+        var uploaded = controller.uploadAnswerImage(7L, file);
+        assertEquals(HttpStatus.OK, uploaded.getStatusCode());
+        assertEquals("/question-images/1/7/answer_1.png", uploaded.getBody().get("answerImageUrl"));
+
+        when(questionService.deleteAnswerImage(7L)).thenReturn(true, false);
+        assertEquals(HttpStatus.OK, controller.deleteAnswerImage(7L).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, controller.deleteAnswerImage(7L).getStatusCode());
+    }
 }

@@ -700,3 +700,324 @@
         padding: 0.85rem 1.25rem;
     }
 }
+
+.answer-reveal-container {
+    text-align: center;
+    margin: 1.5rem auto;
+}
+
+.answer-reveal-image {
+    display: block;
+    max-width: min(100%, 720px);
+    max-height: 420px;
+    object-fit: contain;
+    margin: 0 auto;
+    border-radius: 14px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+/* The global .answer-correct/.answer-incorrect rules (animations.css) paint a square background on the
+   element they sit on. Here that is the outer card wrapper; the rounded inner card shows the result. */
+.answer-option-card.answer-correct,
+.answer-option-card.answer-incorrect {
+    background-color: transparent !important;
+    animation: none !important;
+    opacity: 1 !important; /* answered options are faded; the revealed result shows at full strength */
+}
+
+.answer-option-card.answer-correct > div,
+.answer-option-card.answer-incorrect > div {
+    opacity: 1 !important;
+}
+
+/* True/False keep their big label after the reveal, like the unrevealed option next to them */
+#optionTRUE .answer-card-inner h2,
+#optionFALSE .answer-card-inner h2,
+#optionTRUE .card h2,
+#optionFALSE .card h2 {
+    font-size: 2rem !important;
+    font-weight: 900 !important;
+}
+
+/* ============================================
+   PHONES: the question screen fits the viewport
+   The page itself never scrolls while answering; the answer area takes the space that is left
+   (and only scrolls on its own as a last resort, e.g. ten sorting items on a tiny screen).
+   ============================================ */
+@media (max-width: 768px) {
+    html:has(body.game-play-page) {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body.game-play-page {
+        height: 100vh; /* fallback */
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 0;
+    }
+
+    body.game-play-page > * {
+        flex: none;
+    }
+
+    body.game-play-page > form {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Compact header: small timer beside the question instead of on its own row */
+    .game-header {
+        position: static;
+        padding: 0.5rem 0;
+    }
+
+    .game-header-content {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.75rem;
+        padding: 0 0.75rem;
+    }
+
+    .game-timer-section {
+        width: auto;
+        flex: none;
+        gap: 0;
+    }
+
+    .game-timer-section .flip-clock-wrapper {
+        zoom: 0.45;
+        width: auto;
+        margin: 0;
+    }
+
+    .game-timer-section .message:empty {
+        display: none;
+    }
+
+    .game-question-info {
+        order: 0;
+        flex: 1 1 0;
+        text-align: left;
+    }
+
+    .question-number-badge {
+        font-size: 0.66rem;
+        padding: 0.15rem 0.5rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .question-text-header {
+        font-size: 0.95rem;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+    }
+
+    /* host controls (live game on a phone): one row under the question */
+    .game-controls {
+        flex: 1 1 100%;
+        flex-direction: row;
+        gap: 0.5rem;
+    }
+
+    .game-control-btn {
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Content column fills what is left of the screen */
+    .game-content {
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        margin: 0.75rem auto 0;
+        padding: 0 0.75rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .question-media-section {
+        flex: 0 1 auto;
+        min-height: 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .question-image-container,
+    .question-video-container {
+        margin-bottom: 0.5rem;
+    }
+
+    .question-image {
+        max-height: 22dvh;
+        max-width: 100%;
+        object-fit: contain;
+    }
+
+    .question-video-container {
+        max-width: min(100%, calc(22dvh * 16 / 9));
+    }
+
+    #answerSpace {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    #multiHint {
+        flex: none;
+        margin: 0 0 0.5rem;
+        font-size: 0.8rem;
+        text-align: center;
+        color: var(--color-text-secondary);
+    }
+
+    /* Answer tiles: 2 columns, rows share the free height (Kahoot-style big tap targets) */
+    #answerSpace > .answer-grid {
+        flex: 1 1 auto;
+        min-height: 0;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 0.6rem;
+        margin-bottom: 0.6rem;
+        max-height: 62dvh;
+    }
+
+    /* True/False: two wide rows instead of two tall columns */
+    #answerSpace > .answer-grid:has(#optionTRUE) {
+        grid-template-columns: minmax(0, 1fr);
+        max-height: 44dvh;
+    }
+
+    #answerSpace > .answer-grid > .answer-option-card {
+        min-height: 0;
+        display: flex;
+        touch-action: manipulation;
+    }
+
+    /* also beats the !important sizes of the selected/correct/incorrect states */
+    body.game-play-page .answer-grid .answer-option-card > div {
+        flex: 1 1 auto;
+        min-height: 0 !important;
+        height: 100%;
+        padding: 0.75rem 0.6rem !important;
+        border-radius: var(--radius-lg) !important;
+        overflow: hidden;
+    }
+
+    body.game-play-page .answer-grid .answer-option-card h4 {
+        font-size: clamp(0.9rem, 4vw, 1.1rem) !important;
+        line-height: 1.3 !important;
+        overflow-wrap: anywhere;
+    }
+
+    #optionTRUE .answer-card-inner h2,
+    #optionFALSE .answer-card-inner h2,
+    #optionTRUE .card h2,
+    #optionFALSE .card h2 {
+        font-size: 1.6rem !important;
+    }
+
+    /* the answer area clips its edges, so tiles must not lift on hover (the top got cut off);
+       the highlighted border still shows which tile is under the pointer */
+    body.game-play-page .answer-grid .answer-option-card,
+    body.game-play-page .answer-grid .answer-option-card:hover > div {
+        transform: none !important;
+    }
+
+    /* big glows would be cut off at the edge of the answer area; the tile colours carry the result */
+    body.game-play-page .answer-grid .answer-option-card,
+    body.game-play-page .answer-grid .answer-option-card > div {
+        box-shadow: none !important;
+    }
+
+    /* the result badge sits inside the tile so it is not clipped */
+    body.game-play-page .answer-grid .answer-option-card > div::before {
+        top: 0.4rem !important;
+        right: 0.4rem !important;
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1.1rem !important;
+    }
+
+    #submitChoices,
+    #submitSorting {
+        flex: none;
+        width: 100%;
+        margin-top: 0;
+    }
+
+    /* Sorting: compact buttons, list takes the free height */
+    #sortingAnswers {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #sortingAnswers > p {
+        flex: none;
+        margin: 0 0 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    #sortingAnswers .answer-grid {
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    #sortingAnswers .answer-grid .btn {
+        padding: 0.6rem 0.5rem !important;
+        font-size: 0.9rem;
+    }
+
+    #sortingFeedback {
+        flex: none;
+        margin: 0.5rem 0 0;
+        font-size: 0.85rem;
+    }
+
+    /* Type answer */
+    .type-answer-container {
+        flex: none;
+        width: 100%;
+    }
+
+    .type-answer-card {
+        padding: 1.25rem 1rem;
+    }
+
+    /* After answering */
+    .answer-reveal-container {
+        flex: 0 1 auto;
+        min-height: 0;
+        margin: 0.25rem auto 0.5rem;
+    }
+
+    .answer-reveal-image {
+        max-height: 26dvh;
+    }
+
+    #waitingMessage {
+        flex: none;
+    }
+
+    .waiting-message-container {
+        padding: 1.25rem 1rem;
+    }
+
+    #practiceNextContainer {
+        flex: none;
+        padding-top: 0.25rem;
+    }
+}

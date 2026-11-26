@@ -70,6 +70,9 @@ public class QuestionRequest {
     @Size(max = 500, message = "Image URL must be at most 500 characters")
     private String imageUrl;
 
+    @Size(max = 500, message = "Answer image URL must be at most 500 characters")
+    private String answerImageUrl;
+
     @Size(max = 500, message = "Video URL must be at most 500 characters")
     private String videoUrl;
 
@@ -235,6 +238,14 @@ public class QuestionRequest {
 
     public void setImageUrl(final String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getAnswerImageUrl() {
+        return answerImageUrl;
+    }
+
+    public void setAnswerImageUrl(final String answerImageUrl) {
+        this.answerImageUrl = answerImageUrl;
     }
 
     public String getVideoUrl() {

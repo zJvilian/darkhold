@@ -51,9 +51,14 @@ function game(questionType, mode = 'PRACTICE') {
             this.send = body => { this.body = body; requests.push(this); };
         },
         fetch: async (url, options) => {
-            const reveal = String(options && options.body) === 'reveal=true';
-            fetches.push(reveal ? 'reveal' : url);
-            return {ok: true, text: async () => reveal ? context.revealed : 'correct'};
+            const body = String(options && options.body);
+            const reveal = body === 'reveal=true';
+            const revealImage = body === 'revealImage=true';
+            fetches.push(reveal ? 'reveal' : revealImage ? 'revealImage' : url);
+            return {
+                ok: true,
+                text: async () => reveal ? context.revealed : revealImage ? (context.revealedImage || '') : 'correct'
+            };
         }
     });
     vm.runInContext(fs.readFileSync('src/main/resources/static/scripts/game-scripts.js', 'utf8'), context);
@@ -199,4 +204,16 @@ test('the waiting spinner gets real classes and styles', () => {
     assert.equal(g.node('div').className, 'spinner-grow');
     assert.equal(g.node('div').attributes.style, 'width: 3rem; height: 3rem;');
     assert.equal(g.node('optionA').children[0].attributes.style, 'background: #CCC; cursor: default;');
+});
+
+test('answer reveal image loads once the question ends when configured', async () => {
+    const g = game('POLL', 'MULTIPLAYER');
+    g.node('hasAnswerImage').value = 'true';
+    g.context.revealedImage = '/question-images/1/2/answer_full.jpg';
+    g.expire();
+    g.respond(200, 'true');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(g.fetches, ['revealImage']);
+    assert.equal(g.node('answerRevealImage').src, '/question-images/1/2/answer_full.jpg');
+    assert.equal(g.node('answerRevealContainer').style.display, 'block');
 });

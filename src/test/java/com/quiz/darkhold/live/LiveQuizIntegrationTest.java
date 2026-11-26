@@ -484,6 +484,9 @@ class LiveQuizIntegrationTest {
                                 + ",\"question\":\"Exact cloud?\",\"questionType\":\"WORD_CLOUD\","
                                 + "\"correctOptions\":\"EXACT\",\"points\":0}"))
                 .andExpect(status().isOk());
+        // a new quiz is a draft until the creator finishes it
+        mvc.perform(post("/challenge/" + wcChallengeId + "/finish").with(hostPrincipal).with(csrf()))
+                .andExpect(status().isOk());
         String wcPin = mvc.perform(post("/live/host").with(hostPrincipal).with(csrf())
                         .param("challenge_id", String.valueOf(wcChallengeId)))
                 .andExpect(status().is3xxRedirection()).andReturn().getResponse()
@@ -546,6 +549,41 @@ class LiveQuizIntegrationTest {
         } finally {
             rooms.deleteById(wcPin);
             challenges.deleteById(wcChallengeId);
+        }
+    }
+
+    @Test
+    void answerRevealImageIsHiddenDuringQuestionAndShownOnResults() throws Exception {
+        final var hostAuth = user(new DarkholdUserDetails(users.findByEmail(HOST)));
+        Challenge loaded = challenges.findById(challengeId).orElseThrow();
+        QuestionSet question = loaded.getQuestionSets().getFirst();
+        question.setImageUrl("/question-images/1/1/closeup.jpg");
+        question.setAnswerImageUrl("/question-images/1/1/full_reveal.jpg");
+        challenges.saveAndFlush(loaded);
+
+        String revealPin = mvc.perform(post("/live/host").with(hostAuth).with(csrf())
+                        .param("challenge_id", challengeId.toString()))
+                .andExpect(status().is3xxRedirection()).andReturn().getResponse().getRedirectedUrl()
+                .replace("/play/", "");
+        try {
+            var player = mvc.perform(post("/join").with(csrf()).param("pin", revealPin)
+                            .param("name", "Spotter").param("avatar", "fox"))
+                    .andExpect(status().is3xxRedirection()).andReturn().getResponse().getCookies();
+            mvc.perform(post("/api/live/" + revealPin + "/control").with(hostAuth).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"start\",\"questionIndex\":-1}"))
+                    .andExpect(status().isOk());
+            var duringQuestion = json(mvc.perform(get("/api/live/" + revealPin).cookie(player)).andReturn());
+            assertEquals("/question-images/1/1/closeup.jpg", duringQuestion.path("question").path("image").asText());
+            assertTrue(duringQuestion.path("answerImage").isMissingNode());
+
+            mvc.perform(post("/api/live/" + revealPin + "/control").with(hostAuth).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"reveal\",\"questionIndex\":0}"))
+                    .andExpect(status().isOk());
+            var onResults = json(mvc.perform(get("/api/live/" + revealPin).cookie(player)).andReturn());
+            assertEquals("RESULTS", onResults.path("phase").asText());
+            assertEquals("/question-images/1/1/full_reveal.jpg", onResults.path("answerImage").asText());
+        } finally {
+            rooms.deleteById(revealPin);
         }
     }
 }

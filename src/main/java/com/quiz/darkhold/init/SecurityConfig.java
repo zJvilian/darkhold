@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import com.quiz.darkhold.user.entity.DarkholdUserDetails;
+import com.quiz.darkhold.user.service.DarkholdOidcUserService;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,7 +28,10 @@ import org.springframework.security.web.authentication.SavedRequestAwareAuthenti
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.boot.session.autoconfigure.DefaultCookieSerializerCustomizer;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
@@ -49,9 +53,15 @@ public class SecurityConfig {
 
 
     private final UserDetailsService userDetailsService;
+    private final ObjectProvider<ClientRegistrationRepository> clientRegistrations;
+    private final DarkholdOidcUserService oidcUserService;
 
-    public SecurityConfig(final UserDetailsService userDetailsService) {
+    public SecurityConfig(final UserDetailsService userDetailsService,
+                          final ObjectProvider<ClientRegistrationRepository> clientRegistrations,
+                          final DarkholdOidcUserService oidcUserService) {
         this.userDetailsService = userDetailsService;
+        this.clientRegistrations = clientRegistrations;
+        this.oidcUserService = oidcUserService;
     }
 
     @Bean
@@ -159,6 +169,21 @@ public class SecurityConfig {
                     loginSuccess.onAuthenticationSuccess(req, res, auth);
                 })
                 .permitAll());
+        if (clientRegistrations.getIfAvailable() != null) {
+            http.oauth2Login(oauth2 -> oauth2.loginPage("/login")
+                    .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUserService))
+                    .successHandler(loginSuccess)
+                    .failureHandler((req, res, ex) -> res.sendRedirect(req.getContextPath() + oidcFailureUrl(ex))));
+        }
+    }
+
+    private static String oidcFailureUrl(final Exception ex) {
+        String code = ex instanceof OAuth2AuthenticationException oauth ? oauth.getError().getErrorCode() : "";
+        return switch (code) {
+            case DarkholdOidcUserService.ACCOUNT_DISABLED -> "/login?error=disabled";
+            case DarkholdOidcUserService.EMAIL_CONFLICT -> "/login?error=oidc_conflict";
+            default -> "/login?error=oidc";
+        };
     }
 
     private static String loginKey(final HttpServletRequest request) {
@@ -174,7 +199,8 @@ public class SecurityConfig {
                 "/scripts/core/**", "/styles/core/*", "/styles/webfonts/**",
                 "/fonts/**", "/favicon.ico",
                 "/enterGame", "/joinGame", "/join", "/play/**", "/api/live/**",
-                "/impressum", "/datenschutz"
+                "/impressum", "/datenschutz",
+                "/oauth2/**", "/login/oauth2/**"
         };
     }
 

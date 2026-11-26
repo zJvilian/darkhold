@@ -50,7 +50,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public User save(final User user) {
         if (isUpdatingUser(user)) {
-            user.setPassword(getPassword(user, findExistingUser(user.getId())));
+            User existingUser = findExistingUser(user.getId());
+            user.setPassword(getPassword(user, existingUser));
+            // The admin form does not carry the SSO link; keep it so the user can still sign in.
+            user.setOidcProvider(existingUser.getOidcProvider());
+            user.setOidcSubject(existingUser.getOidcSubject());
         } else {
             user.setPassword(encodeNewPassword(user.getPassword()));
         }
@@ -184,7 +188,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean passwordMatches(final Long id, final String rawPassword) throws UserNotFoundException {
-        return encoder.matches(rawPassword, get(id).getPassword());
+        User user = get(id);
+        return user.hasLocalPassword() && encoder.matches(rawPassword, user.getPassword());
     }
 
     @Override

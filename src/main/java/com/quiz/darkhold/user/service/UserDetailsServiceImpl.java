@@ -29,6 +29,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             logger.error("Username not found !!");
             throw new UsernameNotFoundException(username);
         }
+        if (!user.hasLocalPassword()) {
+            // Single sign-on accounts have no password to check against.
+            throw new UsernameNotFoundException(username);
+        }
         //logger.info("current user -> {}", user);
         return new DarkholdUserDetails(user);
     }

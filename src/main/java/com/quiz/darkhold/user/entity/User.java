@@ -36,7 +36,8 @@ public class User implements Serializable {
     @Column(length = 128, nullable = false, unique = true)
     private String email;
 
-    @Column(length = 64, nullable = false)
+    // null for accounts that only sign in through OpenID Connect
+    @Column(length = 64)
     private String password;
 
     @Column(length = 64)
@@ -44,6 +45,13 @@ public class User implements Serializable {
 
     @Column(name = "enabled")
     private Boolean enabled;
+
+    // shortcut: one OIDC identity per user; extract a member_identities join table if multi-IdP linking is needed.
+    @Column(name = "oidc_provider", length = 64)
+    private String oidcProvider;
+
+    @Column(name = "oidc_subject", length = 255)
+    private String oidcSubject;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "member_roles",
@@ -89,6 +97,26 @@ public class User implements Serializable {
 
     public void setPassword(final String password) {
         this.password = password;
+    }
+
+    public boolean hasLocalPassword() {
+        return password != null && !password.isEmpty();
+    }
+
+    public String getOidcProvider() {
+        return oidcProvider;
+    }
+
+    public void setOidcProvider(final String oidcProvider) {
+        this.oidcProvider = oidcProvider;
+    }
+
+    public String getOidcSubject() {
+        return oidcSubject;
+    }
+
+    public void setOidcSubject(final String oidcSubject) {
+        this.oidcSubject = oidcSubject;
     }
 
     public String getPhoto() {

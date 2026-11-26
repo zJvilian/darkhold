@@ -112,6 +112,8 @@
                     <span th:text="#{login.or}">or</span>
                 </div>
 
+                <div th:replace="~{fragments/oidc :: buttons}"></div>
+
                 <div class="login-footer">
                     <p>
                         <span th:text="#{registration.alreadyRegistered}">Already registered?</span>

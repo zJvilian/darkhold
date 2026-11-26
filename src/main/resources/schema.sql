@@ -19,7 +19,10 @@ create table member (
     createdOn   timestamp,
     modifiedOn  timestamp,
     createdBy   varchar(45),
-    modifiedBy  varchar(45)
+    modifiedBy  varchar(45),
+    oidc_provider varchar(64),
+    oidc_subject  varchar(255),
+    constraint uq_member_oidc_identity unique (oidc_provider, oidc_subject)
 );
 
 create table roles (

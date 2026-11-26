@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.stereotype.Controller;
@@ -116,10 +117,17 @@ public class AccountController {
 
     /** The stored session holds its own copy of the user; replace it so the navbar shows the new values. */
     private void refreshLogin(final Long id, final HttpSession session) throws UserNotFoundException {
-        var fresh = new DarkholdUserDetails(userService.get(id));
+        var current = SecurityContextHolder.getContext().getAuthentication();
         var context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
-                fresh, null, fresh.getAuthorities()));
+        if (current instanceof OAuth2AuthenticationToken sso && sso.getPrincipal() instanceof DarkholdUserDetails old) {
+            var fresh = new DarkholdUserDetails(userService.get(id), old.getIdToken(), old.getUserInfo());
+            context.setAuthentication(new OAuth2AuthenticationToken(
+                    fresh, fresh.getAuthorities(), sso.getAuthorizedClientRegistrationId()));
+        } else {
+            var fresh = new DarkholdUserDetails(userService.get(id));
+            context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(
+                    fresh, null, fresh.getAuthorities()));
+        }
         SecurityContextHolder.setContext(context);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
     }
@@ -136,13 +144,24 @@ public class AccountController {
             return "account.error.name";
         } else if (badPhoto) {
             return "account.error.photo";
-        } else if (form.email().length() > MAX_EMAIL || !EMAIL.matcher(form.email()).matches()) {
+        }
+        User current = userService.get(me.getId());
+        // The email is the login name, so changing it needs the password like a password change does.
+        boolean changed = !form.email().equals(current.getEmail());
+        if (!current.hasLocalPassword()) {
+            // Single sign-on accounts get their email from the provider and have no password to confirm with.
+            return changed ? "account.error.oidcEmail" : null;
+        }
+        return emailError(me, form, changed);
+    }
+
+    private String emailError(final User me, final ProfileForm form, final boolean changed)
+            throws UserNotFoundException {
+        if (form.email().length() > MAX_EMAIL || !EMAIL.matcher(form.email()).matches()) {
             return "account.error.email";
         } else if (!userService.isEmailUnique(me.getId(), form.email())) {
             return "account.error.emailTaken";
         }
-        // The email is the login name, so changing it needs the password like a password change does.
-        boolean changed = !form.email().equals(userService.get(me.getId()).getEmail());
         return changed && !userService.passwordMatches(me.getId(), form.currentPassword())
                 ? "account.error.current" : null;
     }
@@ -154,11 +173,9 @@ public class AccountController {
                                  @RequestParam final String confirmPassword,
                                  final HttpSession session,
                                  final RedirectAttributes redirect) throws UserNotFoundException {
-        if (!newPassword.equals(confirmPassword)) {
-            return fail(redirect, "account.error.mismatch");
-        }
-        if (!isStrong(newPassword)) {
-            return fail(redirect, "account.error.weak");
+        String error = newPasswordError(principal.getUser(), newPassword, confirmPassword);
+        if (error != null) {
+            return fail(redirect, error);
         }
         if (!userService.changePassword(principal.getUser().getId(), currentPassword, newPassword)) {
             return fail(redirect, "account.error.current");
@@ -166,6 +183,15 @@ public class AccountController {
         expireOtherSessions(principal.getUser().getId(), session);
         redirect.addFlashAttribute("message", "account.passwordChanged");
         return "redirect:/account";
+    }
+
+    private String newPasswordError(final User me, final String newPassword, final String confirmPassword) {
+        if (!me.hasLocalPassword()) {
+            return "account.error.oidcPassword";
+        } else if (!newPassword.equals(confirmPassword)) {
+            return "account.error.mismatch";
+        }
+        return isStrong(newPassword) ? null : "account.error.weak";
     }
 
     // Whoever else is signed in with the old password (e.g. a stolen session) is logged out.

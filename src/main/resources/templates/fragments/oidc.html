@@ -1,0 +1,12 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<body>
+    <!-- Single sign-on buttons shared by the sign-in and registration pages -->
+    <div th:fragment="buttons" th:unless="${#lists.isEmpty(oidcProviders)}" class="oidc-buttons">
+        <a th:each="p : ${oidcProviders}" th:href="@{'/oauth2/authorization/' + ${p.id()}}" class="oidc-btn">
+            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+            <span th:text="#{login.continueWith(${p.name()})}">Continue with SSO</span>
+        </a>
+    </div>
+</body>
+</html>

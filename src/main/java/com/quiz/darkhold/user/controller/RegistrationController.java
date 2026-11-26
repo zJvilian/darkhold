@@ -8,7 +8,10 @@ import com.quiz.darkhold.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -38,10 +41,25 @@ public class RegistrationController {
     private final UserService userService;
     private final RateLimitingService rateLimitingService;
 
+    private final ObjectProvider<ClientRegistrationRepository> registrations;
+
     public RegistrationController(final UserService userService,
                                   final RateLimitingService rateLimitingService) {
+        this(userService, rateLimitingService, null);
+    }
+
+    @Autowired
+    public RegistrationController(final UserService userService,
+                                  final RateLimitingService rateLimitingService,
+                                  final ObjectProvider<ClientRegistrationRepository> registrations) {
         this.userService = userService;
         this.rateLimitingService = rateLimitingService;
+        this.registrations = registrations;
+    }
+
+    @ModelAttribute("oidcProviders")
+    public List<OidcProvider> oidcProviders() {
+        return OidcProvider.from(registrations);
     }
 
     @InitBinder("user")

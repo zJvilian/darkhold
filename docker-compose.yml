@@ -19,6 +19,12 @@ services:
       - DARKHOLD_ADMIN_PASSWORD=${DARKHOLD_ADMIN_PASSWORD:-}
       - JAVA_OPTS=-Xmx512m
       - DARKHOLD_PUBLIC_BASE_URL=${DARKHOLD_PUBLIC_BASE_URL:-}
+      - OIDC_ISSUER_URI=${OIDC_ISSUER_URI:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      # An empty value would override the application default, so repeat the defaults here
+      - OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME:-SSO}
+      - OIDC_SCOPES=${OIDC_SCOPES:-openid,profile,email}
     volumes:
       - question_images:/app/question-images
       - user_photos:/app/user-photos

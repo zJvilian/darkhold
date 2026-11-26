@@ -63,17 +63,22 @@
                                        th:value="${#authentication.getPrincipal().getUser().lastName}" />
                                 <label class="settings-option-label" for="email" th:text="#{user.email}">Email</label>
                                 <input class="form-control" type="email" id="email" name="email" maxlength="128" required
-                                       th:value="${#authentication.getPrincipal().getUser().email}" />
-                                <label class="settings-option-label" for="profilePassword" th:text="#{account.passwordForEmail}">Current password (only needed to change the email)</label>
-                                <input class="form-control" type="password" id="profilePassword" name="currentPassword"
-                                       autocomplete="current-password" />
+                                       th:value="${#authentication.getPrincipal().getUser().email}"
+                                       th:readonly="${!#authentication.getPrincipal().getUser().hasLocalPassword()}" />
+                                <p class="settings-option-desc" th:unless="${#authentication.getPrincipal().getUser().hasLocalPassword()}"
+                                   th:text="#{account.oidcManaged}">Your email and password are managed by single sign-on.</p>
+                                <th:block th:if="${#authentication.getPrincipal().getUser().hasLocalPassword()}">
+                                    <label class="settings-option-label" for="profilePassword" th:text="#{account.passwordForEmail}">Current password (only needed to change the email)</label>
+                                    <input class="form-control" type="password" id="profilePassword" name="currentPassword"
+                                           autocomplete="current-password" />
+                                </th:block>
                                 <label class="settings-option-label" for="image" th:text="#{account.profilePicture}">Profile picture</label>
                                 <input class="form-control" type="file" id="image" name="image"
                                        accept=".png,.jpg,.jpeg,.gif,.webp,image/png,image/jpeg,image/gif,image/webp" />
                                 <button type="submit" class="btn btn-primary mt-2" th:text="#{user.save}">Save</button>
                             </form>
                         </details>
-                        <details>
+                        <details th:if="${#authentication.getPrincipal().getUser().hasLocalPassword()}">
                             <summary class="btn btn-secondary"><i class="fas fa-key"></i> <span th:text="#{account.changePassword}">Change Password</span></summary>
                             <form th:action="@{/account/password}" method="post" class="mt-3">
                                 <label class="settings-option-label" for="currentPassword" th:text="#{account.currentPassword}">Current password</label>

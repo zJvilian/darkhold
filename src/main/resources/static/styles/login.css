@@ -345,6 +345,47 @@
 }
 
 /* ============================================
+   SINGLE SIGN-ON
+   ============================================ */
+.oidc-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.oidc-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    background: var(--color-bg-primary);
+    border: 1.5px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .oidc-btn {
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-medium);
+}
+
+.oidc-btn:hover {
+    color: var(--color-text-primary);
+    border-color: var(--color-primary);
+}
+
+.oidc-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 0, 98, 204), 0.3);
+}
+
+/* ============================================
    DIVIDER
    ============================================ */
 .login-divider {

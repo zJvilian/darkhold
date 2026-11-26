@@ -59,7 +59,8 @@
                 <div th:if="${danger}" class="login-error" role="alert">
                     <i class="fas fa-exclamation-circle"></i>
                     <span th:if="${locked}" th:text="#{home.rateLimitBlocked}">Too many failed attempts. You have been temporarily blocked for 15 minutes.</span>
-                    <span th:unless="${locked}" th:text="#{login.invalidCredentials}">Invalid credentials</span>
+                    <span th:if="${errorKey != null}" th:text="#{${errorKey}}">Single sign-on failed.</span>
+                    <span th:if="${locked == null and errorKey == null}" th:text="#{login.invalidCredentials}">Invalid credentials</span>
                 </div>
 
                 <!-- Login Form -->
@@ -126,6 +127,8 @@
                 <div class="login-divider">
                     <span th:text="#{login.or}">or</span>
                 </div>
+
+                <div th:replace="~{fragments/oidc :: buttons}"></div>
 
                 <!-- Sign Up Link -->
                 <div class="login-footer">

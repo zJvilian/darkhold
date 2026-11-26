@@ -6,10 +6,19 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.ui.Model;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,6 +36,9 @@ class LoginControllerTest {
 
     @Mock
     private Model model;
+
+    @Mock
+    private ObjectProvider<ClientRegistrationRepository> registrations;
 
     private LoginController loginController;
 
@@ -124,6 +136,52 @@ class LoginControllerTest {
             assertEquals("login", result);
             verify(model).addAttribute("locked", true);
             verify(model).addAttribute(anyString(), anyString());
+        }
+    }
+
+    @Nested
+    @DisplayName("single sign-on tests")
+    class SingleSignOnTests {
+
+        @ParameterizedTest
+        @CsvSource({
+            "disabled, login.error.disabled",
+            "oidc_conflict, login.error.oidcConflict",
+            "oidc, login.error.oidc"
+        })
+        @DisplayName("should map OIDC errors to a message key")
+        void testLogin_WhenOidcError_ShouldSetErrorKey(final String error, final String errorKey) {
+            when(securityService.isAuthenticated()).thenReturn(false);
+
+            var result = loginController.login(model, error, null);
+
+            assertEquals("login", result);
+            verify(model).addAttribute("errorKey", errorKey);
+            verify(model).addAttribute("danger", "Single sign-on failed.");
+        }
+
+        @Test
+        @DisplayName("should offer no providers without a client registration repository")
+        void testOidcProviders_WhenNotConfigured_ShouldBeEmpty() {
+            assertEquals(List.of(), loginController.oidcProviders());
+        }
+
+        @Test
+        @DisplayName("should offer every configured provider")
+        void testOidcProviders_WhenConfigured_ShouldListThem() {
+            var client = ClientRegistration.withRegistrationId("oidc")
+                    .clientId("darkhold")
+                    .clientName("Company SSO")
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                    .authorizationUri("https://id.example.invalid/authorize")
+                    .tokenUri("https://id.example.invalid/token")
+                    .build();
+            when(registrations.getIfAvailable()).thenReturn(new InMemoryClientRegistrationRepository(client));
+
+            var controller = new LoginController(securityService, registrations);
+
+            assertEquals(List.of(new OidcProvider("oidc", "Company SSO")), controller.oidcProviders());
         }
     }
 

@@ -124,14 +124,15 @@
                 </form>
 
                 <!-- Divider -->
-                <div class="login-divider">
+                <div class="login-divider"
+                     th:if="${(registrationEnabled == null or registrationEnabled) or (oidcProviders != null and !#lists.isEmpty(oidcProviders))}">
                     <span th:text="#{login.or}">or</span>
                 </div>
 
                 <div th:replace="~{fragments/oidc :: buttons}"></div>
 
                 <!-- Sign Up Link -->
-                <div class="login-footer">
+                <div class="login-footer" th:if="${registrationEnabled == null or registrationEnabled}">
                     <p>
                         <span th:text="#{login.noAccount}">Don't have an account?</span>
                         <a th:href="@{/registration}" class="signup-link" th:text="#{login.createAccount}">Create one</a>

@@ -10,7 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,19 +45,28 @@ public class RegistrationController {
     private final RateLimitingService rateLimitingService;
 
     private final ObjectProvider<ClientRegistrationRepository> registrations;
+    private final boolean registrationEnabled;
 
     public RegistrationController(final UserService userService,
                                   final RateLimitingService rateLimitingService) {
         this(userService, rateLimitingService, null);
     }
 
-    @Autowired
     public RegistrationController(final UserService userService,
                                   final RateLimitingService rateLimitingService,
                                   final ObjectProvider<ClientRegistrationRepository> registrations) {
+        this(userService, rateLimitingService, registrations, true);
+    }
+
+    @Autowired
+    public RegistrationController(final UserService userService,
+                                  final RateLimitingService rateLimitingService,
+                                  final ObjectProvider<ClientRegistrationRepository> registrations,
+                                  @Value("${darkhold.registration.enabled:true}") final boolean registrationEnabled) {
         this.userService = userService;
         this.rateLimitingService = rateLimitingService;
         this.registrations = registrations;
+        this.registrationEnabled = registrationEnabled;
     }
 
     @ModelAttribute("oidcProviders")
@@ -75,7 +87,7 @@ public class RegistrationController {
     @GetMapping
     public String registration(final Model model) {
         logger.info("Inside the registration get method");
-        return "registration";
+        return registrationEnabled ? "registration" : "redirect:/login";
     }
 
     @PostMapping
@@ -84,6 +96,9 @@ public class RegistrationController {
                                final BindingResult bindingResult,
                                final HttpServletRequest request) {
         logger.info("Inside the registration post method");
+        if (!registrationEnabled) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Registration is disabled");
+        }
         String rateKey = "register:" + (request != null ? request.getRemoteAddr() : "unknown");
         if (!rateLimitingService.isAllowed(rateKey)) {
             bindingResult.reject("home.rateLimitBlocked",

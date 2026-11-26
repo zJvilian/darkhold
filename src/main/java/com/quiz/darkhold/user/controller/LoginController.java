@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,20 +29,34 @@ public class LoginController {
 
     private final ObjectProvider<ClientRegistrationRepository> registrations;
 
+    private final boolean registrationEnabled;
+
     public LoginController(final SecurityService securityService) {
         this(securityService, null);
     }
 
-    @Autowired
     public LoginController(final SecurityService securityService,
                            final ObjectProvider<ClientRegistrationRepository> registrations) {
+        this(securityService, registrations, true);
+    }
+
+    @Autowired
+    public LoginController(final SecurityService securityService,
+                           final ObjectProvider<ClientRegistrationRepository> registrations,
+                           @Value("${darkhold.registration.enabled:true}") final boolean registrationEnabled) {
         this.securityService = securityService;
         this.registrations = registrations;
+        this.registrationEnabled = registrationEnabled;
     }
 
     @ModelAttribute("oidcProviders")
     public List<OidcProvider> oidcProviders() {
         return OidcProvider.from(registrations);
+    }
+
+    @ModelAttribute("registrationEnabled")
+    public boolean isRegistrationEnabled() {
+        return registrationEnabled;
     }
 
     @GetMapping("/login")

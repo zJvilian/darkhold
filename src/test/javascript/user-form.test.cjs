@@ -167,9 +167,9 @@ test('A11y sets up skip link and keyboard navigation immediately without nested 
     assert.equal(clickableAttrs.get('tabindex'), '0');
 });
 
-test('logOut submits dedicated darkholdLogoutForm instead of hijacking document.forms[0]', () => {
+test('logOut posts its own form with the navbar CSRF token instead of hijacking document.forms[0]', () => {
     let otherFormSubmitted = false;
-    let logoutFormSubmitted = false;
+    const created = [];
     const context = vm.createContext({
         console,
         navigator: {},
@@ -179,12 +179,23 @@ test('logOut submits dedicated darkholdLogoutForm instead of hijacking document.
             documentElement: {lang: 'en'},
             forms: [{action: '/other', submit() { otherFormSubmitted = true; }}],
             addEventListener() {},
-            getElementById: id => id === 'darkholdLogoutForm' ? {submit() { logoutFormSubmitted = true; }} : null
+            body: {appendChild() {}},
+            createElement: tag => {
+                const el = {tag, children: [], appendChild(c) { this.children.push(c); }, submit() { this.submitted = true; }};
+                created.push(el);
+                return el;
+            },
+            getElementById: id => id === 'darkholdLogoutCsrf' ? {dataset: {param: '_csrf', token: 'tok123'}} : null
         }
     });
     vm.runInContext(fs.readFileSync('src/main/resources/static/scripts/common-scripts.js', 'utf8'), context);
     context.logOut();
-    assert.equal(logoutFormSubmitted, true);
+    const form = created.find(el => el.tag === 'form');
+    assert.equal(form.action, '/logout');
+    assert.equal(form.method, 'post');
+    assert.equal(form.submitted, true);
+    assert.equal(form.children[0].name, '_csrf');
+    assert.equal(form.children[0].value, 'tok123');
     assert.equal(otherFormSubmitted, false);
     context.logMeIn();
     assert.equal(context.window.location.href, '/login');

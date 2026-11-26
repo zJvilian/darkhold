@@ -480,3 +480,64 @@
         padding: 1.5rem;
     }
 }
+
+/* Phones: header buttons on one line each instead of three squeezed columns,
+   question cards keep checkbox + number side by side, card actions span the width. */
+@media (max-width: 768px) {
+    .challenge-info-header {
+        padding: 1.25rem;
+        align-items: stretch;
+    }
+
+    /* one full-width row per button: long labels (e.g. German) never get cut */
+    .challenge-info-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .challenge-info-actions > .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        min-width: 0;
+        min-height: 44px;
+        padding: 0.5rem 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .challenge-info-body {
+        padding: 1.25rem;
+    }
+
+    .question-card-content {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .question-card-content > .question-details,
+    .question-card-content > .question-actions {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .question-actions {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+    }
+
+    .question-actions .question-action-btn {
+        width: 100%;
+        height: 44px;
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+    }
+}

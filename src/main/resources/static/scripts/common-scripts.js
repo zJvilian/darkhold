@@ -7,19 +7,16 @@ function toOptions() {
 }
 
 function logOut() {
-    var form = document.getElementById("darkholdLogoutForm");
-    if (form) {
-        form.submit();
-        return;
-    }
-    form = document.createElement("form");
+    var form = document.createElement("form");
     form.method = "post";
     form.action = "/logout";
-    var token = typeof CsrfManager !== "undefined" ? CsrfManager.getToken() : null;
+    var csrf = document.getElementById("darkholdLogoutCsrf");
+    var token = csrf && csrf.dataset.token ? csrf.dataset.token
+        : (typeof CsrfManager !== "undefined" ? CsrfManager.getToken() : null);
     if (token) {
         var input = document.createElement("input");
         input.type = "hidden";
-        input.name = "_csrf";
+        input.name = csrf && csrf.dataset.param ? csrf.dataset.param : "_csrf";
         input.value = token;
         form.appendChild(input);
     }

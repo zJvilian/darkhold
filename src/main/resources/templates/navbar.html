@@ -117,7 +117,8 @@
                         <span class="dh-user-name" th:text="${#strings.substringBefore(#authentication.name + '#', '#')}"></span>
                         <i class="fas fa-chevron-down dh-user-chevron"></i>
                     </button>
-                    <form id="darkholdLogoutForm" method="post" th:action="@{/logout}" class="d-none"></form>
+                    <!--/* Not a form element: page scripts submit document.forms[0], so a navbar form would hijack them */-->
+                    <span id="darkholdLogoutCsrf" hidden th:attr="data-param=${_csrf != null ? _csrf.parameterName : '_csrf'},data-token=${_csrf != null ? _csrf.token : ''}"></span>
                     <ul class="dropdown-menu dropdown-menu-end dh-user-dropdown" aria-labelledby="userMenuDropdown">
                         <li>
                             <a class="dropdown-item" href="/account">

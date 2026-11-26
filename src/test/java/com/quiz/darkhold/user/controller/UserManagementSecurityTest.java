@@ -206,7 +206,8 @@ class UserManagementSecurityTest {
         mvc.perform(get("/userManagement").with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("/user/page/0"))))
-                .andExpect(content().string(containsString("id=\"darkholdLogoutForm\"")));
+                .andExpect(content().string(containsString("id=\"darkholdLogoutCsrf\"")))
+                .andExpect(content().string(not(containsString("darkholdLogoutForm"))));
         mvc.perform(get("/userManagement").param("q", guest.getEmail()).with(admin()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(guest.getEmail())));

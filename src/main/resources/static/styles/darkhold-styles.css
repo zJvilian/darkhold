@@ -120,6 +120,12 @@ input[type="file"]::file-selector-button {
     cursor: pointer;
 }
 
+/* Stop trackpad rubber-band overscroll: it drags the page (navbar) away from fixed elements like the admin sidebar */
+html,
+body {
+    overscroll-behavior-y: none;
+}
+
 body {
     background-color: var(--color-bg-primary);
     color: var(--color-text-primary);

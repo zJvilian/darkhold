@@ -29,6 +29,10 @@
         <p>Bei der Registrierung werden Name, E-Mail-Adresse und ein Passwort (nur als Hash gespeichert) verarbeitet.
         Ebenfalls gespeichert werden von Ihnen erstellte Quizze sowie die Ergebnisse der von Ihnen gestarteten Spiele.
         Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung des Dienstes).</p>
+        <p>Ist die optionale Anmeldung per Single Sign-On (OpenID Connect) aktiviert und nutzen Sie diese, erhält der
+        Dienst vom konfigurierten Identitätsanbieter Name, E-Mail-Adresse und Ihre dortige Nutzerkennung
+        (<code>sub</code>), um Ihr Konto zu verknüpfen oder anzulegen. Rechtsgrundlage ist ebenfalls
+        Art. 6 Abs. 1 lit. b DSGVO.</p>
 
         <h3 class="h5">Server-Logdaten</h3>
         <p>Beim Aufruf der Seite verarbeitet der Server technisch notwendige Verbindungsdaten (z. B. IP-Adresse,
@@ -39,6 +43,8 @@
         <h2 class="h4 mt-4">3. Cookies und lokaler Speicher</h2>
         <p>Es werden ausschließlich technisch notwendige bzw. funktionale Cookies verwendet (Sitzungs-Cookie,
         CSRF-Schutz-Cookie sowie das Sprachpräferenz-Cookie <code>kahvoid_language</code>).
+        Beim Mitspielen wird außerdem das HTTP-only-Cookie <code>kahvoid_player_&lt;PIN&gt;</code> gesetzt und bis zu
+        24 Stunden gespeichert, damit Sie beim Neuladen Ihren Platz und Punktestand in der laufenden Runde behalten.
         Im lokalen Speicher des Browsers werden Einstellungen wie Farbschema, Farbfehlsichtigkeitsmodus und
         Tonlautstärke abgelegt.
         Es gibt kein Tracking und keine Werbung.</p>
@@ -46,7 +52,10 @@
         <h2 class="h4 mt-4">4. Externe Ressourcen</h2>
         <p>Auf den Seiten zur Quiz-Verwaltung (nur für angemeldete Nutzer) werden Skripte bzw. Schriftarten von
         <code>cdn.jsdelivr.net</code> und <code>fonts.googleapis.com</code> nachgeladen. Dabei wird Ihre IP-Adresse an
-        den jeweiligen Anbieter übertragen. Die Spielseiten für Teilnehmende laden keine externen Ressourcen.</p>
+        den jeweiligen Anbieter übertragen. Abgesehen von eingebetteten Videos laden die Spielseiten keine externen
+        Ressourcen.</p>
+        <p>Bindet ein Quiz-Autor ein YouTube-Video in eine Frage ein, wird es über <code>youtube-nocookie.com</code>
+        geladen. Dabei wird Ihre IP-Adresse an YouTube/Google übertragen.</p>
 
         <h2 class="h4 mt-4">5. Ihre Rechte</h2>
         <p>Sie haben das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17),

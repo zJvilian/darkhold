@@ -40,7 +40,7 @@ public class DefaultAdminPasswordInitializer implements ApplicationRunner {
     @Override
     public void run(final ApplicationArguments args) {
         User admin = userRepository.findByEmail(ADMIN_EMAIL);
-        if (admin == null || !encoder.matches(DEFAULT_PASSWORD, admin.getPassword())) {
+        if (admin == null || !admin.hasLocalPassword() || !encoder.matches(DEFAULT_PASSWORD, admin.getPassword())) {
             return;
         }
         boolean generated = configuredPassword == null || configuredPassword.isBlank();

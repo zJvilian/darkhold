@@ -1,5 +1,7 @@
 package com.quiz.darkhold.init;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +18,16 @@ import java.util.Locale;
  */
 @Configuration
 public class I18nConfig {
+    private final boolean secureCookie;
+
+    public I18nConfig() {
+        this("");
+    }
+
+    @Autowired
+    public I18nConfig(@Value("${darkhold.public-base-url:}") final String publicBaseUrl) {
+        this.secureCookie = publicBaseUrl != null && publicBaseUrl.regionMatches(true, 0, "https://", 0, 8);
+    }
 
     /**
      * Configures the MessageSource for loading internationalized messages.
@@ -45,6 +57,8 @@ public class I18nConfig {
         CookieLocaleResolver resolver = new CookieLocaleResolver("kahvoid_language");
         resolver.setCookieMaxAge(java.time.Duration.ofDays(365));
         resolver.setCookieSameSite("Lax");
+        resolver.setCookieHttpOnly(true);
+        resolver.setCookieSecure(secureCookie);
         resolver.setDefaultLocale(Locale.ENGLISH);
         return resolver;
     }

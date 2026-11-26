@@ -919,7 +919,7 @@ function previewYouTubeVideo() {
     }
 
     if (videoId) {
-        const embedUrl = 'https://www.youtube.com/embed/' + videoId;
+        const embedUrl = 'https://www.youtube-nocookie.com/embed/' + videoId;
         document.getElementById('videoPreview').src = embedUrl;
         document.getElementById('videoPreviewContainer').style.display = 'block';
     } else {
